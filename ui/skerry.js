@@ -217,7 +217,7 @@ function vExpanded(){
       ${m.join_url ? `<button class="b-join" data-act="join">${tx('meeting.join')}</button>` : ''}</div></div>`;
   }
   // agents
-  if (mod('claude') || mod('codex')){
+  if (['claude', 'codex', 'gemini', 'copilot'].some(mod)){
     h += `<div class="sec"><div class="sec-h"><b>${tx('agents.title')}</b><span class="sp"></span>${sess.length ? '' : `<span>${tx('agents.none')}</span>`}</div>`;
     for (const s of sess){
       const tk = s.tasks;

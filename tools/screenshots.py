@@ -168,6 +168,8 @@ def scenes(settings):
     settings_data = {"settings": dict(settings), "version": VERSION, "autostart": True,
                      "claude": {"installed": True, "available": True},
                      "codex": {"installed": True, "available": True},
+                     "gemini": {"installed": False, "available": False},
+                     "copilot": {"installed": False, "available": True},
                      "monitors": [], "log_dir": r"C:\Users\you\AppData\Local\Skerry\logs", "update": None,
                      "connectors": {"m365": {"status": "ok", "account": "ada@example.invalid", "error": ""}},
                      "lang": lang}
