@@ -1,3 +1,5 @@
+/* Inter (SIL Open Font License, ui/fonts/OFL.txt) */
+@font-face{font-family:"Inter";src:url("fonts/InterVariable.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:block}
 :root{
   --bg:#000; --fg:#f5f5f7; --muted:#8e8e93; --line:#1f1f22; --chip:#1c1c1e; --chip2:#2c2c2e; --detail:#0f0f10;
   --accent:#d97757; --codex:#10a37f; --gemini:#5b8def; --copilot:#a371f7; --green:#30d158; --amber:#ff9f0a; --red:#ff453a; --blue:#0a84ff;
@@ -7,14 +9,21 @@
   --bg:#ffffff; --fg:#1c1c1e; --muted:#6e6e73; --line:#e5e5ea; --chip:#f2f2f7; --chip2:#e5e5ea; --detail:#f6f6f8;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{background:var(--bg);color:var(--fg);overflow:hidden;height:100%;
-  font:13px/1.35 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;user-select:none;cursor:default}
+/* The window is transparent (skerry/win32.py, "glass"): body::before draws the pill, so its rounded corners are
+   anti-aliased by the browser, and the body clips the content to the same shape. html and body must stay without
+   a background colour (a body background would fill the whole window). --r (corner radius, set by JS with
+   resize()) animates like the window size. */
+@property --r{syntax:'<length>';inherits:true;initial-value:18px}
+html{background:transparent;height:100%;overflow:hidden;transition:--r .3s cubic-bezier(.25,1,.5,1)}
+body::before{content:"";position:fixed;inset:0;z-index:-1;background:var(--bg);border-radius:var(--r)}
+body{background:transparent;border-radius:var(--r);color:var(--fg);overflow:hidden;height:100%;
+  font:13px/1.35 "Inter","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;user-select:none;cursor:default}
 #c{position:absolute;left:50%;top:0;transform:translateX(-50%)}
 /* content stays anchored to the screen edge: the window "grows out" of it */
 html[data-edge=bottom] #c{top:auto;bottom:0}
 html[data-edge=left] #c{left:0;top:50%;transform:translateY(-50%)}
 html[data-edge=right] #c{left:auto;right:0;top:50%;transform:translateY(-50%)}
-/* thin inner border + top highlight, same curvature as the window (--r set by JS) */
+/* thin inner border + top highlight, same curvature as the pill */
 #ring{position:fixed;inset:0;pointer-events:none;z-index:99;border-radius:var(--r,18px);
   background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,0) 45%);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.10),inset 0 1px 0 rgba(255,255,255,.16)}
@@ -41,6 +50,7 @@ html[data-state=alert] #ring{box-shadow:inset 0 0 0 1.5px rgba(10,132,255,.55),i
 .bar .txt{max-width:240px;overflow:hidden;text-overflow:ellipsis}
 .bar .txt.wide{max-width:280px}
 .muted{color:var(--muted)} .sm{font-size:11.5px} .xs{font-size:10.5px}
+.clock{font-variant-numeric:tabular-nums;font-weight:500}
 .mono{font-family:"Cascadia Mono",Consolas,monospace;font-size:12px}
 .big{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
 
@@ -86,7 +96,7 @@ html[data-state=alert] #ring{box-shadow:inset 0 0 0 1.5px rgba(10,132,255,.55),i
   max-height:58px;overflow:hidden;word-break:break-all;color:var(--fg);opacity:.85}
 .clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .btns{display:flex;gap:8px;margin-top:12px}
-button{flex:1;border:0;border-radius:12px;padding:8px 0;font:600 13px "Segoe UI",system-ui;color:var(--fg);cursor:pointer;
+button{flex:1;border:0;border-radius:12px;padding:8px 0;font:600 13px inherit;font-family:inherit;color:var(--fg);cursor:pointer;
   background:var(--chip2);transition:filter .15s,transform .1s}
 button:hover{filter:brightness(1.18)} button:active{transform:scale(.96)}
 .chip,.sess,.file,.gauge,.ucard,.k,.link{transition:background .18s,color .18s,transform .12s}

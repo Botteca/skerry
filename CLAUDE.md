@@ -29,9 +29,9 @@ Stack: Python 3.11+ (dev venv runs 3.13), pywebview on WinForms/WebView2, a loca
 | `skerry/displays.py` | Pure multi-monitor logic: `resolve()` (primary / mouse / chosen screen by stable id, fallback to primary), `changes()` (log lines for connect/disconnect/docking/DPI/taskbar), `geometry()`. Driven by `SkerryApp._display_loop` (1 s layout scan, 0.25 s mouse follow). |
 | `skerry/diagnostics.py` | "Copy diagnostics": report + `redact()` (user paths/name, Bluetooth names/addresses, emails). |
 | `skerry/settings.py` | `%APPDATA%\Skerry\settings.json`, `DEFAULTS` merged on load, dotted keys, change listeners. |
-| `skerry/i18n.py` | Python-side user text (tray, alerts, agent actions, errors) in en/it. `Msg` objects are rendered when the state is sent to the UI, so a language switch applies live. `language` setting: `auto` = Windows display language. |
+| `skerry/i18n.py` | Python-side user text (tray, alerts, agent actions, errors) in en/it/es/de/fr. `Msg` objects are rendered when the state is sent to the UI, so a language switch applies live. `language` setting: `auto` = Windows display language. |
 | `skerry/secrets.py` | DPAPI-encrypted secrets in `%APPDATA%\Skerry\secrets\*.bin`. |
-| `skerry/connectors/` | Optional external services, each with a polling thread that never raises and a `status()` for settings. `m365.py`: MSAL + Graph `calendarView`, read-only; `pick_meeting()` is pure; `alert_before()` is shared. `google.py`: Calendar API, OAuth with system browser + loopback + PKCE, client secret and refresh token in `secrets`, `pick_meeting()`/`meet_link()` pure (https links only). `Connectors.meeting()` returns the earliest of both calendars. `azure.py`: Azure tokens via `az account get-access-token` or a service principal (secret in `secrets`). `adf.py`: Data Factory `queryPipelineRuns`, `latest_runs()` is pure, alert on new failures. `sql.py`: pyodbc query widgets; `check_query()` (single SELECT/WITH, no writing keyword), autocommit off + rollback, widgets saved only through `Api.sql_save` (never `set_setting`). Tests use the `fake_http` fixture (local server), never real endpoints. |
+| `skerry/connectors/` | Optional external services, each with a polling thread that never raises and a `status()` for settings. `m365.py`: MSAL + Graph `calendarView`, read-only; `pick_meeting()` is pure; `alert_before()` is shared. `outlook.py`: classic Outlook over COM (comtypes), read-only, only while OUTLOOK.EXE runs, never starts it; `ics.py`: calendar link (secret URL in `secrets`, https/webcal only, `icalendar` + `recurring_ical_events`); both share the pure `calendar.pick()`/`join_link()`. `google.py`: Calendar API, OAuth with system browser + loopback + PKCE, client secret and refresh token in `secrets`, `pick_meeting()`/`meet_link()` pure (https links only). `Connectors.meeting()` returns the earliest of both calendars. `azure.py`: Azure tokens via `az account get-access-token` or a service principal (secret in `secrets`). `adf.py`: Data Factory `queryPipelineRuns`, `latest_runs()` is pure, alert on new failures. `sql.py`: pyodbc query widgets; `check_query()` (single SELECT/WITH, no writing keyword), autocommit off + rollback, widgets saved only through `Api.sql_save` (never `set_setting`). Tests use the `fake_http` fixture (local server), never real endpoints. |
 | `skerry/media.py`, `audio.py` | Now Playing via WinRT GSMTC; master volume via pycaw. |
 | `skerry/system.py` | Mic/camera via ConsentStore registry, battery, Bluetooth battery via SetupAPI. |
 | `skerry/usage.py` | Token usage parsed incrementally from `~/.claude/projects/**/*.jsonl` (no network). |
@@ -102,12 +102,16 @@ tags or releases unless the user asks.
 
 ## Known delicate points — do not regress
 
-- **Window shape.** The pill is `create_window(..., shadow=False, min_size=(20, 20))`, then on `shown`
-  `_release_min_size()` sets the native WinForms `MinimumSize` to 0 (otherwise it stays ~200x100 × DPI).
-  The shape comes only from `SetWindowRgn(CreateRoundRectRgn(...))`, set **before** `SetWindowPos` on every frame.
-  Animation (`SkerryWindow.animate_to`) is time-based (ease-out, 300 ms) and paced by `DwmFlush` with 1 ms timer
-  resolution. `dwm_flat()` turns off Mica backdrop, NC rendering, rounded corners and border, and is re-applied
-  periodically. **Never re-enable pywebview's shadow or Mica**: they cause the grey border/rectangle.
+- **Window shape.** The pill is `create_window(..., shadow=False, min_size=(20, 20), transparent=True)`, then on
+  `shown` `_prepare_form()` sets the native WinForms `MinimumSize` to 0 (otherwise it stays ~200x100 × DPI) and the
+  form background to black. `SkerryWindow.dwm_flat()` turns off the Mica backdrop, system corners and border and
+  extends the DWM frame over the whole window ("sheet of glass", margins -1): DWM shows the black background as
+  transparent and blends the transparent web view per pixel, so the page draws the pill (`body` with
+  `border-radius: var(--r)`, `--r` animated with `@property`) with anti-aliased edges. No window region in this
+  mode. If DWM refuses, or with `smooth_edges: false`, it falls back to `SetWindowRgn(CreateRoundRectRgn(...))`
+  set **before** `SetWindowPos` on every frame (hard edges). Animation (`SkerryWindow.animate_to`) is time-based
+  (ease-out, 300 ms) and paced by `DwmFlush` with 1 ms timer resolution. **Never re-enable pywebview's shadow or
+  Mica**, and never disable DWM non-client rendering in glass mode: the transparency depends on it.
 - **The local server talks only to agents.** `server._refused()` rejects any request with an `Origin` or
   `Sec-Fetch-*` header (browsers, CSRF), a `Host` other than `127.0.0.1`/`localhost` (DNS rebinding) and non-JSON
   POSTs; bodies over `MAX_BODY` get 413. Every client we ship (`cli.py`, `app.py`) sends `Content-Type:
@@ -155,7 +159,7 @@ tags or releases unless the user asks.
 ## Working rules
 
 - **Language.** Code, comments, commit messages and docs in **English**. In any file you touch, translate existing
-  Italian comments/docstrings to English. User-facing strings are bilingual (English reference, Italian).
+  Italian comments/docstrings to English. User-facing strings are translated (English reference; Italian, Spanish, German, French).
   Replies to the user in **Italian**.
 - **Definition of done.** Before saying something is finished: `py_compile` on all `.py`, `node --check` on
   `ui/*.js` (and the settings inline script if touched), automated tests when they exist, and a real launch with

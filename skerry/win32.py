@@ -206,6 +206,10 @@ class SkerryWindow:
         self._gen = 0
         self._lock = threading.Lock()
         self.displays = []           # cached monitors() list, refreshed by the app's display loop
+        # true per-pixel transparency (DWM "sheet of glass"): the web page draws the rounded shape with smooth
+        # edges. Off (setting smooth_edges = false, or if DWM refuses) = the old window region with hard edges.
+        self.glass = bool(settings.get("smooth_edges", True))
+        self._region_cleared = False
         self.cursor_device = ""      # screen with the mouse (for monitor = "mouse")
 
     def handle(self):
@@ -219,9 +223,17 @@ class SkerryWindow:
             log.warning("Island window not found")
             return
         ex = user32.GetWindowLongW(h, GWL_EXSTYLE)
-        user32.SetWindowLongW(h, GWL_EXSTYLE, (ex | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW)
+        want = (ex | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW
+        if want != ex:
+            user32.SetWindowLongW(h, GWL_EXSTYLE, want)
+            # the taskbar only notices the new style when the window is shown again
+            if user32.IsWindowVisible(h):
+                user32.ShowWindow(h, SW_HIDE)
+                user32.ShowWindow(h, SW_SHOWNOACTIVATE)
+            log.info("Pill removed from the taskbar")
         self.dwm_flat()
         self.capture_hidden()
+        log.info("Smooth edges: %s", "on (transparent window)" if self.glass else "off (window region)")
         try:
             ctx = user32.GetThreadDpiAwarenessContext()
             aware = user32.GetAwarenessFromDpiAwarenessContext(ctx)
@@ -252,8 +264,10 @@ class SkerryWindow:
         log.info("Screen-capture exclusion hwnd=%s: %s (%s)", h, "on" if want else "off", "ok" if ok else "failed")
 
     def dwm_flat(self):
-        """Windows 11: no Mica backdrop (the grey #202020 rectangle pywebview applies in dark theme),
-        no shadow, border or system corners: the shape comes only from the window region."""
+        """No Mica backdrop (the grey #202020 rectangle pywebview applies in dark theme), no border, no system
+        corners. With `glass` the whole client area becomes DWM frame ("sheet of glass"): the form background is
+        black, which DWM treats as transparent, and the transparent web view is blended per pixel, so the page
+        draws the pill with smooth edges. Without it: no shadow or frame, and the shape comes from the region."""
         h = self.handle()
         if not h or not IS_WIN:
             return
@@ -261,11 +275,19 @@ class SkerryWindow:
             dwm = ctypes.WinDLL("dwmapi")
             put = lambda attr, val, t=ctypes.c_int: dwm.DwmSetWindowAttribute(h, attr, ctypes.byref(t(val)), 4)
             put(38, 1)                    # DWMWA_SYSTEMBACKDROP_TYPE = none (pywebview sets Mica = 2)
-            put(2, 1)                     # DWMWA_NCRENDERING_POLICY = disabled (no shadow/frame)
             put(33, 1)                    # DWMWA_WINDOW_CORNER_PREFERENCE = do not round
             put(34, 0xFFFFFFFE, ctypes.c_uint)  # DWMWA_BORDER_COLOR = none
-            margins = (ctypes.c_int * 4)(0, 0, 0, 0)
-            dwm.DwmExtendFrameIntoClientArea(h, margins)
+            if self.glass:
+                margins = (ctypes.c_int * 4)(-1, -1, -1, -1)
+                hr = dwm.DwmExtendFrameIntoClientArea(h, margins)
+                if hr != 0:
+                    log.warning("Transparent window refused by DWM (0x%08x): back to the window region",
+                                hr & 0xFFFFFFFF)
+                    self.glass = False
+            if not self.glass:
+                put(2, 1)                 # DWMWA_NCRENDERING_POLICY = disabled (no shadow/frame)
+                margins = (ctypes.c_int * 4)(0, 0, 0, 0)
+                dwm.DwmExtendFrameIntoClientArea(h, margins)
         except Exception:
             log.debug("DWM not available", exc_info=True)
 
@@ -309,8 +331,15 @@ class SkerryWindow:
             return
         x, y, W, H, scale = rect
         d = max(2, round(2 * r * scale))
-        # region first, then the window: no "square" corner ever shows during the animation
-        user32.SetWindowRgn(hwnd, gdi32.CreateRoundRectRgn(0, 0, W + 1, H + 1, d, d), False)
+        if self.glass:
+            # transparent window: the page draws the rounded shape, no region (removed once)
+            if not self._region_cleared:
+                user32.SetWindowRgn(hwnd, None, False)
+                self._region_cleared = True
+        else:
+            # region first, then the window: no "square" corner ever shows during the animation
+            user32.SetWindowRgn(hwnd, gdi32.CreateRoundRectRgn(0, 0, W + 1, H + 1, d, d), False)
+            self._region_cleared = False
         user32.SetWindowPos(hwnd, HWND_TOPMOST, x, y, W, H, SWP_NOACTIVATE | SWP_NOCOPYBITS | flags)
 
     def animate_to(self, w, h, r, duration=0.30):

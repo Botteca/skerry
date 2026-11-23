@@ -20,9 +20,10 @@ with open(os.path.join(SPECPATH, "version_info.txt"), encoding="utf-8") as _f:
 with open(_version_file, "w", encoding="utf-8") as _f:
     _f.write(_tpl.replace("{version}", VERSION).replace("{numbers}", repr(_numbers)))
 datas = [(os.path.join(ROOT, "ui"), "ui"), (os.path.join(ROOT, "assets"), "assets")]
-binaries, hidden = [], ["msal", "pystray._win32", "comtypes.stream", "winrt.windows.foundation",
+binaries, hidden = [], ["msal", "pystray._win32", "comtypes.stream", "comtypes.client", "icalendar",
+                        "recurring_ical_events", "x_wr_timezone", "winrt.windows.foundation",
                         "winrt.windows.media.control", "winrt.windows.storage.streams"]
-for pkg in ("webview", "winrt", "pycaw"):
+for pkg in ("webview", "winrt", "pycaw", "icalendar", "tzdata"):
     try:
         d, b, h = collect_all(pkg)
         datas += d; binaries += b; hidden += h

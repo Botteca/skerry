@@ -13,6 +13,8 @@ DEFAULTS = {
     "monitor_id": "",         # stable id of the chosen screen (survives docking / device renumbering)
     "language": "auto",       # auto (Windows display language) | en | it
     "theme": "dark",          # dark | light
+    "idle_label": "usage",    # resting pill: usage | name | clock | icon
+    "smooth_edges": True,     # transparent pill window with smooth edges; false = hard-edged window region
     "accent": "#d97757",
     # animated status indicator: off | dot (classic) | eyes; energy lively | calm. Never switched on by itself.
     "companion": {"style": "dot", "energy": "lively"},
@@ -49,6 +51,9 @@ DEFAULTS = {
     "bluetooth_names": {},   # e.g. {"BLE ·9418": "Mouse", "BLE ·a5f0": ""}  ("" = hide)
     "hooks_version": 0,
     "connectors": {
+        # Outlook on this PC (COM, classic Outlook only) and a calendar link (its URL is a secret, in secrets/)
+        "outlook": {"enabled": False, "alert_minutes": 5},
+        "ics": {"enabled": False, "alert_minutes": 5},
         "m365": {"client_id": "", "tenant": "organizations", "alert_minutes": 5},
         # Google Calendar: client secret and refresh token are in secrets/, never here
         "google": {"client_id": "", "alert_minutes": 5},

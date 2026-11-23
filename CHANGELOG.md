@@ -1,68 +1,40 @@
 # Changelog
 
-## 1.0.1
-
-- Dependencies pinned to exact, tested versions (pywebview 6.2.1, Flask 3.1.3, Pillow 13.0.0, psutil 7.2.2,
-  pycaw 20260927, comtypes 1.5.0, winrt 4.x, MSAL 1.39.0, pyodbc 5.5.0), so every build ships exactly what was tested.
-- Build tools pinned too (PyInstaller 6.22.3, pytest 9.2.0, Ruff 0.17.6).
-- Emoji in the settings sidebar, the section titles of the expanded island and the tray menu.
-- Fixed: a long Bluetooth device name widened its column and cut off the battery percentages; names now end
-  with "…" (full name on hover).
-- GitHub Actions updated to checkout v7.0.1 and setup-python v7.1.0 (Node.js 24).
-
 ## 1.0.0
 
 First public release.
 
-- **Security hardening**: the local server refuses requests from web browsers (any `Origin` or `Sec-Fetch-*`
-  header), from a non-loopback `Host` (DNS rebinding) and non-JSON or oversized (> 1 MB) bodies. The update source
-  can no longer be changed from the settings window: it decides what gets installed.
-- **Multiple screens**: choose the primary screen, a specific one (remembered by a stable id, so docking and
-  renumbering don't lose it) or the screen with the mouse pointer. The island follows screens being connected,
-  disconnected or docked, sizes itself with the target screen's DPI, comes back if it ends up off-screen, and logs
-  every display change.
-- **Copy diagnostics** (Settings → About and logs): version, Windows, DPI, screens, enabled modules, connector
-  and agent status and the last 80 log lines go to the clipboard, with user paths, Bluetooth device names and
-  email addresses hidden.
-- **Guided setup on first launch**: three short steps in the island (edge and screen, connect Claude Code and
-  Codex, shortcut tips). It can be skipped and shown again from *Settings → General*. Existing installs don't see it.
-- **No more "hook failed: ECONNREFUSED" in Claude Code when Skerry is not running.** Claude Code hooks are now
-  `skerry-cli` command hooks that exit silently in that case (hooks v4, rewritten automatically). They run in the
-  background, except the permission request, so they add no latency.
-- **Automatic updates.** Skerry checks GitHub releases at startup and every 6 hours (ETag), ignores pre-releases and,
-  in the default *Automatic* mode, downloads the installer, verifies its SHA-256 against `SHA256SUMS.txt` and installs
-  it silently at a quiet moment (or with *Update now*), then restarts. Modes: Automatic / Notify only / Off
-  (the old "check automatically" switch is migrated). *Settings → Updates* shows status, last check and release notes.
-- Releases are built and published by GitHub Actions on a `v*` tag; the version lives only in `skerry/__init__.py`.
-- Installer in English and Italian, detects a running Skerry (AppMutex) and supports silent updates.
-- **English and Italian interface.** The language follows Windows by default; *Settings → General → Language*
-  (Automatic / English / Italiano) switches the pill, the settings window, alerts and the tray menu immediately,
-  without a restart. Dates, times and numbers follow the language. Log messages are now always in English.
-- Screenshots regenerated in English (`docs/img/`) and Italian (`docs/img/it/`) by `tools/screenshots.py`.
-- **Renamed to Skerry**: `Skerry.exe` / `skerry-cli.exe`, new installer identity, data in `%APPDATA%\Skerry` and
-  `%LOCALAPPDATA%\Skerry`. On first run the data of the previous version is copied over once; old autostart entries,
-  old installs and old agent hooks are removed and replaced automatically (hooks v3).
-- New icon and logo (`assets/brand/`), explicit AppUserModelID, icon on the settings window.
-- Updates now come from `github.com/fabrisimo/skerry`.
-- **Connections** page in settings and the first connector: **Microsoft 365** — next Outlook/Teams meeting with a
-  *Join* button and an alert before it starts (Microsoft Graph, read-only, browser sign-in, DPAPI-encrypted tokens).
-- Settings redesigned with a sidebar.
-- Hide the pill while the screen is being shared (optional, on by default).
-- MIT license.
-- Open-source project files: README in English and Italian, CONTRIBUTING, SECURITY, Code of Conduct, issue and pull
-  request templates, pytest suite and GitHub Actions CI (ruff, py_compile, pytest on Windows).
-- Animations synced to the display refresh; entry animations only when the view changes.
-- Bluetooth: real device name from the Windows registry, icon per device type, battery bar.
-- "Claude usage" section: tokens of the last 5 hours / 7 days read from local files.
-- Fixed the grey (Mica) background around the pill.
+**Coding agents**
+- Live activity of **Claude Code** and **Codex** (current action, tasks, done or error), plus **Gemini CLI** and
+  **GitHub Copilot CLI** (opt-in). Several sessions at once, context and 5-hour/weekly limit alerts, terminal focus.
+- **Permission requests** answered from the island: Allow, Always, Deny, back to the terminal, or "allow similar
+  requests in this project for N minutes" (never for commands that delete, overwrite or reach outside the project).
+- Agent **history** of the last 30 days by project, with CSV export (local files only).
+- Hooks never block an agent: when Skerry is not running they exit silently.
 
-- Pill snaps to any edge and monitor, with dragging and a vertical tab on the sides
-- Start with Windows, single instance, supervisor with automatic restart, tray icon
-- Settings page, light/dark themes, accent colour, global hotkey
-- Hides with fullscreen apps
-- Claude Code: multiple sessions, tasks, "Always allow", context and limit alerts, terminal focus
-- Codex: actions, permissions and completion through hooks
-- Media: colour from the cover, seek, volume
-- Microphone/camera in use, battery, Bluetooth headphones
-- Timer and Pomodoro, file shelf
-- Rotating logs, updates from GitHub releases, Inno Setup installer
+**The island**
+- Always-on-top pill on any screen edge and monitor, with dragging, a vertical tab on the sides, multi-monitor
+  support (primary, a chosen screen or the one with the mouse) and **anti-aliased corners**.
+- Now Playing with cover colour, seek and volume; microphone/camera in use; laptop and **Bluetooth** battery;
+  timer and Pomodoro; file shelf; local **Claude usage** (5 hours / 7 days).
+- **Customisable layout**: order and visibility of every section, what may take the closed pill, minimal mode,
+  profiles (work, presentation, focus) with an automatic switch during screen sharing or meetings.
+- At rest the pill shows Claude usage, the name, a clock or the icon only. Optional animated companion (two eyes).
+- Hidden during screen sharing (on by default) and with fullscreen apps; not shown in the taskbar.
+
+**Connections** (all read-only, secrets encrypted with Windows DPAPI)
+- Next meeting with a *Join* button, with no setup from **Outlook on this PC** (classic Outlook) or from a
+  **calendar link** (ICS, Outlook on the web or Google; encrypted like a password), or with a sign-in from
+  **Microsoft 365** or **Google Calendar**.
+- **Azure Data Factory** pipeline runs, with an alert when one fails.
+- **SQL Server / Azure SQL** query widgets with green, amber and red thresholds.
+
+**Everything else**
+- Interface in **English, Italian, Spanish, German and French** (follows Windows, switchable live). Font: Inter.
+- Settings window with sidebar, light and dark themes, accent colour, global shortcut, guided setup on first launch,
+  settings export/import (passwords and tokens never included), *Copy diagnostics* without personal data.
+- **Automatic updates** from GitHub releases: the installer's SHA-256 is verified against `SHA256SUMS.txt` before a
+  silent install at a quiet moment. Modes: automatic, notify only, off.
+- Security: the local server (127.0.0.1) refuses browsers, DNS rebinding and oversized requests; permission
+  decisions never go through HTTP; the update source cannot be changed from the UI.
+- Per-user installer (no admin rights) in five languages; start with Windows; automatic restart after a crash.

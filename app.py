@@ -116,7 +116,8 @@ class SkerryApp:
         self.window = webview.create_window(
             TITLE, url=os.path.join(paths.resource_dir(), "ui", "index.html"), js_api=self.api,
             width=180, height=34, frameless=True, on_top=True, resizable=False,
-            background_color="#000000", text_select=False, easy_drag=False, min_size=(20, 20), shadow=False)
+            background_color="#000000", text_select=False, easy_drag=False, min_size=(20, 20), shadow=False,
+            transparent=self.win.glass)
         self.window.events.shown += self._on_shown
         self.window.events.loaded += self._on_loaded
         self.log.info("%s %s started (language %s)", APP_NAME, VERSION, i18n.current())
@@ -153,22 +154,25 @@ class SkerryApp:
         self.updater.start()
 
     def _on_shown(self):
-        self._prepare_form(self.window, release_min_size=True)
+        self._prepare_form(self.window, release_min_size=True, black=self.win.glass)
         self.win.setup()
 
-    def _prepare_form(self, window, release_min_size=False):
+    def _prepare_form(self, window, release_min_size=False, black=False):
         """Set the window icon and, for the pill, clear the WinForms minimum size
-        (without that the pill stays 200x100 times the DPI scale)."""
+        (without that the pill stays 200x100 times the DPI scale). `black`: form background for the transparent
+        pill (DWM shows black frame pixels as transparent, see SkerryWindow.dwm_flat)."""
         try:
             import clr  # noqa: F401  (pythonnet, already required by pywebview)
             from System import Action
-            from System.Drawing import Icon, Size
+            from System.Drawing import Color, Icon, Size
             form = window.native
             ico = paths.icon_file()
 
             def fn():
                 if release_min_size:
                     form.MinimumSize = Size(0, 0)
+                if black:
+                    form.BackColor = Color.Black
                 if os.path.exists(ico):
                     form.Icon = Icon(ico)
 

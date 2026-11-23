@@ -1,11 +1,13 @@
-"""Connectors: optional links to external services (Microsoft 365, Google Calendar, Azure Data Factory,
-SQL Server / Azure SQL).
+"""Connectors: optional links to external services (Outlook on this PC, a calendar link, Microsoft 365,
+Google Calendar, Azure Data Factory, SQL Server / Azure SQL).
 
 Each connector has: a state readable by the UI, sign-in/out started from settings, a polling thread,
 and no credentials in settings.json (tokens live in `skerry.secrets`)."""
 from .adf import ADF
 from .google import Google
+from .ics import ICS
 from .m365 import M365
+from .outlook import Outlook
 from .sql import SQL
 
 
@@ -15,7 +17,10 @@ class Connectors:
         self.google = Google(settings, store)
         self.adf = ADF(settings, store)
         self.sql = SQL(settings, store)
-        self._all = {"m365": self.m365, "google": self.google, "adf": self.adf, "sql": self.sql}
+        self.outlook = Outlook(settings, store)
+        self.ics = ICS(settings, store)
+        self._all = {"outlook": self.outlook, "ics": self.ics, "m365": self.m365, "google": self.google,
+                     "adf": self.adf, "sql": self.sql}
 
     def start(self):
         for c in self._all.values():
@@ -32,6 +37,7 @@ class Connectors:
         return self._all.get(cid)
 
     def meeting(self):
-        """The meeting in progress or the next one, from Microsoft 365 and Google Calendar."""
-        found = [m for m in (self.m365.meeting(), self.google.meeting()) if m]
+        """The meeting in progress or the next one, from every calendar source that is on."""
+        found = [m for m in (self.outlook.meeting(), self.ics.meeting(), self.m365.meeting(), self.google.meeting())
+                 if m]
         return min(found, key=lambda m: m["start"]) if found else None

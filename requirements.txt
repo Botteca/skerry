@@ -12,4 +12,8 @@ winrt-Windows.Foundation==4!10.0.28000.2957; sys_platform == "win32"
 winrt-Windows.Media.Control==4!10.0.28000.2957; sys_platform == "win32"
 winrt-Windows.Storage.Streams==4!10.0.28000.2957; sys_platform == "win32"
 msal==1.39.0
+# calendar link (ICS): parsing and recurring events; tzdata = time zones on Windows
+icalendar==7.3.2
+recurring-ical-events==3.8.2
+tzdata==2026.6
 pyodbc==5.5.0

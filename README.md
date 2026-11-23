@@ -48,7 +48,7 @@ your next Microsoft 365 meeting. Everything runs locally.
 
 </details>
 
-> The interface is available in English and Italian: it follows the Windows display language, or pick one in
+> The interface is available in English, Italian, Spanish, German and French: it follows the Windows display language, or pick one in
 > *Settings → General → Language* (it switches immediately, no restart).
 
 ## Features
@@ -235,6 +235,8 @@ encrypted with Windows DPAPI, never written to `settings.json`. The same step-by
 
 | Connector | What you get | Setup |
 |---|---|---|
+| **Outlook on this PC** | Next meeting from classic Outlook, with its Teams/Meet/Zoom link. No sign-in, no setup | [Guide](docs/connectors.md#outlook-on-this-pc) |
+| **Calendar link (ICS)** | Next meeting from the private link of an Outlook on the web or Google calendar. No sign-in | [Guide](docs/connectors.md#calendar-link-ics) |
 | **Microsoft 365** | Next Outlook/Teams meeting with a *Join* button and an alert before it starts | [Guide](docs/connectors.md#microsoft-365) |
 | **Google Calendar** | Next event with its Google Meet link | [Guide](docs/connectors.md#google-calendar) |
 | **Azure Data Factory** | Latest run of the pipelines you choose, alert when one fails | [Guide](docs/connectors.md#azure-data-factory) |

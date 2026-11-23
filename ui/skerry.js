@@ -139,8 +139,12 @@ function vCompact(){
   }
   const lim = f && mod('claude') ? `${ring(f.used_percentage)}<span class="sm">${Math.round(f.used_percentage)}%</span><span class="muted xs">${tx('usage.fiveHourShort')}</span>` : '';
   if (vert) return {...base, key:`vi${f&&Math.round(f.used_percentage)}${badgeKey()}`, html:`<div class="tab">${lead(glyph('claude'), true)}${f ? ring(f.used_percentage) : ''}${b}</div>`};
-  return {...base, key:`i${f&&Math.round(f.used_percentage)}${badgeKey()}`,
-    html:`<div class="bar">${lead(glyph('claude'), true)}${lim || '<span class="muted sm">Skerry</span>'}${b}</div>`};
+  // resting label (Settings > Appearance): Claude usage (falls back to the name), the name, a clock or nothing
+  const il = S.settings.idle_label || 'usage', name = '<span class="muted sm">Skerry</span>';
+  const clock = il === 'clock' ? `<span class="sm clock">${esc(I18N.time(S.now))}</span>` : '';
+  const label = il === 'name' ? name : il === 'clock' ? clock : il === 'icon' ? '' : (lim || name);
+  return {...base, key:`i${il}${clock}${il === 'usage' && f ? Math.round(f.used_percentage) : ''}${badgeKey()}`,
+    html:`<div class="bar">${lead(glyph('claude'), true)}${label}${b}</div>`};
 }
 
 // ---------------- cards ----------------

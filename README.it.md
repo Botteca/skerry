@@ -49,7 +49,7 @@ Microsoft 365. Tutto gira in locale.
 
 </details>
 
-> L'interfaccia è in inglese e in italiano: segue la lingua di Windows, oppure scegli in *Impostazioni → Generale →
+> L'interfaccia è in inglese, italiano, spagnolo, tedesco e francese: segue la lingua di Windows, oppure scegli in *Impostazioni → Generale →
 > Lingua* (cambia subito, senza riavvio).
 
 ## Funzioni
@@ -239,6 +239,8 @@ sono cifrati con DPAPI di Windows, mai scritti in `settings.json`. Le stesse gui
 
 | Connettore | Cosa mostra | Configurazione |
 |---|---|---|
+| **Outlook su questo PC** | Prossima riunione da Outlook classico, con il link di Teams/Meet/Zoom. Niente accesso né configurazione | [Guida](docs/connectors.it.md#outlook-su-questo-pc) |
+| **Link del calendario (ICS)** | Prossima riunione dal link privato di un calendario di Outlook sul web o Google. Niente accesso | [Guida](docs/connectors.it.md#link-del-calendario-ics) |
 | **Microsoft 365** | Prossima riunione di Outlook/Teams con il pulsante *Entra* e un avviso prima dell'inizio | [Guida](docs/connectors.it.md#microsoft-365) |
 | **Google Calendar** | Prossimo evento con il link di Google Meet | [Guida](docs/connectors.it.md#google-calendar) |
 | **Azure Data Factory** | Ultima esecuzione delle pipeline scelte, avviso quando una fallisce | [Guida](docs/connectors.it.md#azure-data-factory) |

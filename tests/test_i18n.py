@@ -22,7 +22,7 @@ KEY_LITERAL = re.compile(r"""['"]([a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9_]+)+)['"]""")
 
 # Product and brand names are the same in every language.
 BRANDS = {"Skerry", "Google Calendar", "Claude Code", "Codex", "Gemini CLI", "Copilot CLI", "GitHub Copilot CLI", "Microsoft 365", "Google Workspace", "SQL Server", "Azure SQL",
-          "Azure Data Factory"}
+          "Azure Data Factory", "Outlook"}
 
 
 def read(*parts):
@@ -52,18 +52,24 @@ def placeholders(value):
     return {name for form in forms for name in PLACEHOLDER.findall(form)}
 
 
+TAGS = re.compile(r"</?([a-z]+)")
+
+
 def check_dictionaries(strings):
-    assert set(strings) == {"en", "it"}
-    en, it = strings["en"], strings["it"]
-    assert sorted(set(en) - set(it)) == [], "keys missing in Italian"
-    assert sorted(set(it) - set(en)) == [], "keys missing in English"
-    for key in en:
-        assert type(en[key]) is type(it[key]), key
-        if isinstance(en[key], dict):
-            assert set(en[key]) == set(it[key]) and "other" in en[key], key
-        assert placeholders(en[key]) == placeholders(it[key]), f"different placeholders in {key}"
-        forms = en[key].values() if isinstance(en[key], dict) else [en[key]]
-        assert all(f.strip() for f in forms), f"empty translation: {key}"
+    assert set(strings) == set(i18n.LANGUAGES)
+    en = strings["en"]
+    for lang, tr in strings.items():
+        assert sorted(set(en) - set(tr)) == [], f"keys missing in {lang}"
+        assert sorted(set(tr) - set(en)) == [], f"keys only in {lang}"
+        for key in en:
+            assert type(en[key]) is type(tr[key]), (lang, key)
+            if isinstance(en[key], dict):
+                assert set(en[key]) == set(tr[key]) and "other" in en[key], (lang, key)
+            assert placeholders(en[key]) == placeholders(tr[key]), f"different placeholders in {lang} {key}"
+            if isinstance(en[key], str):
+                assert sorted(TAGS.findall(en[key])) == sorted(TAGS.findall(tr[key])), f"different markup in {lang} {key}"
+            forms = tr[key].values() if isinstance(tr[key], dict) else [tr[key]]
+            assert all(f.strip() for f in forms), f"empty translation: {lang} {key}"
 
 
 # ---------------------------------------------------------------- dictionaries
@@ -117,6 +123,10 @@ def test_python_translation_and_live_switch():
         assert str(msg) == "Limite 5 ore al 85%"                       # same object, new language
         assert i18n.t("alert.meeting_soon", title="Standup", n=1) == "Standup tra 1 min"
         assert i18n.t("no.such.key") == "no.such.key"
+        i18n.set_language("fr")
+        assert i18n.t("alert.meeting_soon", title="Standup", n=0) == "Standup dans 0 min"   # French: 0 is singular
+        i18n.set_language("de")
+        assert str(msg) == "5-Stunden-Limit bei 85%"
         assert i18n.render("plain text") == "plain text"
     finally:
         i18n.set_language(old)
@@ -126,7 +136,8 @@ def test_language_setting(monkeypatch):
     monkeypatch.setattr(i18n, "system_language", lambda: "it")
     assert i18n.resolve("auto") == "it"
     assert i18n.resolve("en") == "en"
-    assert i18n.resolve("fr") == "it"   # unknown values fall back to automatic
+    assert i18n.resolve("fr") == "fr"
+    assert i18n.resolve("xx") == "it"   # unknown values fall back to automatic
 
 
 def test_language_is_settable_from_the_ui():

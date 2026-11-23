@@ -1,4 +1,4 @@
-; Inno Setup 6: per-user installer (no admin rights).
+﻿; Inno Setup 6: per-user installer (no admin rights).
 ; The version is not written here: build.bat and the release workflow pass it from skerry/__init__.py:
 ;   ISCC /DAppVersion=1.2.0 build\installer.iss      (python tools\release.py version prints it)
 ; Silent update, as started by Skerry itself:  Skerry-Setup-X.Y.Z.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
@@ -43,18 +43,36 @@ UsePreviousTasks=yes
 [Languages]
 Name: "en"; MessagesFile: "compiler:Default.isl"
 Name: "it"; MessagesFile: "compiler:Languages\Italian.isl"
+Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
+Name: "de"; MessagesFile: "compiler:Languages\German.isl"
+Name: "fr"; MessagesFile: "compiler:Languages\French.isl"
 
 [CustomMessages]
 en.Options=Options:
 it.Options=Opzioni:
+es.Options=Opciones:
+de.Options=Optionen:
+fr.Options=Options :
 en.TaskAutostart=Start Skerry with Windows
 it.TaskAutostart=Avvia Skerry con Windows
+es.TaskAutostart=Iniciar Skerry con Windows
+de.TaskAutostart=Skerry mit Windows starten
+fr.TaskAutostart=Démarrer Skerry avec Windows
 en.TaskConnect=Connect Claude Code and Codex to Skerry
 it.TaskConnect=Collega Claude Code e Codex a Skerry
+es.TaskConnect=Conectar Claude Code y Codex a Skerry
+de.TaskConnect=Claude Code und Codex mit Skerry verbinden
+fr.TaskConnect=Connecter Claude Code et Codex à Skerry
 en.TaskDesktop=Desktop icon
 it.TaskDesktop=Icona sul desktop
+es.TaskDesktop=Icono en el escritorio
+de.TaskDesktop=Desktopsymbol
+fr.TaskDesktop=Icône sur le Bureau
 en.LaunchApp=Start Skerry
 it.LaunchApp=Avvia Skerry
+es.LaunchApp=Iniciar Skerry
+de.LaunchApp=Skerry starten
+fr.LaunchApp=Lancer Skerry
 
 [Tasks]
 Name: "autostart"; Description: "{cm:TaskAutostart}"; GroupDescription: "{cm:Options}"

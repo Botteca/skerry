@@ -10,11 +10,13 @@ from .store import GRANT_MINUTES
 log = logging.getLogger("skerry")
 
 SETTABLE = {
-    "language", "theme", "accent", "hotkey", "autostart", "hide_fullscreen", "hide_from_capture", "permission_over_fullscreen",
+    "language", "theme", "idle_label", "accent", "hotkey", "autostart", "hide_fullscreen", "hide_from_capture", "permission_over_fullscreen",
     "companion.style", "companion.energy",
     "permission_wait", "focus_terminal_after_decision", "edge", "offset", "updates",
     "alerts.context", "alerts.limits", "alerts.battery_low", "alerts.bluetooth_low",
     "pomodoro.focus", "pomodoro.short_break", "pomodoro.long_break", "pomodoro.cycles",
+    "connectors.outlook.enabled", "connectors.outlook.alert_minutes",
+    "connectors.ics.enabled", "connectors.ics.alert_minutes",   # the link itself only through connector_secret()
     "connectors.m365.client_id", "connectors.m365.tenant", "connectors.m365.alert_minutes",
     "connectors.google.client_id", "connectors.google.alert_minutes",
     "connectors.adf.enabled", "connectors.adf.auth", "connectors.adf.tenant", "connectors.adf.client_id",
@@ -48,7 +50,7 @@ class Api:
         snap["adf"] = a.connectors.adf.runs() if "adf" in shown else None
         snap["sql"] = a.connectors.sql.widgets() if "sql" in shown else None
         snap["shelf"] = a.shelf.items() if "shelf" in shown else []
-        snap["settings"] = {k: a.settings.get(k) for k in ("edge", "monitor", "theme", "accent", "modules", "alerts", "companion")}
+        snap["settings"] = {k: a.settings.get(k) for k in ("edge", "monitor", "theme", "idle_label", "accent", "modules", "alerts", "companion")}
         snap["visible"] = bool(getattr(a.win, "visible", True))   # the companion stops its animations when hidden
         snap["onboarding"] = None if a.settings.get("first_run_done", True) else self._onboarding()
         snap["update"] = a.updater.visible_state()

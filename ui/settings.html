@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <title>Settings · Skerry</title>
 <style>
+  @font-face{font-family:"Inter";src:url("fonts/InterVariable.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:block}
   :root{--bg:#0e0e10;--side:#131316;--panel:#1a1a1e;--panel2:#212126;--line:#2b2b31;--fg:#f4f4f6;--muted:#8d8d95;--accent:#d97757;--green:#30d158;--red:#ff453a;--amber:#ff9f0a;--ease:cubic-bezier(.22,1,.36,1)}
   :root[data-theme=light]{--bg:#f3f3f6;--side:#eaeaef;--panel:#fff;--panel2:#f0f0f4;--line:#e0e0e6;--fg:#1c1c1e;--muted:#6c6c74}
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;overflow:hidden}
-  body{background:var(--bg);color:var(--fg);font:13.5px/1.45 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;display:flex;-webkit-font-smoothing:antialiased}
+  body{background:var(--bg);color:var(--fg);font:13.5px/1.45 "Inter","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;display:flex;-webkit-font-smoothing:antialiased}
   /* ---------- sidebar ---------- */
   aside{width:208px;flex:none;background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:20px 12px 14px}
   .brand{display:flex;align-items:center;gap:11px;padding:0 8px 20px}
@@ -79,7 +80,20 @@
   .about b{font-size:17px;display:block} .about span{color:var(--muted);font-size:12.5px}
   .soon .row{opacity:.62} .soon .row:hover{background:transparent}
   .guide{background:var(--panel2);line-height:1.55} .guide>b:first-child{display:block;color:var(--fg);margin-bottom:4px;font-size:12.5px}
-  .guide ol{padding-left:18px} .guide li{margin:3px 0} .guide code{color:var(--fg);white-space:nowrap;word-break:normal}
+  .guide ol{padding-left:18px} .guide li{margin:3px 0} .guide code{color:var(--fg);white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal}
+  .conn + .conn{margin-top:10px}
+  .conn .head{cursor:pointer;user-select:none} .conn .head:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .conn .head .l{font-weight:600}
+  .chev{width:8px;height:8px;flex:none;margin:0 2px 0 4px;border:solid var(--muted);border-width:0 1.8px 1.8px 0;transform:rotate(45deg) translateY(-2px);transition:transform .2s}
+  .conn.open .chev{transform:rotate(-135deg) translate(-2px,0)}
+  .conn:not(.open) > .body{display:none} .conn > .body{border-top:1px solid var(--line)}
+  .conn input[type=text],.conn input[type=password]{width:300px!important;max-width:46%}
+  .howto{border-top:1px solid var(--line)}
+  .howto>summary{list-style:none;cursor:pointer;padding:12px 16px;font-size:12.5px;font-weight:600;color:var(--accent);display:flex;align-items:center;gap:8px}
+  .howto>summary::-webkit-details-marker{display:none}
+  .howto>summary::before{content:"📖"} .howto>summary::after{content:"";width:6px;height:6px;border:solid currentColor;border-width:0 1.6px 1.6px 0;transform:rotate(-45deg);transition:transform .2s;margin-left:2px}
+  .howto[open]>summary::after{transform:rotate(45deg)}
+  .howto>.guide{border-top:1px solid var(--line)}
   .badge.err{background:color-mix(in srgb,var(--red) 18%,transparent);color:var(--red)}
   input::placeholder{color:var(--muted);opacity:.55}
   code{font:12px Consolas,monospace;color:var(--muted);word-break:break-all}
@@ -134,7 +148,7 @@
 <section class="page" id="p-gen">
   <h1 data-i18n="gen.title"></h1><div class="sub" data-i18n="gen.sub"></div>
   <div class="panel">
-    <div class="row"><div class="ico">🌐</div><div class="l"><span data-i18n="gen.language"></span><div class="d" data-i18n="gen.languageDesc"></div></div><div class="seg" data-seg="language"><button data-v="auto" data-i18n="lang.auto"></button><button data-v="en" data-i18n="lang.en"></button><button data-v="it" data-i18n="lang.it"></button></div></div>
+    <div class="row"><div class="ico">🌐</div><div class="l"><span data-i18n="gen.language"></span><div class="d" data-i18n="gen.languageDesc"></div></div><select id="lang-sel"><option value="auto" data-i18n="lang.auto"></option><option value="en" data-i18n="lang.en"></option><option value="it" data-i18n="lang.it"></option><option value="es" data-i18n="lang.es"></option><option value="de" data-i18n="lang.de"></option><option value="fr" data-i18n="lang.fr"></option></select></div>
     <div class="row"><div class="ico">🧭</div><div class="l"><span data-i18n="gen.onboarding"></span><div class="d" data-i18n="gen.onboardingDesc"></div></div><button class="btn" id="onb-btn" data-i18n="gen.onboardingBtn"></button></div>
     <div class="row"><div class="ico">🚀</div><div class="l"><span data-i18n="gen.autostart"></span><div class="d" data-i18n="gen.autostartDesc"></div></div><label class="sw"><input type="checkbox" data-k="autostart"><span></span></label></div>
     <div class="row"><div class="ico">⌨️</div><div class="l"><span data-i18n="gen.hotkey"></span><div class="d" data-i18n-html="gen.hotkeyDescHtml"></div></div><input type="text" data-k="hotkey" data-lazy></div>
@@ -168,6 +182,7 @@
   <h2 data-i18n="look.themeSection"></h2>
   <div class="panel">
     <div class="row"><div class="l" data-i18n="look.theme"></div><div class="seg" data-seg="theme"><button data-v="dark" data-i18n="look.dark"></button><button data-v="light" data-i18n="look.light"></button></div></div>
+    <div class="row"><div class="l"><span data-i18n="look.idleLabel"></span><div class="d" data-i18n="look.idleLabelDesc"></div></div><div class="seg" data-seg="idle_label"><button data-v="usage" data-i18n="look.idleUsage"></button><button data-v="name">Skerry</button><button data-v="clock" data-i18n="look.idleClock"></button><button data-v="icon" data-i18n="look.idleIcon"></button></div></div>
     <div class="row"><div class="l"><span data-i18n="look.accent"></span><div class="d" data-i18n="look.accentDesc"></div></div><div class="accents" id="accents"></div></div>
     <div class="row"><div class="l"><span data-i18n="look.companion"></span><div class="d" data-i18n="look.companionDesc"></div></div><div class="seg" data-seg="companion.style"><button data-v="off" data-i18n="look.cmpOff"></button><button data-v="dot" data-i18n="look.cmpDot"></button><button data-v="eyes" data-i18n="look.cmpEyes"></button></div></div>
     <div class="row"><div class="l"><span data-i18n="look.energy"></span><div class="d" data-i18n="look.energyDesc"></div></div><div class="seg" data-seg="companion.energy"><button data-v="lively" data-i18n="look.lively"></button><button data-v="calm" data-i18n="look.calm"></button></div></div>
@@ -215,44 +230,63 @@
 
 <section class="page" id="p-conn">
   <h1 data-i18n="conn.title"></h1><div class="sub" data-i18n="conn.sub"></div>
-  <div class="panel">
-    <div class="row"><div class="ico">📅</div><div class="l">Microsoft 365<div class="d" id="m365-desc"></div></div><span class="badge" id="m365-badge"></span><button class="btn" id="m365-btn"></button></div>
-    <div class="row"><div class="l"><span data-i18n="conn.clientId"></span><div class="d" data-i18n="conn.clientIdDesc"></div></div><input type="text" data-k="connectors.m365.client_id" data-lazy data-i18n-placeholder="conn.clientIdPlaceholder" style="width:230px"></div>
-    <div class="row"><div class="l"><span data-i18n="conn.tenant"></span><div class="d" data-i18n-html="conn.tenantDescHtml"></div></div><input type="text" data-k="connectors.m365.tenant" data-lazy></div>
-    <div class="row"><div class="l"><span data-i18n="conn.alert"></span><div class="d" data-i18n="conn.alertDesc"></div></div><input type="number" min="0" max="60" data-k="connectors.m365.alert_minutes" data-num data-lazy></div>
-    <div class="note guide" data-i18n-html="conn.guideHtml"></div>
+  <h2 data-i18n="conn.groupCalendar"></h2>
+  <div class="panel conn" data-conn="outlook">
+    <div class="row head" role="button" tabindex="0" aria-expanded="false"><div class="ico">📧</div><div class="l">Outlook<div class="d" id="outlook-desc"></div></div><span class="badge" id="outlook-badge"></span><button class="btn" id="outlook-refresh" data-i18n="conn.refresh"></button><label class="sw"><input type="checkbox" data-k="connectors.outlook.enabled"><span></span></label><i class="chev" aria-hidden="true"></i></div>
+    <div class="body">
+      <div class="row"><div class="l"><span data-i18n="conn.alert"></span><div class="d" data-i18n="conn.alertDesc"></div></div><input type="number" min="0" max="60" data-k="connectors.outlook.alert_minutes" data-num data-lazy></div>
+      <details class="howto"><summary data-i18n="conn.howTo"></summary><div class="note guide" data-i18n-html="conn.outlook.guideHtml"></div></details>
+    </div>
   </div>
-  <h2>Google Calendar</h2>
-  <div class="panel">
-    <div class="row"><div class="ico">🗓️</div><div class="l">Google Calendar<div class="d" id="google-desc"></div></div><span class="badge" id="google-badge"></span><button class="btn" id="google-btn"></button></div>
-    <div class="row"><div class="l"><span data-i18n="google.clientId"></span><div class="d" data-i18n="google.clientIdDesc"></div></div><input type="text" data-k="connectors.google.client_id" data-lazy data-i18n-placeholder="google.clientIdPh" style="width:270px"></div>
-    <div class="row"><div class="l"><span data-i18n="adf.secret"></span><div class="d" id="google-secret-desc"></div></div><input type="password" id="google-secret" autocomplete="off" style="width:270px"></div>
-    <div class="row"><div class="l"><span data-i18n="conn.alert"></span><div class="d" data-i18n="conn.alertDesc"></div></div><input type="number" min="0" max="60" data-k="connectors.google.alert_minutes" data-num data-lazy></div>
-    <div class="note guide" data-i18n-html="google.guideHtml"></div>
+  <div class="panel conn" data-conn="ics">
+    <div class="row head" role="button" tabindex="0" aria-expanded="false"><div class="ico">🔗</div><div class="l"><span data-i18n="conn.ics.name"></span><div class="d" id="ics-desc"></div></div><span class="badge" id="ics-badge"></span><button class="btn" id="ics-refresh" data-i18n="conn.refresh"></button><label class="sw"><input type="checkbox" data-k="connectors.ics.enabled"><span></span></label><i class="chev" aria-hidden="true"></i></div>
+    <div class="body">
+      <div class="row"><div class="l"><span data-i18n="conn.ics.url"></span><div class="d" id="ics-url-desc"></div></div><input type="password" id="ics-url" autocomplete="off" data-i18n-placeholder="conn.ics.urlPh" style="width:270px"><button class="btn" id="ics-remove" data-i18n="sql.remove"></button></div>
+      <div class="row"><div class="l"><span data-i18n="conn.alert"></span><div class="d" data-i18n="conn.alertDesc"></div></div><input type="number" min="0" max="60" data-k="connectors.ics.alert_minutes" data-num data-lazy></div>
+      <details class="howto"><summary data-i18n="conn.howTo"></summary><div class="note guide" data-i18n-html="conn.ics.guideHtml"></div></details>
+    </div>
   </div>
-
-  <h2>Azure Data Factory</h2>
-  <div class="panel">
-    <div class="row"><div class="ico">🏭</div><div class="l"><span data-i18n="adf.watch"></span><div class="d" id="adf-desc"></div></div><span class="badge" id="adf-badge"></span><button class="btn" id="adf-refresh" data-i18n="conn.refresh"></button><label class="sw"><input type="checkbox" data-k="connectors.adf.enabled"><span></span></label></div>
-    <div class="row"><div class="l"><span data-i18n="adf.auth"></span><div class="d" data-i18n="adf.authDesc"></div></div><div class="seg" data-seg="connectors.adf.auth"><button data-v="az" data-i18n="adf.authAz"></button><button data-v="sp" data-i18n="adf.authSp"></button></div></div>
-    <div class="row adf-sp"><div class="l"><span data-i18n="adf.tenant"></span><div class="d" data-i18n="adf.tenantDesc"></div></div><input type="text" data-k="connectors.adf.tenant" data-lazy style="width:270px"></div>
-    <div class="row adf-sp"><div class="l"><span data-i18n="conn.clientId"></span><div class="d" data-i18n="adf.clientIdDesc"></div></div><input type="text" data-k="connectors.adf.client_id" data-lazy style="width:270px"></div>
-    <div class="row adf-sp"><div class="l"><span data-i18n="adf.secret"></span><div class="d" id="adf-secret-desc"></div></div><input type="password" id="adf-secret" autocomplete="off" style="width:270px"></div>
-    <div class="row"><div class="l" data-i18n="adf.subscription"></div><input type="text" data-k="connectors.adf.subscription" data-lazy data-i18n-placeholder="adf.subscriptionPh" style="width:270px"></div>
-    <div class="row"><div class="l" data-i18n="adf.resourceGroup"></div><input type="text" data-k="connectors.adf.resource_group" data-lazy data-i18n-placeholder="adf.resourceGroupPh" style="width:270px"></div>
-    <div class="row"><div class="l" data-i18n="adf.factory"></div><input type="text" data-k="connectors.adf.factory" data-lazy data-i18n-placeholder="adf.factoryPh" style="width:270px"></div>
-    <div class="row"><div class="l"><span data-i18n="adf.pipelines"></span><div class="d" data-i18n="adf.pipelinesDesc"></div></div><input type="text" data-k="connectors.adf.pipelines" data-lazy data-i18n-placeholder="adf.pipelinesPh" style="width:270px"></div>
-    <div class="note guide" data-i18n-html="adf.guideHtml"></div>
+  <div class="panel conn" data-conn="m365">
+    <div class="row head" role="button" tabindex="0" aria-expanded="false"><div class="ico">📅</div><div class="l">Microsoft 365<div class="d" id="m365-desc"></div></div><span class="badge" id="m365-badge"></span><button class="btn" id="m365-btn"></button><i class="chev" aria-hidden="true"></i></div>
+    <div class="body">
+      <div class="row"><div class="l"><span data-i18n="conn.clientId"></span><div class="d" data-i18n="conn.clientIdDesc"></div></div><input type="text" data-k="connectors.m365.client_id" data-lazy data-i18n-placeholder="conn.clientIdPlaceholder" style="width:230px"></div>
+      <div class="row"><div class="l"><span data-i18n="conn.tenant"></span><div class="d" data-i18n-html="conn.tenantDescHtml"></div></div><input type="text" data-k="connectors.m365.tenant" data-lazy></div>
+      <div class="row"><div class="l"><span data-i18n="conn.alert"></span><div class="d" data-i18n="conn.alertDesc"></div></div><input type="number" min="0" max="60" data-k="connectors.m365.alert_minutes" data-num data-lazy></div>
+      <details class="howto"><summary data-i18n="conn.howTo"></summary><div class="note guide" data-i18n-html="conn.guideHtml"></div></details>
+    </div>
   </div>
-
-  <h2 data-i18n="sql.heading"></h2>
-  <div class="panel">
-    <div class="row"><div class="ico">🗄️</div><div class="l"><span data-i18n="sql.widgets"></span><div class="d" id="sql-desc"></div></div><span class="badge" id="sql-badge"></span><button class="btn" id="sql-refresh" data-i18n="conn.refresh"></button><label class="sw"><input type="checkbox" data-k="connectors.sql.enabled"><span></span></label></div>
-    <div id="sql-list"></div>
-    <div class="row"><div class="l"></div><button class="btn" id="sql-add" data-i18n="sql.add"></button></div>
-    <div class="note guide" data-i18n-html="sql.guideHtml"></div>
+  <div class="panel conn" data-conn="google">
+    <div class="row head" role="button" tabindex="0" aria-expanded="false"><div class="ico">🗓️</div><div class="l">Google Calendar<div class="d" id="google-desc"></div></div><span class="badge" id="google-badge"></span><button class="btn" id="google-btn"></button><i class="chev" aria-hidden="true"></i></div>
+    <div class="body">
+      <div class="row"><div class="l"><span data-i18n="google.clientId"></span><div class="d" data-i18n="google.clientIdDesc"></div></div><input type="text" data-k="connectors.google.client_id" data-lazy data-i18n-placeholder="google.clientIdPh" style="width:270px"></div>
+      <div class="row"><div class="l"><span data-i18n="adf.secret"></span><div class="d" id="google-secret-desc"></div></div><input type="password" id="google-secret" autocomplete="off" style="width:270px"></div>
+      <div class="row"><div class="l"><span data-i18n="conn.alert"></span><div class="d" data-i18n="conn.alertDesc"></div></div><input type="number" min="0" max="60" data-k="connectors.google.alert_minutes" data-num data-lazy></div>
+      <details class="howto"><summary data-i18n="conn.howTo"></summary><div class="note guide" data-i18n-html="google.guideHtml"></div></details>
+    </div>
   </div>
-
+  <h2 data-i18n="conn.groupData"></h2>
+  <div class="panel conn" data-conn="adf">
+    <div class="row head" role="button" tabindex="0" aria-expanded="false"><div class="ico">🏭</div><div class="l">Azure Data Factory<div class="d" id="adf-desc"></div></div><span class="badge" id="adf-badge"></span><button class="btn" id="adf-refresh" data-i18n="conn.refresh"></button><label class="sw"><input type="checkbox" data-k="connectors.adf.enabled"><span></span></label><i class="chev" aria-hidden="true"></i></div>
+    <div class="body">
+      <div class="row"><div class="l"><span data-i18n="adf.auth"></span><div class="d" data-i18n="adf.authDesc"></div></div><div class="seg" data-seg="connectors.adf.auth"><button data-v="az" data-i18n="adf.authAz"></button><button data-v="sp" data-i18n="adf.authSp"></button></div></div>
+      <div class="row adf-sp"><div class="l"><span data-i18n="adf.tenant"></span><div class="d" data-i18n="adf.tenantDesc"></div></div><input type="text" data-k="connectors.adf.tenant" data-lazy style="width:270px"></div>
+      <div class="row adf-sp"><div class="l"><span data-i18n="conn.clientId"></span><div class="d" data-i18n="adf.clientIdDesc"></div></div><input type="text" data-k="connectors.adf.client_id" data-lazy style="width:270px"></div>
+      <div class="row adf-sp"><div class="l"><span data-i18n="adf.secret"></span><div class="d" id="adf-secret-desc"></div></div><input type="password" id="adf-secret" autocomplete="off" style="width:270px"></div>
+      <div class="row"><div class="l" data-i18n="adf.subscription"></div><input type="text" data-k="connectors.adf.subscription" data-lazy data-i18n-placeholder="adf.subscriptionPh" style="width:270px"></div>
+      <div class="row"><div class="l" data-i18n="adf.resourceGroup"></div><input type="text" data-k="connectors.adf.resource_group" data-lazy data-i18n-placeholder="adf.resourceGroupPh" style="width:270px"></div>
+      <div class="row"><div class="l" data-i18n="adf.factory"></div><input type="text" data-k="connectors.adf.factory" data-lazy data-i18n-placeholder="adf.factoryPh" style="width:270px"></div>
+      <div class="row"><div class="l"><span data-i18n="adf.pipelines"></span><div class="d" data-i18n="adf.pipelinesDesc"></div></div><input type="text" data-k="connectors.adf.pipelines" data-lazy data-i18n-placeholder="adf.pipelinesPh" style="width:270px"></div>
+      <details class="howto"><summary data-i18n="conn.howTo"></summary><div class="note guide" data-i18n-html="adf.guideHtml"></div></details>
+    </div>
+  </div>
+  <div class="panel conn" data-conn="sql">
+    <div class="row head" role="button" tabindex="0" aria-expanded="false"><div class="ico">🗄️</div><div class="l"><span data-i18n="sql.heading"></span><div class="d" id="sql-desc"></div></div><span class="badge" id="sql-badge"></span><button class="btn" id="sql-refresh" data-i18n="conn.refresh"></button><label class="sw"><input type="checkbox" data-k="connectors.sql.enabled"><span></span></label><i class="chev" aria-hidden="true"></i></div>
+    <div class="body">
+      <div id="sql-list"></div>
+      <div class="row"><div class="l"></div><button class="btn" id="sql-add" data-i18n="sql.add"></button></div>
+      <details class="howto"><summary data-i18n="conn.howTo"></summary><div class="note guide" data-i18n-html="sql.guideHtml"></div></details>
+    </div>
+  </div>
 </section>
 
 <section class="page" id="p-alerts">
@@ -496,6 +530,7 @@ function bind(){
   }));
   $('accents').addEventListener('click', e => { const i = e.target.closest('i'); if (i) save('accent', i.dataset.c); });
   $('center').onclick = () => save('offset', 0.5);
+  $('lang-sel').onchange = e => save('language', e.target.value);
   $('mon-sel').onchange = async e => { await api().set_monitor(e.target.value); load(); };
   $('m365-btn').onclick = async () => { if (D.connectors.m365.status === 'ok') await api().connector_logout('m365'); else await api().connector_login('m365'); load(); };
   $('agents-list').innerHTML = AGENTS.map(([a, i, name]) => `<div class="row"><div class="ico">${i}</div><div class="l">${name}<div class="d" id="${a}-desc"></div></div><span class="badge" id="${a}-badge"></span><button class="btn" id="${a}-btn"></button></div>`).join('');
@@ -537,6 +572,12 @@ function bind(){
     sqlWidgets = sqlWidgets.filter(w => w.id !== b.dataset.del); drawSql(); saveSql();
   });
   $('adf-refresh').onclick = async () => { await api().connector_refresh('adf'); setTimeout(load, 1500); };
+  for (const cid of ['outlook', 'ics']) $(cid + '-refresh').onclick = async () => { await api().connector_refresh(cid); setTimeout(load, 2500); };
+  $('ics-url').addEventListener('change', async e => {
+    const v = e.target.value.trim(); e.target.value = '';
+    if (v){ await api().connector_secret('ics', v); setTimeout(load, 2500); }
+  });
+  $('ics-remove').onclick = async () => { await api().connector_secret('ics', ''); load(); };
   $('adf-secret').addEventListener('change', async e => {
     await api().connector_secret('adf', e.target.value); e.target.value = ''; load();
   });
@@ -552,6 +593,20 @@ function bind(){
   $('upd-btn').onclick = async () => { $('upd-btn').disabled = true; D.update = await api().check_updates(); renderUpdate(); load(); };
   $('upd-now').onclick = async () => { $('upd-now').disabled = true; await api().install_update(); setTimeout(load, 300); };
   $('upd-notes').onclick = () => api().open_release_notes();
+  // Connections: one collapsible card per service; the open ones are remembered
+  let openConn = [];
+  try { openConn = JSON.parse(localStorage.getItem('skerry.conn.open') || '[]'); } catch (e) {}
+  document.querySelectorAll('.conn').forEach(card => {
+    const head = card.querySelector('.head'), id = card.dataset.conn;
+    const set = open => {
+      card.classList.toggle('open', open); head.setAttribute('aria-expanded', String(open));
+      openConn = openConn.filter(x => x !== id).concat(open ? [id] : []);
+      try { localStorage.setItem('skerry.conn.open', JSON.stringify(openConn)); } catch (e) {}
+    };
+    set(openConn.includes(id));
+    head.addEventListener('click', e => { if (!e.target.closest('button,label,input,a,select')) set(!card.classList.contains('open')); });
+    head.addEventListener('keydown', e => { if ((e.keyCode === 13 || e.keyCode === 32) && e.target === head) { e.preventDefault(); set(!card.classList.contains('open')); } });
+  });
   let p = 'gen'; try { p = localStorage.getItem('skerry.page') || 'gen'; } catch (e) {}
   show(document.getElementById('p-' + p) ? p : 'gen');
 }
@@ -679,8 +734,8 @@ function renderConnector(cid, enabled, descKey){
   const c = D.connectors[cid] || {}, b = $(cid + '-badge'), d = $(cid + '-desc');
   const st = !enabled ? 'off' : !c.configured ? 'incomplete' : c.status;
   b.className = 'badge ' + (st === 'ok' ? 'ok' : st === 'error' ? 'err' : 'no');
-  b.textContent = t({off: 'status.off', incomplete: 'status.incomplete', ok: 'status.connected', error: 'status.error'}[st] || 'status.checking');
-  d.textContent = st === 'error' ? c.error : st === 'ok' && c.updated ? t('conn.updated', {time: I18N.time(c.updated)}) : t(descKey);
+  b.textContent = t({off: 'status.off', incomplete: 'status.incomplete', ok: 'status.connected', error: 'status.error', waiting: 'status.waiting'}[st] || 'status.checking');
+  d.textContent = (st === 'error' || st === 'waiting') && c.error ? c.error : st === 'ok' && c.updated ? t('conn.updated', {time: I18N.time(c.updated)}) : t(descKey);
   d.style.color = st === 'error' ? 'var(--red)' : '';
 }
 
@@ -700,6 +755,7 @@ async function load(){
     else if (document.activeElement !== el) el.value = Array.isArray(v) ? v.join(', ') : (v ?? '');
   });
   document.querySelectorAll('[data-seg]').forEach(seg => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', (get(s, seg.dataset.seg) ?? 'auto') === b.dataset.v)));
+  $('lang-sel').value = s.language || 'auto';
   document.querySelectorAll('#accents i').forEach(i => i.classList.toggle('on', i.dataset.c.toLowerCase() === String(s.accent).toLowerCase()));
   const badge = (id, st, avail) => { const b = $(id);
     b.className = 'badge ' + (st.installed ? 'ok' : 'no'); b.textContent = t(st.installed ? 'status.connected' : (avail === false ? 'status.notFound' : 'status.notConnected')); };
@@ -731,6 +787,10 @@ async function load(){
   $('google-desc').style.color = gc.status === 'error' ? 'var(--red)' : '';
   $('google-secret-desc').textContent = t(gc.has_secret ? 'adf.secretSaved' : 'adf.secretDesc');
   renderLayout();
+  renderConnector('outlook', s.connectors.outlook.enabled, 'conn.outlook.desc');
+  renderConnector('ics', s.connectors.ics.enabled, 'conn.ics.desc');
+  $('ics-url-desc').textContent = t(D.connectors.ics.has_secret ? 'conn.ics.urlSaved' : 'conn.ics.urlDesc');
+  $('ics-remove').hidden = !D.connectors.ics.has_secret;
   renderConnector('adf', s.connectors.adf.enabled, 'conn.adf.desc');
   renderConnector('sql', s.connectors.sql.enabled, 'conn.sql.desc');
   const saved = JSON.stringify(s.connectors.sql.widgets || []);

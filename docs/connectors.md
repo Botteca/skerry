@@ -2,6 +2,34 @@
 
 Setup guides for the optional connectors. Back to the [README](../README.md).
 
+## Outlook on this PC
+
+The quickest way: no sign-in, no setup. In **Settings → Connections → Outlook** turn the switch on. While classic
+Outlook for Windows is open, Skerry reads the next meeting of your default calendar through Outlook's own
+programming interface (COM), read-only, every 2 minutes, with its Teams, Meet or Zoom link. Nothing leaves your PC.
+
+- Skerry never starts Outlook: when Outlook is closed it waits and keeps the last meeting it saw.
+- The **new Outlook** for Windows has no such interface: turn off its *New Outlook* switch, or use a calendar link.
+- If Outlook asks whether to allow a program to access your data (older Outlook without an up-to-date antivirus),
+  choose *Allow*.
+
+## Calendar link (ICS)
+
+Works with Outlook on the web and Google Calendar, with no app registration. You paste the calendar's private
+address once; Skerry reads it every 5 minutes (recurring meetings included).
+
+1. Get the link:
+   - **Outlook on the web**: *Settings → Calendar → Shared calendars → Publish a calendar*, choose your calendar and
+     *Can view all details*, press *Publish* and copy the **ICS** link.
+   - **Google Calendar**: *Settings*, your calendar under *Settings for my calendars*, *Integrate calendar*, then copy
+     the **Secret address in iCal format**.
+2. In **Settings → Connections → Calendar link** paste it and turn the switch on.
+
+Anyone with the link can read your calendar, so Skerry treats it like a password: it is encrypted with Windows DPAPI
+in `%APPDATA%\Skerry\secrets\`, never written to `settings.json` and never shown again. Only `https://` (and
+`webcal://`, the same address) links are accepted. Some organisations turn calendar publishing off: then use Outlook
+or Microsoft 365.
+
 ## Microsoft 365
 
 Skerry can show your next Outlook/Teams meeting with a *Join* button. It uses Microsoft Graph, **read-only**, with a

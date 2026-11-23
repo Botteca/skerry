@@ -2,6 +2,36 @@
 
 Guide di configurazione dei connettori facoltativi. Torna al [README](../README.it.md).
 
+## Outlook su questo PC
+
+Il modo più rapido: niente accesso, niente configurazione. In **Impostazioni → Connessioni → Outlook** accendi
+l'interruttore. Quando Outlook classico per Windows è aperto, Skerry legge la prossima riunione del calendario
+predefinito tramite l'interfaccia di programmazione di Outlook (COM), in sola lettura, ogni 2 minuti, con il link di
+Teams, Meet o Zoom. Niente esce dal tuo PC.
+
+- Skerry non avvia mai Outlook: quando è chiuso aspetta e tiene l'ultima riunione vista.
+- Il **nuovo Outlook** per Windows non ha questa interfaccia: spegni l'interruttore *Nuovo Outlook* oppure usa il
+  link del calendario.
+- Se Outlook chiede se consentire a un programma l'accesso ai tuoi dati (versioni vecchie senza antivirus
+  aggiornato), scegli *Consenti*.
+
+## Link del calendario (ICS)
+
+Funziona con Outlook sul web e Google Calendar, senza registrare nessuna app. Incolli una volta l'indirizzo privato
+del calendario; Skerry lo legge ogni 5 minuti (riunioni ricorrenti comprese).
+
+1. Prendi il link:
+   - **Outlook sul web**: *Impostazioni → Calendario → Calendari condivisi → Pubblica un calendario*, scegli il tuo
+     calendario e *Può visualizzare tutti i dettagli*, premi *Pubblica* e copia il link **ICS**.
+   - **Google Calendar**: *Impostazioni*, il tuo calendario in *Impostazioni dei miei calendari*, *Integra
+     calendario*, poi copia l'**Indirizzo segreto in formato iCal**.
+2. In **Impostazioni → Connessioni → Link del calendario** incollalo e accendi l'interruttore.
+
+Chi ha il link può leggere il tuo calendario, quindi Skerry lo tratta come una password: è cifrato con DPAPI di
+Windows in `%APPDATA%\Skerry\secrets\`, mai scritto in `settings.json` e mai più mostrato. Sono accettati solo
+link `https://` (e `webcal://`, che è lo stesso indirizzo). Alcune aziende disattivano la pubblicazione dei
+calendari: in quel caso usa Outlook o Microsoft 365.
+
 ## Microsoft 365
 
 Skerry può mostrare la prossima riunione di Outlook/Teams con il pulsante *Entra*. Usa Microsoft Graph in **sola
