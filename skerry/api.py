@@ -11,6 +11,7 @@ log = logging.getLogger("skerry")
 
 SETTABLE = {
     "language", "theme", "accent", "hotkey", "autostart", "hide_fullscreen", "hide_from_capture", "permission_over_fullscreen",
+    "companion.style", "companion.energy",
     "permission_wait", "focus_terminal_after_decision", "edge", "offset", "updates", "update_url",
     "alerts.context", "alerts.limits", "alerts.battery_low", "alerts.bluetooth_low",
     "pomodoro.focus", "pomodoro.short_break", "pomodoro.long_break", "pomodoro.cycles",
@@ -47,7 +48,8 @@ class Api:
         snap["adf"] = a.connectors.adf.runs() if "adf" in shown else None
         snap["sql"] = a.connectors.sql.widgets() if "sql" in shown else None
         snap["shelf"] = a.shelf.items() if "shelf" in shown else []
-        snap["settings"] = {k: a.settings.get(k) for k in ("edge", "monitor", "theme", "accent", "modules", "alerts")}
+        snap["settings"] = {k: a.settings.get(k) for k in ("edge", "monitor", "theme", "accent", "modules", "alerts", "companion")}
+        snap["visible"] = bool(getattr(a.win, "visible", True))   # the companion stops its animations when hidden
         snap["onboarding"] = None if a.settings.get("first_run_done", True) else self._onboarding()
         snap["update"] = a.updater.visible_state()
         snap["version"] = VERSION

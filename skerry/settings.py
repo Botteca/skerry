@@ -14,6 +14,8 @@ DEFAULTS = {
     "language": "auto",       # auto (Windows display language) | en | it
     "theme": "dark",          # dark | light
     "accent": "#d97757",
+    # animated status indicator: off | dot (classic) | eyes; energy lively | calm. Never switched on by itself.
+    "companion": {"style": "dot", "energy": "lively"},
     "hotkey": "win+alt+i",
     "autostart": True,
     "hide_fullscreen": True,

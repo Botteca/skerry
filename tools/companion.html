@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<!-- Companion test page (driven by tools/companion.py; can also be opened by hand in Edge).
+     ?mode=sheet          every mood in the dark and light theme (the README sprite sheet)
+     ?mode=row&theme=x    one theme row of the sheet
+     ?mode=check          self-checks, result as JSON in <pre id="out">
+     ?mode=idle&style=x   one live island at rest, for the CPU measurement
+     ?style=puffin        any registered style (default eyes) -->
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>Skerry companion</title>
+<link rel="stylesheet" href="../ui/skerry.css">
+<style>
+  html,body{height:auto;overflow:visible}
+  body{padding:18px 22px;background:var(--bg)}
+  .row{display:flex;gap:14px}
+  .cell{display:flex;flex-direction:column;align-items:center;gap:8px;width:104px}
+  .face{width:104px;height:64px;border-radius:32px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line);
+    display:flex;align-items:center;justify-content:center}
+  .face .cmp{transform:scale(2.6)}
+  .cell span{font-size:11px;color:var(--muted)}
+  iframe{display:block;border:0;width:880px;height:124px}
+  .sheet{padding:0;background:#18181b}
+</style>
+</head>
+<body>
+<script src="../ui/companion.js"></script>
+<script>
+'use strict';
+const P = new URLSearchParams(location.search), MODE = P.get('mode') || 'sheet', STYLE = P.get('style') || 'eyes';
+const FREEZE_AT = {work: 2500, meet: 0};   // ms into each mood's loop for a still picture
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+if (MODE === 'sheet'){
+  document.body.className = 'sheet';
+  document.body.innerHTML = ['dark', 'light'].map(th => `<iframe src="?mode=row&theme=${th}&style=${STYLE}"></iframe>`).join('');
+}
+
+if (MODE === 'row'){
+  document.documentElement.dataset.theme = P.get('theme') || 'dark';
+  const row = document.createElement('div'); row.className = 'row';
+  for (const m of Companion.MOODS){
+    const cell = document.createElement('div'); cell.className = 'cell';
+    const face = document.createElement('div'); face.className = 'face';
+    const e = Companion.make(STYLE, m); face.appendChild(e);
+    const lab = document.createElement('span'); lab.textContent = m;
+    cell.append(face, lab); row.appendChild(cell);
+  }
+  document.body.appendChild(row);
+  // freeze the looping moods at a telling moment (the target is an SVG group inside the .cmp)
+  document.getAnimations().forEach(a => { const c = a.effect.target.closest('.cmp'); a.pause(); a.currentTime = FREEZE_AT[c.dataset.mood] || 0; });
+}
+
+// ---------------- self-checks ----------------
+function rgb(str){   // "rgb(r, g, b)" or "color(srgb r g b)" -> [r, g, b] 0..255
+  const n = str.match(/[\d.]+/g).map(Number);
+  return str.startsWith('color(') ? n.slice(0, 3).map(v => v * 255) : n.slice(0, 3);
+}
+function lum([r, g, b]){
+  const c = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * c(r) + 0.7152 * c(g) + 0.0722 * c(b);
+}
+const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+const infinite = () => document.getAnimations().filter(a => a.playState === 'running' && a.effect.getTiming().iterations === Infinity).length;
+const state = (extra) => ({now: Date.now() / 1000, sessions: [], pending: [], alerts: [], limits: null, meeting: null,
+  settings: {companion: {style: STYLE, energy: 'lively'}, alerts: {limits: [80, 90]}}, ...extra});
+
+async function check(){
+  const out = {style: STYLE, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches, contrast: {}, fails: []};
+  // 1. contrast of every mood colour against the island background, both themes (WCAG 1.4.11: >= 3 for graphics)
+  for (const th of ['dark', 'light']){
+    document.documentElement.dataset.theme = th;
+    const bg = rgb(getComputedStyle(document.body).backgroundColor);
+    for (const m of Companion.MOODS){
+      const e = Companion.make(STYLE, m); document.body.appendChild(e);
+      const r = Math.round(contrast(rgb(getComputedStyle(e).color), bg) * 100) / 100;
+      out.contrast[`${th}.${m}`] = r;
+      if (r < 3) out.fails.push(`contrast ${th}.${m} = ${r}`);
+      e.remove();
+    }
+  }
+  document.documentElement.dataset.theme = 'dark';
+  // 2. live companion: at rest nothing loops; at work something loops (unless reduced motion); hidden = all stopped
+  const root = document.createElement('div'); root.innerHTML = '<span class="cslot"></span>'; document.body.appendChild(root);
+  Companion.render(root, state(), true, 'rest'); await sleep(400);
+  out.rest = {infinite: infinite(), ...Companion.debug()};
+  if (out.rest.infinite) out.fails.push('animations loop at rest');
+  Companion.render(root, state({sessions: [{status: 'working'}]}), true, 'work'); await sleep(400);
+  out.work = {infinite: infinite(), ...Companion.debug()};
+  if (out.reduced ? out.work.infinite : !out.work.infinite) out.fails.push('work: unexpected looping state');
+  if (out.reduced && out.work.timer) out.fails.push('reduced motion: blink timer still scheduled');
+  Companion.render(root, state({sessions: [{status: 'working'}]}), false, 'work'); await sleep(400);
+  out.hidden = {infinite: infinite(), ...Companion.debug()};
+  if (out.hidden.infinite || out.hidden.timer) out.fails.push('animations or timers run while hidden');
+  Companion.render(root, state({pending: [{id: 1}]}), true, 'perm'); await sleep(400);
+  out.perm = Companion.debug();
+  if (out.perm.mood !== 'perm') out.fails.push('permission mood not shown');
+  // 3. the box never changes size, whatever the mood
+  const sizes = new Set();
+  for (const m of Companion.MOODS){ const e = Companion.make(STYLE, m); document.body.appendChild(e);
+    const r = e.getBoundingClientRect(); sizes.add(`${r.width}x${r.height}`); e.remove(); }
+  if (sizes.size !== 1) out.fails.push('size changes with the mood: ' + [...sizes]);
+  const pre = document.createElement('pre'); pre.id = 'out'; pre.textContent = JSON.stringify(out); document.body.appendChild(pre);
+}
+if (MODE === 'check') check();
+
+if (MODE === 'idle'){
+  const root = document.createElement('div'); root.className = 'bar';
+  root.innerHTML = STYLE === 'dot' ? '<span class="dot idle"></span><span class="sm">Skerry</span>' : '<span class="cslot"></span><span class="sm">Skerry</span>';
+  document.body.appendChild(root);
+  if (STYLE !== 'dot') Companion.render(root, state(), true, 'rest');
+}
+</script>
+</body>
+</html>

@@ -153,6 +153,18 @@ vengono mantenute):
   aggiornamenti, il comando della status line concatenata e i valori legati al PC, e scarta i widget SQL la cui
   query non è in sola lettura.
 
+### Compagno (facoltativo)
+
+**Impostazioni → Aspetto → Compagno** sostituisce il pallino di stato con due piccoli occhi animati (proposto anche
+nella configurazione guidata; non si attiva mai da solo). A riposo ammiccano, leggono mentre un agente lavora, si
+ingrandiscono e guardano i pulsanti quando c'è un permesso in attesa, sorridono quando un agente finisce, sono
+preoccupati per errori o limiti quasi raggiunti, guardano di lato prima di una riunione e si assopiscono dopo 10
+minuti di calma. Con il puntatore sopra l'isola lo seguono. *Vivacità* sceglie vivace o tranquillo; con gli effetti
+di animazione di Windows disattivati mantengono le espressioni ma non si muovono più da soli. Nulla si anima
+mentre l'isola è nascosta.
+
+![Stati del compagno, tema scuro e chiaro](docs/img/companion.png)
+
 ## Configurare Claude Code e Codex
 
 Skerry riceve gli eventi tramite gli **hook** degli agenti. Aggiunge le proprie voci e non tocca il resto;

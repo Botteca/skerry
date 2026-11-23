@@ -26,6 +26,10 @@ const GRANT_MINUTES = [5, 15, 60];   // same as skerry/store.py GRANT_MINUTES
 const glyph = (agent, spin) => `<span class="ag ${agent} ${spin ? 'spin' : ''}">${GLYPH[agent] || '✦'}</span>`;
 const mod = m => !S.settings.modules || S.settings.modules[m] !== false;
 const vertical = () => ['left','right'].includes(S.settings.edge);
+// Status indicator: the companion slot (ui/companion.js), the classic glyph/dot, or nothing in the closed pill when "off".
+const cstyle = () => (S.settings.companion || {}).style || 'dot';
+const lead = (classic, pill) => Companion.style(S) ? '<span class="cslot"></span>' : pill && cstyle() === 'off' ? '' : classic;
+const MOOD_KEY = {rest: 'cmp.rest', work: 'cmp.work', perm: 'cmp.perm', happy: 'cmp.happy', worry: 'cmp.worry', meet: 'cmp.meet', sleep: 'cmp.sleep'};
 
 function ring(p, size = 16, color, sw = 2.5){
   const r = size/2 - sw/2 - 0.5, c = 2*Math.PI*r, off = c*(1 - Math.min(100, Math.max(0, p))/100), h = size/2;
@@ -96,11 +100,11 @@ function vCompact(){
   if (m.type === 'agent'){
     const s = m.s, n = active().length, idx = active().indexOf(s), tk = s.tasks;
     const spin = s.status === 'working';
-    if (vert) return {...base, key:`va${s.sid}${s.status}${tk&&tk.done}${badgeKey()}`, html:`<div class="tab">${glyph(s.agent, spin)}
+    if (vert) return {...base, key:`va${s.sid}${s.status}${tk&&tk.done}${badgeKey()}`, html:`<div class="tab">${lead(glyph(s.agent, spin), true)}
       ${s.status === 'waiting' ? '<span class="dot waiting"></span>' : ''}
       ${tk ? `<div class="t">${tk.done}/${tk.total}</div>` : ''}${n > 1 ? `<div class="t">${idx+1}/${n}</div>` : ''}${b}</div>`};
     return {...base, key:`a${s.sid}${s.status}${s.action}${n}${idx}${tk&&[tk.done,tk.total]}${badgeKey()}`, html:`<div class="bar">
-      ${glyph(s.agent, spin)}<span>${esc(s.icon)}</span><span class="txt">${esc(s.action)}</span>
+      ${lead(glyph(s.agent, spin), true)}<span>${esc(s.icon)}</span><span class="txt">${esc(s.action)}</span>
       ${tk ? `<span class="chip on">☑ ${tk.done}/${tk.total}</span>` : ''}
       <span class="chip">${esc(s.project || AGENT[s.agent])}</span>${n > 1 ? `<span class="chip">${idx+1}/${n}</span>` : ''}
       ${s.status === 'waiting' ? '<span class="dot waiting"></span>' : ''}${b}</div>`};
@@ -122,8 +126,8 @@ function vCompact(){
   if (m.type === 'meeting'){
     const mt = m.m, mins = Math.max(1, Math.round((mt.start - S.now) / 60));
     const txt = mt.in_progress ? t('meeting.now') : t('meeting.inMinutes', {n: mins});
-    if (vert) return {...base, key:`vmt${mt.id}${mt.in_progress || mins}${badgeKey()}`, html:`<div class="tab"><span>📅</span><div class="t">${mt.in_progress ? '●' : mins + "'"}</div>${b}</div>`};
-    return {...base, key:`mt${mt.id}${mt.in_progress || mins}${badgeKey()}`, html:`<div class="bar"><span>📅</span>
+    if (vert) return {...base, key:`vmt${mt.id}${mt.in_progress || mins}${badgeKey()}`, html:`<div class="tab">${lead('<span>📅</span>')}<div class="t">${mt.in_progress ? '●' : mins + "'"}</div>${b}</div>`};
+    return {...base, key:`mt${mt.id}${mt.in_progress || mins}${badgeKey()}`, html:`<div class="bar">${lead('<span>📅</span>')}
       <span class="txt">${mt.title ? esc(mt.title) : tx('meeting.untitled')}</span><span class="chip on">${esc(txt)}</span>
       ${mt.join_url ? `<span class="chip act" data-act="join">${tx('meeting.join')}</span>` : ''}${b}</div>`};
   }
@@ -134,9 +138,9 @@ function vCompact(){
       <span class="sm" style="color:var(--red)">${bt.percent}%</span><span class="muted sm">${tx('pill.battery')}</span>${b}</div>`};
   }
   const lim = f && mod('claude') ? `${ring(f.used_percentage)}<span class="sm">${Math.round(f.used_percentage)}%</span><span class="muted xs">${tx('usage.fiveHourShort')}</span>` : '';
-  if (vert) return {...base, key:`vi${f&&Math.round(f.used_percentage)}${badgeKey()}`, html:`<div class="tab">${glyph('claude')}${f ? ring(f.used_percentage) : ''}${b}</div>`};
+  if (vert) return {...base, key:`vi${f&&Math.round(f.used_percentage)}${badgeKey()}`, html:`<div class="tab">${lead(glyph('claude'), true)}${f ? ring(f.used_percentage) : ''}${b}</div>`};
   return {...base, key:`i${f&&Math.round(f.used_percentage)}${badgeKey()}`,
-    html:`<div class="bar">${glyph('claude')}${lim || '<span class="muted sm">Skerry</span>'}${b}</div>`};
+    html:`<div class="bar">${lead(glyph('claude'), true)}${lim || '<span class="muted sm">Skerry</span>'}${b}</div>`};
 }
 
 // ---------------- cards ----------------
@@ -151,7 +155,7 @@ function vPermission(){
       <button class="b-deny" data-act="decide" data-arg="deny">${tx('perm.deny')}</button>
       <button data-act="decide" data-arg="terminal" title="${tx('perm.terminalTip')}">${tx('perm.terminal')}</button>`;
   return {w:480, r:26, key:'p'+p.id+more+menu, pid:p.id, html:`<div class="card">
-    <div class="hd">${glyph(p.agent)}<b>${esc(p.project || AGENT[p.agent])}</b><span class="muted">· ${tx('perm.asks', {agent: AGENT[p.agent]})}</span>
+    <div class="hd">${lead(glyph(p.agent))}<b>${esc(p.project || AGENT[p.agent])}</b><span class="muted">· ${tx('perm.asks', {agent: AGENT[p.agent]})}</span>
       <span class="sp"></span>${more ? `<span class="chip">+${more}</span>` : ''}</div>
     <div class="title">${esc(p.icon)} ${esc(p.text)}</div>
     ${p.detail && p.detail !== p.text ? `<div class="detail mono">${esc(p.detail)}</div>` : ''}
@@ -164,7 +168,7 @@ function vAlert(a){
 function vDone(s){
   const ok = s.status === 'done';
   return {w:440, r:24, key:'d'+s.sid+s.done_at, done:s.sid+s.done_at, html:`<div class="card" ${s.has_window ? `data-act="focus" data-arg="${esc(s.sid)}"` : ''}>
-    <div class="hd"><span class="dot ${s.status}"></span><b>${esc(s.project || AGENT[s.agent])}</b>
+    <div class="hd">${lead(`<span class="dot ${s.status}"></span>`)}<b>${esc(s.project || AGENT[s.agent])}</b>
       <span class="muted">· ${tx(ok ? 'done.finished' : 'done.stopped', {agent: AGENT[s.agent]})}</span></div>
     <div class="clamp2 ${ok ? '' : 'muted'}">${ok ? (s.done_msg ? esc(s.done_msg) : tx('done.default')) : esc(s.action)}</div></div>`};
 }
@@ -326,13 +330,14 @@ const SECTION = {
 
 function vExpanded(){
   const md = S.media, L = S.limits, sy = S.system || {}, au = S.audio, sess = S.sessions.slice(0, 4);
-  let h = '<div class="card">';
+  const cm = Companion.style(S) && Companion.moodNow(S);
+  let h = '<div class="card">' + (cm ? `<div class="hd chd"><span class="cslot"></span><span class="muted sm">${tx(MOOD_KEY[cm])}</span></div>` : '');
   for (const id of S.layout.sections) if (SECTION[id]) h += SECTION[id]();
   h += updateBar();
   h += `<div class="foot"><span>Skerry ${esc(S.version)}</span>
     <span class="sp"></span><span class="link" data-act="settings">⚙ ${tx('foot.settings')}</span></div></div>`;
   const u = S.update;
-  const key = 'x' + JSON.stringify([S.layout, md && [md.title, md.artist, md.playing, md.duration, thumbId, !!au, au && au.muted],
+  const key = 'x' + JSON.stringify([cm, S.layout, md && [md.title, md.artist, md.playing, md.duration, thumbId, !!au, au && au.muted],
     sess.map(s => [s.sid, s.status, s.action, s.tasks, s.context_pct, s.has_window]), L, S.statusline && S.statusline.seen, S.usage && [S.usage.h5, S.usage.d7, S.usage.days],
     Math.floor(S.now/30), sy, S.adf, S.sql, S.timer && [S.timer.label, S.timer.paused, S.timer.cycle], S.shelf, u && [u.status, u.version]]);
   return {w:480, r:28, key, html:h};
@@ -363,15 +368,17 @@ function vOnboarding(){
   } else {
     body = `<div class="otitle">${tx('onb.s3.title')}</div><ul class="otips">
       ${o.hotkey ? `<li>${tx('onb.tip.hotkey', {hotkey: I18N.html(`<kbd>${esc(hotkeyLabel(o.hotkey))}</kbd>`)})}</li>` : ''}
-      <li>${tx('onb.tip.click')}</li><li>${tx('onb.tip.settings')}</li></ul>`;
+      <li>${tx('onb.tip.click')}</li><li>${tx('onb.tip.settings')}</li></ul>
+      <div class="olabel">${tx('onb.companion')}</div><div class="opts">${
+        opt(cstyle() === 'dot', 'onb-cmp', 'dot', tx('look.cmpDot'))}${opt(cstyle() === 'eyes', 'onb-cmp', 'eyes', tx('look.cmpEyes'))}</div>`;
   }
   const dots = [0, 1, 2].map(i => `<i class="${i === step ? 'on' : ''}"></i>`).join('');
   const left = step < 2 ? `<span class="link" data-act="onb-skip">${tx('onb.skip')}</span>` : '';
   const back = step > 0 ? `<button class="b-ghost" data-act="onb-back">${tx('onb.back')}</button>` : '';
   const next = step < 2 ? `<button class="b-join" data-act="onb-next">${tx('onb.next')}</button>`
                         : `<button class="b-join" data-act="onb-done">${tx('onb.start')}</button>`;
-  return {w: 460, r: 26, key: 'onb' + step + JSON.stringify([o, S.settings.edge, S.settings.monitor]), html: `<div class="card onb">
-    <div class="hd">${glyph('claude')}<b>Skerry</b><span class="muted">· ${tx('onb.step', {n: step + 1})}</span><span class="sp"></span><span class="odots">${dots}</span></div>
+  return {w: 460, r: 26, key: 'onb' + step + JSON.stringify([o, S.settings.edge, S.settings.monitor, cstyle()]), html: `<div class="card onb">
+    <div class="hd">${lead(glyph('claude'))}<b>Skerry</b><span class="muted">· ${tx('onb.step', {n: step + 1})}</span><span class="sp"></span><span class="odots">${dots}</span></div>
     ${body}<div class="ofoot">${left}<span class="sp"></span>${back}${next}</div></div>`};
 }
 
@@ -410,7 +417,7 @@ function render(){
   document.documentElement.dataset.theme = S.settings.theme || 'dark';
   document.documentElement.style.setProperty('--accent', S.settings.accent || '#d97757');
   view = pick();
-  const key = `${S.settings.edge}|${S.settings.theme}|${I18N.lang}|${view.key}`;
+  const key = `${S.settings.edge}|${S.settings.theme}|${I18N.lang}|${cstyle()}|${view.key}`;
   const root = document.documentElement;
   root.dataset.edge = S.settings.edge || 'top';
   root.dataset.state = S.pending.length ? 'perm' : (shownAlerts().length ? 'alert' : '');
@@ -422,6 +429,8 @@ function render(){
     $c.innerHTML = `<div class="${fresh ? 'enter' : ''}">${view.html}</div>`;
   }
   live();
+  const cm = Companion.style(S) && Companion.moodNow(S);
+  Companion.render($c, S, S.visible !== false, cm ? t(MOOD_KEY[cm]) : '');
   const rect = $c.getBoundingClientRect();
   const w = view.auto ? Math.min(460, Math.max(96, Math.ceil(rect.width))) : view.w, h = Math.ceil(rect.height);
   const r = Math.min(view.r, h/2, w/2), size = `${w}x${h}x${r}`;
@@ -470,6 +479,7 @@ function act(name, arg, ev, el){
     case 'settings': return api.open_settings();
     case 'update': return api.install_update();
     case 'onb-edge': return api.set_setting('edge', arg).then(tick);
+    case 'onb-cmp': return api.set_setting('companion.style', arg).then(tick);
     case 'onb-mon': return api.set_monitor(arg).then(tick);
     case 'onb-connect': el.disabled = true; return api.agent_connect(arg, true).then(tick);
     case 'onb-next': onbStep = Math.min(2, onbStep + 1); return render();

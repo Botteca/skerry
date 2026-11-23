@@ -144,7 +144,7 @@ def pill_state(settings, store=None, **extra):
     snap.update({"media": None, "audio": {"volume": 0.55, "muted": False},
                  "system": {"mic": [], "cam": [], "battery": None, "bluetooth": []}, "usage": None, "timer": None,
                  "meeting": None, "shelf": [], "update": None, "version": VERSION, "lang": settings["language"],
-                 "settings": {k: settings[k] for k in ("edge", "theme", "accent", "modules", "alerts")}, "now": now,
+                 "settings": {k: settings[k] for k in ("edge", "theme", "accent", "modules", "alerts", "companion")}, "now": now,
                  "layout": island_layout.resolve(settings.get("layout")), "profile": "work"})
     snap.update(extra)
     if snap["media"]:
@@ -248,7 +248,7 @@ addEventListener('message', e => {
 
 def build(tmp, scene, name):
     ui = os.path.join(ROOT, "ui")
-    for f in ("skerry.css", "i18n.js", "skerry.js"):
+    for f in ("skerry.css", "i18n.js", "companion.js", "skerry.js"):
         shutil.copy(os.path.join(ui, f), tmp)
     if "settings" in scene:
         data, page = scene["settings"]

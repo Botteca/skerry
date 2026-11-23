@@ -38,11 +38,13 @@ Stack: Python 3.11+ (dev venv runs 3.13), pywebview on WinForms/WebView2, a loca
 | `skerry/timer.py`, `shelf.py`, `sounds.py`, `tray.py`, `autostart.py`, `terminal.py`, `paths.py`, `log.py` | Timer/Pomodoro, shelf, beeps, tray menu, HKCU Run key, terminal HWND lookup, paths, rotating log. |
 | `skerry/updater.py` | GitHub release check (startup + every 6 h, ETag), semver, `updates` = auto/notify/off. Auto: download, verify SHA-256 against `SHA256SUMS.txt`, install at a quiet moment (`SkerryApp._quiet_moment`) or on "Update now" via a hidden PowerShell that waits for Skerry to exit, runs the installer silently and restarts the old version if it fails. |
 | `ui/i18n.js` | UI dictionaries (en reference, it), `t()` / `tx()` (escaped, for `innerHTML`), plurals, locale date/time/number formatting, `I18N.apply()` for `data-i18n*` attributes. Loaded before `skerry.js` and the settings script. |
+| `ui/companion.js` | Optional companion (`companion.style` off/dot/eyes, `companion.energy`). `mood(S, quiet)` is pure (tested under Node in `tests/test_companion.py`); styles are added with `register(name, {w, h, svg, css, blink, glance})` and only touch their own CSS, so a new style (e.g. "puffin") needs nothing else. `render()` moves one live element into the view's `.cslot`; only transform/opacity animate, everything pauses when `S.visible` is false or with reduced motion. |
 | `ui/index.html`, `skerry.js`, `skerry.css` | The pill. Polls `get_state()` every 250 ms (which carries `lang`), picks a view, calls `resize(w,h,r)`. |
 | `ui/settings.html` | Settings window (inline script, same `js_api`). |
 | `build/` | `skerry.spec` (two exes: `Skerry.exe` windowed, `skerry-cli.exe` console), `installer.iss` (per user, AppMutex, silent updates), `version_info.txt` (template). |
 | `tools/release.py` | Version, tag check, CHANGELOG release notes, SHA256SUMS. Used by `build.bat` and `release.yml`. |
 | `demo.py` | Simulates Claude Code and Codex against a running Skerry (includes a permission request). |
+| `tools/companion.py` + `companion.html` | Companion self-checks in headless Edge (contrast >= 3:1 both themes, no loop at rest, nothing running when hidden or with reduced motion, fixed size), CPU at rest vs the dot, and the `docs/img/companion.png` sprite sheet. |
 | `tools/screenshots.py` | Regenerates `docs/img/` (en) and `docs/img/it/` from invented data with headless Edge. |
 
 ## Data flow

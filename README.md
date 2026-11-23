@@ -150,6 +150,17 @@ It creates `dist\Skerry\` (`Skerry.exe` and `skerry-cli.exe`), `dist\Skerry-Setu
   in it (they are not in `settings.json`); on import Skerry ignores the update source, the chained status-line
   command and per-PC values, and drops SQL widgets whose query is not read-only.
 
+### Companion (optional)
+
+**Settings → Appearance → Companion** swaps the status dot for two small animated eyes (also offered in the guided
+setup; never switched on by itself). They rest and blink, read while an agent works, grow and look down at the
+buttons when a permission waits, smile when an agent finishes, look worried on errors or near a usage limit, glance
+aside before a meeting and doze after 10 quiet minutes. With the pointer over the island they follow it.
+*Energy* chooses lively or calm; with Windows animation effects off they keep their expressions but stop moving on
+their own. Nothing animates while the island is hidden.
+
+![Companion moods, dark and light theme](docs/img/companion.png)
+
 ## Setting up Claude Code and Codex
 
 Skerry receives events through the agents' **hooks**. It adds its own entries and leaves everything else untouched;
