@@ -11,6 +11,8 @@
 
 <p align="center">
   <a href="https://github.com/fabrisimo/skerry/releases/latest"><img src="https://img.shields.io/badge/Download-Windows%20installer-d97757?style=for-the-badge&logo=windows&logoColor=white" alt="Download the Windows installer"></a>
+  &nbsp;
+  <a href="https://paypal.me/fabrisimo00"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-PayPal-0070ba?style=for-the-badge&logo=paypal&logoColor=white" alt="Buy me a coffee with PayPal"></a>
 </p>
 
 <p align="center">
