@@ -65,6 +65,9 @@ your next Microsoft 365 meeting. Everything runs locally.
   and Codex, the shortcut). You can skip it and show it again from *Settings → General*.
 - **Click** the pill to expand it; it collapses when the mouse leaves.
 - **Drag** it: it snaps to the nearest edge (top, bottom, left, right), on any monitor. On the side edges it becomes a vertical tab.
+- **Several screens**: *Settings → Appearance → Screen* keeps the island on the primary screen, on a specific one or on
+  the screen with the mouse pointer. It moves by itself when screens are connected, disconnected or docked, and keeps
+  the right size on screens with a different scale.
 - **Mouse wheel**: on music it changes the volume, on agents it cycles through sessions.
 - **`Win+Alt+I`** expands/collapses it from any app (configurable).
 - **Click a session** in the expanded view to bring its terminal or VS Code window to the front.

@@ -167,7 +167,7 @@ class TextCollector(html.parser.HTMLParser):
         if not self.in_body or any(t in ("script", "style") or tr for t, tr in self.stack):
             return
         text = data.strip()
-        if re.search(r"[A-Za-zÀ-ÿ]{2,}", text) and text not in BRANDS:
+        if re.search(r"[A-Za-zÀ-ÖØ-öø-ÿ]{2,}", text) and text not in BRANDS:
             self.texts.append(text)
 
 
@@ -249,7 +249,7 @@ def js_literals(src):
     return out
 
 
-WORD = r"[A-Za-zÀ-ÿ]{2,}"
+WORD = r"[A-Za-zÀ-ÖØ-öø-ÿ]{2,}"
 JS_ALLOWED = BRANDS | {"Files", "use strict"}   # "Files": DataTransfer type name
 
 
@@ -269,7 +269,7 @@ def visible_js_text(kind, text):
         return found
     if ("#" in plain or "[" in plain) and not re.search(r"[A-Z]", plain):
         return found                                       # CSS selector
-    if re.search(WORD + r"\s+" + WORD, plain) or re.search(r"[À-ÿ]", plain) or re.match(r"[A-Z][a-z]{2,}", plain):
+    if re.search(WORD + r"\s+" + WORD, plain) or re.search(r"[À-ÖØ-öø-ÿ]", plain) or re.match(r"[A-Z][a-z]{2,}", plain):
         found.append(plain)
     return found
 
@@ -302,7 +302,7 @@ LOG_METHODS = {"debug", "info", "warning", "error", "exception", "critical"}
 
 
 def prose(text):
-    return bool(re.search(WORD + r"\s+" + WORD, text) or re.search(r"[À-ÿ]", text)) and text not in PY_ALLOWED \
+    return bool(re.search(WORD + r"\s+" + WORD, text) or re.search(r"[À-ÖØ-öø-ÿ]", text)) and text not in PY_ALLOWED \
         and text not in BRANDS
 
 

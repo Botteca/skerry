@@ -9,7 +9,8 @@ from . import paths
 DEFAULTS = {
     "edge": "top",            # top | bottom | left | right
     "offset": 0.5,            # position along the edge (0..1)
-    "monitor": "",            # monitor device name ("" = primary)
+    "monitor": "",            # "" = primary screen, "mouse" = screen with the pointer, else a device name
+    "monitor_id": "",         # stable id of the chosen screen (survives docking / device renumbering)
     "language": "auto",       # auto (Windows display language) | en | it
     "theme": "dark",          # dark | light
     "accent": "#d97757",

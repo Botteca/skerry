@@ -133,6 +133,9 @@
       </div>
     </div>
   </div>
+  <div class="panel" style="margin-top:12px">
+    <div class="row"><div class="ico">🖥️</div><div class="l"><span data-i18n="look.screen"></span><div class="d" data-i18n="look.screenDesc"></div></div><select id="mon-sel" style="max-width:300px"></select></div>
+  </div>
   <h2 data-i18n="look.themeSection"></h2>
   <div class="panel">
     <div class="row"><div class="l" data-i18n="look.theme"></div><div class="seg" data-seg="theme"><button data-v="dark" data-i18n="look.dark"></button><button data-v="light" data-i18n="look.light"></button></div></div>
@@ -269,6 +272,7 @@ function bind(){
   }));
   $('accents').addEventListener('click', e => { const i = e.target.closest('i'); if (i) save('accent', i.dataset.c); });
   $('center').onclick = () => save('offset', 0.5);
+  $('mon-sel').onchange = async e => { await api().set_monitor(e.target.value); load(); };
   $('m365-btn').onclick = async () => { if (D.connectors.m365.status === 'ok') await api().connector_logout('m365'); else await api().connector_login('m365'); load(); };
   $('cl-btn').onclick = () => connect('claude');
   $('cx-btn').onclick = () => connect('codex');
@@ -290,6 +294,17 @@ function bind(){
 }
 
 const UPD_BUSY = ['checking', 'downloading', 'installing'];
+function renderMonitors(){
+  const sel = $('mon-sel'), cur = D.settings.monitor || '';
+  const opts = [['', t('mon.primary')], ['mouse', t('mon.mouse')]];
+  D.monitors.forEach((m, i) => opts.push([m.device, `${m.name || t('mon.screenN', {n: i + 1})} · ${m.width}×${m.height} · ${Math.round(m.scale * 100)}%`
+    + (m.primary ? ` · ${t('onb.primary')}` : '')]));
+  if (cur && cur !== 'mouse' && !D.monitors.some(m => m.device === cur)) opts.push([cur, t('mon.missing', {name: cur})]);
+  sel.innerHTML = '';
+  for (const [v, label] of opts){ const o = document.createElement('option'); o.value = v; o.textContent = label; sel.appendChild(o); }
+  sel.value = cur;
+}
+
 function renderUpdate(){
   const u = D.update || {}, v = {version: u.version, error: u.error};
   $('upd-msg').textContent = t('upd.status.' + (u.status || 'idle'), v);
@@ -355,6 +370,7 @@ async function load(){
   $('m365-desc').textContent = mc.status === 'error' && mc.error ? mc.error : t('conn.m365Desc');
   $('m365-desc').style.color = mc.status === 'error' ? 'var(--red)' : '';
   renderUpdate();
+  renderMonitors();
   // refresh while something is in progress (Microsoft sign-in, update check or download)
   const busy = mc.status === 'signing_in' || UPD_BUSY.includes((D.update || {}).status);
   if (busy && !window.__poll) window.__poll = setInterval(load, 1500);

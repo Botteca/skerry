@@ -277,7 +277,8 @@ function vOnboarding(){
     const edges = Object.entries(EDGE_KEYS).map(([e, k]) => opt(S.settings.edge === e, 'onb-edge', e, tx(k))).join('');
     const mon = S.settings.monitor || '';
     const screens = o.monitors.length > 1 ? `<div class="olabel">${tx('onb.screen')}</div><div class="opts">${o.monitors.map(m =>
-      opt(mon === m.value, 'onb-mon', m.value, tx('onb.screenN', {n: m.index, w: m.width, h: m.height}) + (m.primary ? ` · ${tx('onb.primary')}` : ''))).join('')}</div>` : '';
+      opt(mon === m.value, 'onb-mon', m.value, tx('onb.screenN', {n: m.index, w: m.width, h: m.height}) + (m.primary ? ` · ${tx('onb.primary')}` : ''))).join('')}${
+      opt(mon === 'mouse', 'onb-mon', 'mouse', tx('onb.mouse'))}</div>` : '';
     body = `<div class="otitle">${tx('onb.s1.title')}</div><div class="muted sm">${tx('onb.s1.text')}</div><div class="opts">${edges}</div>${screens}`;
   } else if (step === 1){
     const row = (agent, name, st) => `<div class="oagent">${glyph(agent)}<b>${name}</b><span class="sp"></span>${
@@ -393,7 +394,7 @@ function act(name, arg, ev, el){
     case 'settings': return api.open_settings();
     case 'update': return api.install_update();
     case 'onb-edge': return api.set_setting('edge', arg).then(tick);
-    case 'onb-mon': return api.set_setting('monitor', arg).then(tick);
+    case 'onb-mon': return api.set_monitor(arg).then(tick);
     case 'onb-connect': el.disabled = true; return (arg === 'codex' ? api.codex_connect(true) : api.claude_connect(true)).then(tick);
     case 'onb-next': onbStep = Math.min(2, onbStep + 1); return render();
     case 'onb-back': onbStep = Math.max(0, onbStep - 1); return render();

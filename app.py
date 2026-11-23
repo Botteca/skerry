@@ -13,7 +13,7 @@ import threading
 import time
 import urllib.request
 
-from skerry import APP_ID, APP_NAME, VERSION, autostart, i18n, log as logsetup, paths, win32
+from skerry import APP_ID, APP_NAME, VERSION, autostart, displays, i18n, log as logsetup, paths, win32
 from skerry.i18n import Msg
 
 TITLE = "Skerry overlay"   # internal title: deliberately not just "Skerry" (an Explorer folder could match FindWindow)
@@ -144,6 +144,7 @@ class SkerryApp:
         self.tray.start()
         self._start_hotkey()
         threading.Thread(target=self._guard_loop, daemon=True, name="guard").start()
+        threading.Thread(target=self._display_loop, daemon=True, name="displays").start()
         self.updater.start()
 
     def _on_shown(self):
@@ -218,6 +219,62 @@ class SkerryApp:
             tick += 1
             time.sleep(1)
 
+    @staticmethod
+    def _layout(mons):
+        return [(displays.key(m), m["device"], m["primary"], tuple(m["monitor"]), tuple(m["work"]), m.get("dpi"))
+                for m in mons]
+
+    def _display_loop(self):
+        """Screens: follow the mouse (monitor = "mouse"), react to screens connected/disconnected, docking, resolution
+        and DPI changes, bring the island back if it ended up off-screen, and log every edge case."""
+        prev, last_scan, pending, last_reason = None, 0.0, "", None
+        while not self._quitting:
+            try:
+                now = time.time()
+                if now - last_scan >= 1.0:
+                    last_scan = now
+                    mons = win32.monitors()
+                    if prev is None:
+                        self.log.info("Displays at start (DPI awareness %s): %s", win32.dpi_awareness(),
+                                      "; ".join(displays.label(m) for m in mons) or "none")
+                        self.win.displays = mons
+                    elif self._layout(mons) != self._layout(prev):
+                        for msg in displays.changes(prev, mons):
+                            self.log.info("Displays: %s", msg)
+                        self.win.displays = mons
+                        self.win.replace()
+                        # second pass once Windows has applied the new resolution / DPI to the window
+                        threading.Timer(0.5, self.win.replace).start()
+                    prev = mons
+                    mon, reason = self.win.target()
+                    if reason != last_reason:
+                        if reason == "missing":
+                            self.log.warning("Chosen screen %s is not connected: using the primary screen until it "
+                                             "comes back", self.settings.get("monitor"))
+                        elif last_reason == "missing" and reason == "chosen":
+                            self.log.info("Chosen screen %s is back: moving the island there", displays.label(mon))
+                            self.win.replace()
+                        last_reason = reason
+                    rect = win32.window_rect(self.win.handle())
+                    if rect and mons and self.win.visible and not self.win.dragging \
+                            and not displays.visible_on_any(rect, mons):
+                        self.log.warning("Island was off-screen at %s: moved back", rect)
+                        self.win.replace()
+                if self.settings.get("monitor") == displays.MOUSE:
+                    dev = win32.cursor_device()
+                    if dev and dev != self.win.cursor_device:
+                        if pending == dev:              # still there after a poll: really moved, not just passing
+                            self.log.info("Following the mouse to %s", dev)
+                            self.win.cursor_device, pending = dev, ""
+                            self.win.replace()
+                        else:
+                            pending = dev
+                    else:
+                        pending = ""
+            except Exception:
+                self.log.exception("display loop")
+            time.sleep(0.25)
+
     def _quiet_moment(self):
         """Good time to restart for an update: no permission waiting and nothing fullscreen (presentations, video)."""
         return not self.store.has_pending() and not win32.is_fullscreen({self.win.handle()})
@@ -246,8 +303,13 @@ class SkerryApp:
     def toggle_autostart(self):
         self.settings.set("autostart", not autostart.is_enabled())
 
-    def on_snapped(self, edge, offset, monitor):
-        self.settings.update({"edge": edge, "offset": offset, "monitor": monitor})
+    def on_snapped(self, edge, offset, monitor, monitor_id=""):
+        values = {"edge": edge, "offset": offset}
+        if self.settings.get("monitor") == displays.MOUSE:
+            self.win.cursor_device = win32.cursor_device()      # keep following the mouse
+        else:
+            values.update(monitor=monitor, monitor_id=monitor_id if monitor else "")
+        self.settings.update(values)
         self.log.info("Island snapped to edge %s (%.2f) %s", edge, offset, monitor or "primary")
 
     def open_settings(self):
@@ -276,7 +338,10 @@ class SkerryApp:
             self.tray.refresh()
         elif key == "hotkey":
             self._start_hotkey()
-        elif key in ("edge", "offset", "monitor"):
+        elif key in ("edge", "offset", "monitor", "monitor_id"):
+            if key == "monitor":
+                self.win.cursor_device = win32.cursor_device()
+                self.log.info("Screen choice: %s", {"": "primary", displays.MOUSE: "follow the mouse"}.get(value, value))
             self.win.replace()
         elif key in ("updates", "update_url"):
             self.updater.wake()

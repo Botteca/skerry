@@ -20,7 +20,9 @@ Stack: Python 3.11+ (dev venv runs 3.13), pywebview on WinForms/WebView2, a loca
 | `skerry/store.py` | Thread-safe state: sessions, pending permissions (blocking `threading.Event`), tasks, alerts, rate limits. `snapshot()` is what the UI sees. |
 | `skerry/api.py` | `js_api` exposed to the UI as `window.pywebview.api.*`. `SETTABLE` whitelists settings the UI may write. |
 | `skerry/integrations.py` | Writes/removes our hooks in `~/.claude/settings.json` and `~/.codex/hooks.json` (backup first). Bump `HOOKS_VERSION` when the hook list changes. |
-| `skerry/win32.py` | ctypes: pill window (region, DWM, animation, drag/snap), fullscreen detection, focus, clipboard (CF_HDROP), single-instance mutex, global hotkey. |
+| `skerry/win32.py` | ctypes: pill window (region, DWM, animation, drag/snap), monitors (EnumDisplayMonitors, GetDpiForMonitor, EnumDisplayDevices for name + stable id), fullscreen detection, focus, clipboard (CF_HDROP, text), single-instance mutex, global hotkey. |
+| `skerry/displays.py` | Pure multi-monitor logic: `resolve()` (primary / mouse / chosen screen by stable id, fallback to primary), `changes()` (log lines for connect/disconnect/docking/DPI/taskbar), `geometry()`. Driven by `SkerryApp._display_loop` (1 s layout scan, 0.25 s mouse follow). |
+| `skerry/diagnostics.py` | "Copy diagnostics": report + `redact()` (user paths/name, Bluetooth names/addresses, emails). |
 | `skerry/settings.py` | `%APPDATA%\Skerry\settings.json`, `DEFAULTS` merged on load, dotted keys, change listeners. |
 | `skerry/i18n.py` | Python-side user text (tray, alerts, agent actions, errors) in en/it. `Msg` objects are rendered when the state is sent to the UI, so a language switch applies live. `language` setting: `auto` = Windows display language. |
 | `skerry/secrets.py` | DPAPI-encrypted secrets in `%APPDATA%\Skerry\secrets\*.bin`. |

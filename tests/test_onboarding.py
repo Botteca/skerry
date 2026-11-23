@@ -50,5 +50,5 @@ def test_finish_and_show_again(env):
 def test_the_ui_can_choose_edge_and_monitor(env):
     a, s = env["api"], env["settings"]
     assert a.set_setting("edge", "left") and s.get("edge") == "left"
-    assert a.set_setting("monitor", r"\\.\DISPLAY2") and s.get("monitor") == r"\\.\DISPLAY2"
+    assert a.set_monitor(r"\\.\DISPLAY2") and s.get("monitor") == r"\\.\DISPLAY2"
     assert a.set_setting("first_run_done", True) is False      # only through onboarding_finish()

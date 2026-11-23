@@ -4,13 +4,13 @@ import logging
 import os
 import time
 
-from . import VERSION, autostart, i18n, integrations, paths, win32
+from . import VERSION, autostart, displays, i18n, integrations, paths, win32
 
 log = logging.getLogger("skerry")
 
 SETTABLE = {
     "language", "theme", "accent", "hotkey", "autostart", "hide_fullscreen", "hide_from_capture", "permission_over_fullscreen",
-    "permission_wait", "focus_terminal_after_decision", "edge", "offset", "monitor", "updates", "update_url",
+    "permission_wait", "focus_terminal_after_decision", "edge", "offset", "updates", "update_url",
     "alerts.context", "alerts.limits", "alerts.battery_low", "alerts.bluetooth_low",
     "pomodoro.focus", "pomodoro.short_break", "pomodoro.long_break", "pomodoro.cycles",
     "connectors.m365.client_id", "connectors.m365.tenant", "connectors.m365.alert_minutes",
@@ -50,7 +50,7 @@ class Api:
         mons = win32.monitors()
         data = {"hotkey": s.get("hotkey", ""),
                 "monitors": [{"value": "" if m["primary"] else m["device"], "index": i + 1, "primary": m["primary"],
-                              "width": m["monitor"][2] - m["monitor"][0], "height": m["monitor"][3] - m["monitor"][1]}
+                              "width": displays.width(m), "height": displays.height(m)}
                              for i, m in enumerate(mons)],
                 "claude": integrations.claude_status(), "codex": integrations.codex_status()}
         self._onb_cache = (time.time(), data)
@@ -158,8 +158,27 @@ class Api:
         a = self._app
         return {"settings": a.settings.all(), "version": VERSION, "autostart": autostart.is_enabled(),
                 "claude": integrations.claude_status(), "codex": integrations.codex_status(),
-                "monitors": [m["device"] for m in win32.monitors()], "log_dir": paths.log_dir(),
+                "monitors": self._monitors(), "dpi_awareness": win32.dpi_awareness(), "log_dir": paths.log_dir(),
                 "update": a.updater.public_state(), "connectors": a.connectors.states(), "lang": i18n.current()}
+
+    @staticmethod
+    def _monitors():
+        return [{"device": m["device"], "id": m.get("id", ""), "name": m.get("name", ""), "primary": m["primary"],
+                 "width": displays.width(m), "height": displays.height(m), "scale": m.get("scale", 1.0)}
+                for m in win32.monitors()]
+
+    def set_monitor(self, value):
+        """Screen choice: "" (primary), "mouse" or a device name; the stable id is stored next to it."""
+        value = str(value or "")
+        monitor_id = ""
+        if value not in (displays.PRIMARY, displays.MOUSE):
+            m = displays.find(win32.monitors(), value)
+            if not m:
+                return False
+            monitor_id = m.get("id", "")
+        self._app.settings.update({"monitor": value, "monitor_id": monitor_id})
+        self._onb_cache = None
+        return True
 
     def set_setting(self, key, value):
         if key.startswith("modules.") or key.startswith("sounds.") or key in SETTABLE:

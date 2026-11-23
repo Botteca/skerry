@@ -5,6 +5,8 @@ import sys
 import threading
 import time
 
+from . import displays
+
 log = logging.getLogger("skerry")
 IS_WIN = sys.platform == "win32"
 
@@ -73,6 +75,14 @@ if IS_WIN:
     _sig(user32.EnumDisplayMonitors, wintypes.BOOL, wintypes.HDC, ctypes.c_void_p, MonitorEnumProc,
          wintypes.LPARAM)
 
+    class DISPLAY_DEVICEW(ctypes.Structure):
+        _fields_ = [("cb", wintypes.DWORD), ("DeviceName", wintypes.WCHAR * 32), ("DeviceString", wintypes.WCHAR * 128),
+                    ("StateFlags", wintypes.DWORD), ("DeviceID", wintypes.WCHAR * 128),
+                    ("DeviceKey", wintypes.WCHAR * 128)]
+
+    _sig(user32.EnumDisplayDevicesW, wintypes.BOOL, wintypes.LPCWSTR, wintypes.DWORD,
+         ctypes.POINTER(DISPLAY_DEVICEW), wintypes.DWORD)
+
 GWL_EXSTYLE = -20
 WS_EX_TOOLWINDOW, WS_EX_APPWINDOW = 0x80, 0x40000
 HWND_TOPMOST = -1
@@ -93,13 +103,27 @@ def monitor_dpi(hmon):
     return 96
 
 
+def _display_device(device):
+    """(friendly name, stable id) of the screen attached to a display device such as DISPLAY2.
+    The id is the monitor interface path: it follows the physical screen when device names are reassigned."""
+    try:
+        dd = DISPLAY_DEVICEW()
+        dd.cb = ctypes.sizeof(DISPLAY_DEVICEW)
+        if user32.EnumDisplayDevicesW(device, 0, ctypes.byref(dd), 1):   # EDD_GET_DEVICE_INTERFACE_NAME
+            return dd.DeviceString or "", dd.DeviceID or ""
+    except Exception:
+        log.debug("EnumDisplayDevices %s", device, exc_info=True)
+    return "", ""
+
+
 def _monitor_info(hmon):
     mi = MONITORINFOEXW()
     mi.cbSize = ctypes.sizeof(MONITORINFOEXW)
     user32.GetMonitorInfoW(hmon, ctypes.byref(mi))
     r, w = mi.rcMonitor, mi.rcWork
     dpi = monitor_dpi(hmon)
-    return {"device": mi.szDevice, "primary": bool(mi.dwFlags & 1),
+    name, mid = _display_device(mi.szDevice)
+    return {"device": mi.szDevice, "name": name, "id": mid, "primary": bool(mi.dwFlags & 1),
             "monitor": (r.left, r.top, r.right, r.bottom), "work": (w.left, w.top, w.right, w.bottom),
             "dpi": dpi, "scale": round(dpi / 96, 2)}
 
@@ -117,12 +141,38 @@ def monitors():
     return out
 
 
-def _find_monitor(device):
-    mons = monitors()
-    for m in mons:
-        if device and m["device"] == device:
-            return m
-    return next((m for m in mons if m["primary"]), mons[0] if mons else None)
+def window_rect(hwnd):
+    """(left, top, right, bottom) of a window, or None."""
+    if not IS_WIN or not hwnd:
+        return None
+    rc = RECT()
+    if not user32.GetWindowRect(hwnd, ctypes.byref(rc)):
+        return None
+    return rc.left, rc.top, rc.right, rc.bottom
+
+
+def cursor_device():
+    """Device name of the screen under the mouse pointer ("" if unknown)."""
+    if not IS_WIN:
+        return ""
+    pt = POINT()
+    if not user32.GetCursorPos(ctypes.byref(pt)):
+        return ""
+    mi = MONITORINFOEXW()
+    mi.cbSize = ctypes.sizeof(MONITORINFOEXW)
+    if not user32.GetMonitorInfoW(user32.MonitorFromPoint(pt, 2), ctypes.byref(mi)):
+        return ""
+    return mi.szDevice
+
+
+def dpi_awareness():
+    """'per-monitor', 'system' or 'unaware'. With 'system' Windows virtualises coordinates and DPI on screens whose
+    scale differs from the main one (it stretches the window), so every screen reports the system DPI."""
+    try:
+        ctx = user32.GetThreadDpiAwarenessContext()
+        return {0: "unaware", 1: "system", 2: "per-monitor"}.get(user32.GetAwarenessFromDpiAwarenessContext(ctx), "?")
+    except Exception:
+        return "?"
 
 
 # ---------------- pill window ----------------
@@ -155,6 +205,8 @@ class SkerryWindow:
         self.visible = True
         self._gen = 0
         self._lock = threading.Lock()
+        self.displays = []           # cached monitors() list, refreshed by the app's display loop
+        self.cursor_device = ""      # screen with the mouse (for monitor = "mouse")
 
     def handle(self):
         if IS_WIN and not self.hwnd:
@@ -175,7 +227,7 @@ class SkerryWindow:
             aware = user32.GetAwarenessFromDpiAwarenessContext(ctx)
         except Exception:
             aware = "?"
-        log.info("Finestra hwnd=%s dpi=%s awareness=%s", h, user32.GetDpiForWindow(h), aware)
+        log.info("Window hwnd=%s dpi=%s awareness=%s", h, user32.GetDpiForWindow(h), aware)
         self._apply(*self.cur, SWP_FRAMECHANGED)
         self.diag("setup")
 
@@ -231,32 +283,31 @@ class SkerryWindow:
                  tuple(round(v) for v in self.cur), rc.right - rc.left, rc.bottom - rc.top, rc.left, rc.top,
                  cc.right - cc.left, cc.bottom - cc.top)
 
+    def target(self):
+        """(monitor, reason) the island belongs to right now (see displays.resolve)."""
+        mons = self.displays or monitors()
+        return displays.resolve(mons, self.settings.get("monitor", ""), self.settings.get("monitor_id", ""),
+                                self.cursor_device)
+
     def _rect(self, w, h):
-        hwnd = self.handle()
-        scale = (user32.GetDpiForWindow(hwnd) or 96) / 96
-        W, H = round(w * scale), round(h * scale)
-        mon = _find_monitor(self.settings.get("monitor", ""))
-        L, T, R, B = mon["work"] if mon else (0, 0, 1920, 1080)
-        if mon and self.settings.get("edge") == "top":
-            T = mon["monitor"][1] if mon["work"][1] == mon["monitor"][1] else T
-        m = round(self.MARGIN * scale)
-        edge = self.settings.get("edge", "top")
-        off = min(0.98, max(0.02, float(self.settings.get("offset", 0.5))))
-        if edge in ("top", "bottom"):
-            x = round(L + off * (R - L) - W / 2)
-            x = max(L + m, min(R - W - m, x))
-            y = T + m if edge == "top" else B - H - m
-        else:
-            y = round(T + off * (B - T) - H / 2)
-            y = max(T + m, min(B - H - m, y))
-            x = L + m if edge == "left" else R - W - m
+        mon, _ = self.target()
+        if mon is None:
+            return None
+        # size from the target screen's DPI, not the window's: when the island moves to a screen with another
+        # scale it gets the right size at once (with system DPI awareness every screen reports the same DPI)
+        scale = (mon.get("dpi") or user32.GetDpiForWindow(self.handle()) or 96) / 96
+        x, y, W, H = displays.geometry(w, h, self.settings.get("edge", "top"), self.settings.get("offset", 0.5),
+                                       mon, scale, self.MARGIN)
         return x, y, W, H, scale
 
     def _apply(self, w, h, r, flags=0):
         hwnd = self.handle()
         if not hwnd or self.dragging:
             return
-        x, y, W, H, scale = self._rect(w, h)
+        rect = self._rect(w, h)
+        if rect is None:                 # no active screen: keep the window where it is
+            return
+        x, y, W, H, scale = rect
         d = max(2, round(2 * r * scale))
         # region first, then the window: no "square" corner ever shows during the animation
         user32.SetWindowRgn(hwnd, gdi32.CreateRoundRectRgn(0, 0, W + 1, H + 1, d, d), False)
@@ -347,7 +398,7 @@ class SkerryWindow:
                 offset = round(min(0.98, max(0.02, offset)), 4)
             finally:
                 self.dragging = False
-            on_done(edge, offset, "" if mon["primary"] else mon["device"])
+            on_done(edge, offset, "" if mon["primary"] else mon["device"], mon.get("id", ""))
             self._apply(*self.cur)
 
         threading.Thread(target=run, daemon=True, name="drag").start()

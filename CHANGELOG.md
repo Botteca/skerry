@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Multiple screens**: choose the primary screen, a specific one (remembered by a stable id, so docking and
+  renumbering don't lose it) or the screen with the mouse pointer. The island follows screens being connected,
+  disconnected or docked, sizes itself with the target screen's DPI, comes back if it ends up off-screen, and logs
+  every display change.
 - **Copy diagnostics** (Settings → About and logs): version, Windows, DPI, screens, enabled modules, connector
   and agent status and the last 80 log lines go to the clipboard, with user paths, Bluetooth device names and
   email addresses hidden.
