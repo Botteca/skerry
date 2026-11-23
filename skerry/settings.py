@@ -23,7 +23,7 @@ DEFAULTS = {
     "permission_wait": 300,
     "focus_terminal_after_decision": True,
     "modules": {
-        "claude": True, "codex": True, "media": True, "privacy": True,
+        "claude": True, "codex": True, "gemini": True, "copilot": True, "media": True, "privacy": True,
         "battery": True, "bluetooth": True, "timer": True, "shelf": True, "usage": True, "calendar": True,
     },
     "sounds": {"permission": True, "done": True, "alert": True, "timer": True},

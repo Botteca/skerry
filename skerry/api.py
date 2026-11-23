@@ -53,7 +53,7 @@ class Api:
                 "monitors": [{"value": "" if m["primary"] else m["device"], "index": i + 1, "primary": m["primary"],
                               "width": displays.width(m), "height": displays.height(m)}
                              for i, m in enumerate(mons)],
-                "claude": integrations.claude_status(), "codex": integrations.codex_status()}
+                **integrations.statuses()}
         self._onb_cache = (time.time(), data)
         return data
 
@@ -161,7 +161,7 @@ class Api:
     def get_settings(self):
         a = self._app
         return {"settings": a.settings.all(), "version": VERSION, "autostart": autostart.is_enabled(),
-                "claude": integrations.claude_status(), "codex": integrations.codex_status(),
+                **integrations.statuses(),
                 "monitors": self._monitors(), "dpi_awareness": win32.dpi_awareness(), "log_dir": paths.log_dir(),
                 "update": a.updater.public_state(), "connectors": a.connectors.states(), "lang": i18n.current()}
 
@@ -190,23 +190,44 @@ class Api:
             return True
         return False
 
-    def claude_connect(self, on):
+    def agent_connect(self, agent, on):
+        if agent not in integrations.AGENTS:
+            return {"ok": False, "error": str(agent)}
+        status, install, uninstall = integrations.functions(agent)
         try:
-            (integrations.claude_install if on else integrations.claude_uninstall)(self._app.settings)
+            (install if on else uninstall)(self._app.settings)
             self._onb_cache = None
-            return {"ok": True, **integrations.claude_status()}
+            return {"ok": True, **status()}
         except Exception as e:
-            log.exception("Connecting Claude Code")
+            log.exception("Connecting %s", agent)
             return {"ok": False, "error": str(e)}
 
-    def codex_connect(self, on):
+    # ---------- history (local files only) ----------
+    def history(self):
+        from . import history
         try:
-            (integrations.codex_install if on else integrations.codex_uninstall)(self._app.settings)
-            self._onb_cache = None
-            return {"ok": True, **integrations.codex_status()}
-        except Exception as e:
-            log.exception("Connecting Codex")
-            return {"ok": False, "error": str(e)}
+            return {"ok": True, "sessions": history.sessions()}
+        except Exception:
+            log.exception("Reading the session history")
+            return {"ok": False, "sessions": []}
+
+    def history_export(self):
+        """Save the last 30 days as CSV where the user chooses. Returns the path, or None if cancelled."""
+        import webview
+
+        from . import history
+        win = self._app.settings_window
+        if not win:
+            return None
+        name = f"skerry-history-{time.strftime('%Y-%m-%d')}.csv"
+        target = win.create_file_dialog(webview.SAVE_DIALOG, save_filename=name, file_types=("CSV (*.csv)",))
+        if not target:
+            return None
+        path = target if isinstance(target, str) else target[0]
+        with open(path, "w", encoding="utf-8-sig", newline="") as f:   # BOM: Excel reads accents correctly
+            f.write(history.to_csv(history.sessions()))
+        log.info("History exported (%s)", os.path.basename(path))
+        return path
 
     def check_updates(self):
         return self._app.updater.check(manual=True)

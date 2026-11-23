@@ -1,8 +1,9 @@
-"""CLI used by Claude Code and Codex (skerry-cli.exe in the package).
+"""CLI used by the coding agents (skerry-cli.exe in the package).
 
-  skerry-cli hook <claude|codex>   forward a hook event (JSON on stdin) to Skerry
+  skerry-cli hook <agent> [event]  forward a hook event (JSON on stdin) to Skerry
+                                   (agent: claude, codex, gemini, copilot; Copilot needs the event name)
   skerry-cli statusline            Claude Code status line (+ forwards the rate limits)
-  skerry-cli connect | disconnect  connect/disconnect Claude Code and Codex
+  skerry-cli connect | disconnect  connect/disconnect the agents
 """
 import json
 import subprocess
@@ -33,24 +34,28 @@ def _read_stdin():
         return "", {}
 
 
-def cmd_hook(agent):
-    s = load_raw()
-    _, payload = _read_stdin()
-    event = payload.get("hook_event_name", "")
-    if event == "SessionStart":
-        try:
-            from skerry.terminal import find_terminal_hwnd
-            payload["terminal_hwnd"] = find_terminal_hwnd()
-        except Exception:
-            pass
-    timeout = int(s.get("permission_wait", 300)) + 20 if event == "PermissionRequest" else 4
+def cmd_hook(agent, event=None):
+    """Always exits 0: Copilot CLI denies the tool when a preToolUse hook fails. Gemini CLI wants JSON on stdout."""
+    body = ""
     try:
-        body = _post(s["port"], f"/hook/{event}?agent={agent}", payload, timeout)
+        s = load_raw()
+        _, payload = _read_stdin()
+        event = payload.get("hook_event_name") or event or ""   # Copilot sends no event name: it comes from argv
+        if event in ("SessionStart", "sessionStart"):
+            try:
+                from skerry.terminal import find_terminal_hwnd
+                payload["terminal_hwnd"] = find_terminal_hwnd()
+            except Exception:
+                pass
+        permission = event in ("PermissionRequest", "permissionRequest")
+        timeout = int(s.get("permission_wait", 300)) + 20 if permission else 4
+        body = (_post(s["port"], f"/hook/{event}?agent={agent}", payload, timeout) or "").strip()
     except Exception:
-        return 0  # Skerry not running: no decision, the agent carries on normally
-    body = (body or "").strip()
+        pass  # Skerry not running: no decision, the agent carries on normally
     if body and body != "{}":
         print(body)
+    elif agent == "gemini":
+        print("{}")
     return 0
 
 
@@ -93,16 +98,17 @@ def cmd_connect(on):
         integrations.claude_install(st)
         if integrations.codex_status().get("available"):
             integrations.codex_install(st)
+        integrations.refresh_connected(st)
     else:
-        integrations.claude_uninstall(st)
-        integrations.codex_uninstall(st)
+        for agent in integrations.AGENTS:
+            integrations.functions(agent)[2](st)
     print("Fatto.")
     return 0
 
 
 def main(argv):
     if len(argv) >= 2 and argv[0] == "hook":
-        return cmd_hook(argv[1])
+        return cmd_hook(argv[1], argv[2] if len(argv) > 2 else None)
     if argv[:1] == ["statusline"]:
         return cmd_statusline()
     if argv[:1] in (["connect"], ["disconnect"]):

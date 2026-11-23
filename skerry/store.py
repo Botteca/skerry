@@ -8,6 +8,8 @@ import time
 import uuid
 from collections import OrderedDict
 
+from . import history
+from .agents import ACTIVITY_ONLY
 from .i18n import Msg, render, t
 
 log = logging.getLogger("skerry")
@@ -18,8 +20,15 @@ TOOL_ICONS = {
     "Grep": "🔎", "Glob": "🔎", "LS": "📁", "WebFetch": "🌐", "WebSearch": "🌐", "web_search": "🌐",
     "Task": "🤖", "Agent": "🤖", "TodoWrite": "☑️", "TaskCreate": "☑️", "TaskUpdate": "☑️",
     "update_plan": "☑️", "apply_patch": "✏️",
+    # Gemini CLI and Copilot CLI tool names
+    "run_shell_command": "⌨️", "bash": "⌨️", "powershell": "⌨️", "read_file": "👁", "read_many_files": "👁",
+    "view": "👁", "write_file": "📝", "create": "📝", "replace": "✏️", "edit": "✏️", "glob": "🔎",
+    "search_file_content": "🔎", "grep": "🔎", "google_web_search": "🌐", "web_fetch": "🌐",
 }
-AGENTS = {"claude": "Claude Code", "codex": "Codex"}
+AGENTS = {"claude": "Claude Code", "codex": "Codex", "gemini": "Gemini CLI", "copilot": "Copilot CLI"}
+FILE_TOOLS = {"Read": "action.read", "read_file": "action.read", "view": "action.read", "Write": "action.write",
+              "write_file": "action.write", "create": "action.write", "Edit": "action.edit",
+              "MultiEdit": "action.edit", "NotebookEdit": "action.edit", "replace": "action.edit", "edit": "action.edit"}
 
 # "Allow for N minutes": durations offered in the UI, and what such a rule never covers.
 GRANT_MINUTES = (5, 15, 60)
@@ -42,10 +51,9 @@ def describe(tool, inp):
     tool = tool or ""
     inp = inp if isinstance(inp, dict) else {"input": inp}
     icon = TOOL_ICONS.get(tool, "🔌" if tool.startswith("mcp__") else "⚙️")
-    fp = inp.get("file_path") or inp.get("notebook_path") or inp.get("path")
-    if tool in ("Read", "Edit", "MultiEdit", "Write", "NotebookEdit") and fp:
-        key = {"Read": "action.read", "Write": "action.write"}.get(tool, "action.edit")
-        return icon, Msg(key, file=os.path.basename(str(fp))), str(fp)
+    fp = inp.get("file_path") or inp.get("notebook_path") or inp.get("absolute_path") or inp.get("path")
+    if tool in FILE_TOOLS and fp:
+        return icon, Msg(FILE_TOOLS[tool], file=os.path.basename(str(fp))), str(fp)
     if tool == "apply_patch":
         return icon, Msg("action.patch"), short(inp.get("input") or inp.get("patch") or "", 400)
     cmd = inp.get("command") or inp.get("cmd")
@@ -159,7 +167,9 @@ class Store:
             if event == "SessionEnd":
                 sid = f"{agent}:{payload.get('session_id') or 'default'}"
                 self._cancel_pending_for(sid)
-                self._sessions.pop(sid, None)
+                ended = self._sessions.pop(sid, None)
+                if ended:
+                    self._record(ended)
                 return
             s = self._session(payload, agent)
             tool = payload.get("tool_name", "")
@@ -168,9 +178,11 @@ class Store:
                     s.update(status="idle", icon="", action="", _tasks={}, tasks=None)
                 if payload.get("model"):
                     s["model"] = str(payload["model"])
+                self._record(s)
             elif event == "UserPromptSubmit":
                 self._cancel_pending_for(s["sid"])
                 s.update(status="working", icon="✦", action=Msg("action.thinking"))
+                self._record(s)
             elif event == "PreToolUse":
                 icon, text, _ = describe(tool, payload.get("tool_input"))
                 s.update(status="working", icon=icon, action=text)
@@ -204,6 +216,9 @@ class Store:
                 has_pending = any(p["sid"] == s["sid"] for p in self._pending.values())
                 if ntype == "permission_prompt" and has_pending:
                     return
+                if ntype == "permission_prompt" and agent in ACTIVITY_ONLY:   # Skerry cannot answer it
+                    s.update(status="waiting", icon="⏳", action=Msg("action.terminal_permission"))
+                    return
                 if ntype in ("idle_prompt", "permission_prompt", "elicitation_dialog", "agent_needs_input"):
                     msg = payload.get("message")
                     s.update(status="waiting", icon="⏳", action=short(msg, 70) if msg else Msg("action.waiting"))
@@ -211,11 +226,18 @@ class Store:
                 self._cancel_pending_for(s["sid"])
                 s.update(status="done", icon="✓", action=Msg("action.done"), done_at=time.time(),
                          done_msg=short(payload.get("last_assistant_message", ""), 180))
+                self._record(s)
                 self._on_event("done")
             elif event == "StopFailure":
                 err = payload.get("error")
                 s.update(status="error", icon="✕", done_at=time.time(),
                          action=short(err, 70) if err else Msg("action.failed"))
+                self._record(s)
+
+    @staticmethod
+    def _record(s):
+        """A line in the local session history (Settings > History)."""
+        history.record(s["agent"], s["sid"].split(":", 1)[1], s["project"], s["cost"])
 
     def statusline(self, data):
         with self._lock:

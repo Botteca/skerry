@@ -92,7 +92,7 @@ def build(app):
     add("Modules", lambda: {k: v for k, v in (s.get("modules") or {}).items()})
     add("Settings", lambda: {k: s.get(k) for k in ("language", "theme", "updates", "hide_fullscreen",
                                                    "hide_from_capture", "permission_wait", "port", "hooks_version")})
-    add("Agents", lambda: {"claude": integrations.claude_status(), "codex": integrations.codex_status()})
+    add("Agents", integrations.statuses)
     add("Connectors", lambda: app.connectors.states())
     add("Updates", lambda: app.updater.public_state())
     add("System", lambda: {"battery": app.system.state.get("battery"),

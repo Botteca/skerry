@@ -1,4 +1,5 @@
-"""Connect/disconnect Claude Code (~/.claude/settings.json) and Codex (~/.codex/hooks.json)."""
+"""Connect/disconnect the agents: Claude Code (~/.claude/settings.json), Codex (~/.codex/hooks.json),
+Gemini CLI (~/.gemini/settings.json) and GitHub Copilot CLI (~/.copilot/hooks/skerry.json)."""
 import json
 import logging
 import os
@@ -14,6 +15,9 @@ HOME = os.path.expanduser("~")
 CLAUDE_SETTINGS = os.path.join(HOME, ".claude", "settings.json")
 CODEX_DIR = os.path.join(HOME, ".codex")
 CODEX_HOOKS = os.path.join(CODEX_DIR, "hooks.json")
+GEMINI_SETTINGS = os.path.join(HOME, ".gemini", "settings.json")
+COPILOT_DIR = os.environ.get("COPILOT_HOME") or os.path.join(HOME, ".copilot")
+COPILOT_HOOKS = os.path.join(COPILOT_DIR, "hooks", "skerry.json")   # our own file: disconnecting deletes it
 
 HOOKS_VERSION = 4  # bump when the hooks change: they are rewritten on the first run after an update
 OUR_URL = re.compile(r"^http://127\.0\.0\.1:\d+/hook/")
@@ -29,6 +33,13 @@ CLAUDE_EVENTS = {   # event -> timeout in seconds (None = permission_wait + 30)
 CLAUDE_SYNC = {"PermissionRequest"}
 CODEX_EVENTS = {"SessionStart": 10, "UserPromptSubmit": 10, "PreToolUse": 10, "PermissionRequest": None,
                 "Stop": 10, "SessionEnd": 10}
+# Gemini CLI waits for every hook (timeout in ms): activity only, so they are all short.
+GEMINI_EVENTS = ("SessionStart", "SessionEnd", "BeforeAgent", "BeforeTool", "AfterTool", "AfterAgent", "Notification")
+GEMINI_MATCHER = {"BeforeTool", "AfterTool"}
+COPILOT_EVENTS = {   # event -> timeoutSec (None = permission_wait + 30). On timeout Copilot asks the user as usual.
+    "sessionStart": 10, "sessionEnd": 10, "userPromptSubmitted": 10, "preToolUse": 10, "postToolUse": 10,
+    "postToolUseFailure": 10, "agentStop": 10, "errorOccurred": 10, "permissionRequest": None,
+}
 # Hook commands we own. "island-cli" was written by versions before the rename: still ours, so it gets stripped.
 CLI_MARKERS = ("skerry-cli", "island-cli", "cli.py")
 WITH_MATCHER = {"PreToolUse", "PostToolUse", "PostToolUseFailure", "PermissionRequest"}
@@ -176,3 +187,84 @@ def codex_uninstall(settings):
     _strip(data.get("hooks", {}), "codex")
     _write(CODEX_HOOKS, data)
     log.info("Codex disconnected")
+
+
+# ---------------- Gemini CLI ----------------
+def gemini_status():
+    available = bool(shutil.which("gemini")) or os.path.exists(GEMINI_SETTINGS)
+    try:
+        hooks = _read(GEMINI_SETTINGS).get("hooks", {})
+    except Exception as e:
+        return {"installed": False, "error": str(e), "available": available}
+    installed = any(_is_ours(g, "gemini") for groups in hooks.values() if isinstance(groups, list) for g in groups)
+    return {"installed": installed, "available": available}
+
+
+def gemini_install(settings):
+    data = _read(GEMINI_SETTINGS)
+    hooks = data.setdefault("hooks", {})
+    _strip(hooks, "gemini")
+    for ev in GEMINI_EVENTS:
+        group = {"hooks": [{"name": "skerry", "type": "command", "command": cli_command("hook", "gemini"),
+                            "timeout": 5000}]}
+        if ev in GEMINI_MATCHER:
+            group = {"matcher": "*", **group}
+        hooks.setdefault(ev, []).append(group)
+    _write(GEMINI_SETTINGS, data)
+    log.info("Gemini CLI connected")
+
+
+def gemini_uninstall(settings):
+    if not os.path.exists(GEMINI_SETTINGS):
+        return
+    data = _read(GEMINI_SETTINGS)
+    hooks = data.get("hooks", {})
+    _strip(hooks, "gemini")
+    if not hooks:
+        data.pop("hooks", None)
+    _write(GEMINI_SETTINGS, data)
+    log.info("Gemini CLI disconnected")
+
+
+# ---------------- GitHub Copilot CLI ----------------
+def copilot_status():
+    return {"installed": os.path.exists(COPILOT_HOOKS),
+            "available": bool(shutil.which("copilot")) or os.path.isdir(COPILOT_DIR)}
+
+
+def copilot_install(settings):
+    wait = int(settings.get("permission_wait", 300)) + 30
+    hooks = {}
+    for ev, timeout in COPILOT_EVENTS.items():
+        cmd = cli_command("hook", "copilot", ev)
+        hooks[ev] = [{"type": "command", "bash": cmd, "powershell": "& " + cmd, "timeoutSec": timeout or wait}]
+    _write(COPILOT_HOOKS, {"version": 1, "hooks": hooks})
+    log.info("GitHub Copilot CLI connected")
+
+
+def copilot_uninstall(settings):
+    if os.path.exists(COPILOT_HOOKS):
+        os.remove(COPILOT_HOOKS)
+    log.info("GitHub Copilot CLI disconnected")
+
+
+# ---------------- all agents ----------------
+AGENTS = ("claude", "codex", "gemini", "copilot")
+
+
+def functions(agent):
+    """(status, install, uninstall) of an agent, looked up at call time."""
+    g = globals()
+    return g[f"{agent}_status"], g[f"{agent}_install"], g[f"{agent}_uninstall"]
+
+
+def statuses():
+    return {a: functions(a)[0]() for a in AGENTS}
+
+
+def refresh_connected(settings):
+    """Rewrite the hooks of the opt-in agents that are already connected (after an update or a new wait time)."""
+    for agent in ("gemini", "copilot"):
+        status, install, _ = functions(agent)
+        if status().get("installed"):
+            install(settings)

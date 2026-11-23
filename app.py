@@ -136,6 +136,8 @@ class SkerryApp:
                 integrations.codex_install(self.settings)
             if cx.get("available") and cx.get("installed") and self.settings.get("hooks_version", 0) != integrations.HOOKS_VERSION:
                 integrations.codex_install(self.settings)
+            if self.settings.get("hooks_version", 0) != integrations.HOOKS_VERSION:
+                integrations.refresh_connected(self.settings)   # Gemini/Copilot: only if the user connected them
             self.settings.update({"auto_connect_done": True, "hooks_version": integrations.HOOKS_VERSION})
         except Exception:
             self.log.exception("Automatic agent connection failed")
@@ -295,6 +297,7 @@ class SkerryApp:
             integrations.claude_install(self.settings)
             if integrations.codex_status().get("available"):
                 integrations.codex_install(self.settings)
+            integrations.refresh_connected(self.settings)
             self.store.alert("info", "🔗", Msg("alert.reconnected"), sound=False)
         except Exception:
             self.log.exception("Reconnecting agents")

@@ -86,6 +86,8 @@
   @media (max-width:760px){aside{width:64px;padding:16px 8px}.brand div,nav button span,.foot{display:none}.brand{padding:0 0 16px;justify-content:center}.logo{display:none}nav button{justify-content:center;padding:10px}nav button.on::before{left:-8px}}
   body:not(.ready){visibility:hidden}  /* until the first load() applies the language */
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  .hproj{cursor:pointer} .hsess .row{gap:12px;padding:7px 16px 7px 58px;min-height:0;font-size:12px;color:var(--muted)}
+  .hsess .row b{color:var(--fg);font-weight:500}
 </style>
 </head>
 <body>
@@ -95,6 +97,7 @@
     <button data-p="gen"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span data-i18n="nav.general"></span></button>
     <button data-p="look"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 2 2 0 0 0 2-2c0-.6-.3-1-.5-1.4-.3-.4-.5-.8-.5-1.3a2 2 0 0 1 2-2h2.3A3.7 3.7 0 0 0 21 10.6C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r=".6"/><circle cx="10" cy="7" r=".6"/><circle cx="15" cy="7" r=".6"/></svg><span data-i18n="nav.look"></span></button>
     <button data-p="agents"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg><span data-i18n="nav.agents"></span></button>
+    <button data-p="hist"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span data-i18n="nav.history"></span></button>
     <button data-p="mods"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg><span data-i18n="nav.modules"></span></button>
     <button data-p="conn"><svg viewBox="0 0 24 24"><path d="M9 7V3m6 4V3M7 7h10v4a5 5 0 0 1-10 0z"/><path d="M12 16v5"/></svg><span data-i18n="nav.connections"></span></button>
     <button data-p="alerts"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span data-i18n="nav.alerts"></span></button>
@@ -146,8 +149,7 @@
 <section class="page" id="p-agents">
   <h1 data-i18n="agents.title"></h1><div class="sub" data-i18n="agents.sub"></div>
   <div class="panel">
-    <div class="row"><div class="ico">✦</div><div class="l">Claude Code<div class="d" data-i18n="agents.claudeDesc"></div></div><span class="badge" id="cl-badge"></span><button class="btn" id="cl-btn"></button></div>
-    <div class="row"><div class="ico">◎</div><div class="l">Codex<div class="d" id="cx-desc"></div></div><span class="badge" id="cx-badge"></span><button class="btn" id="cx-btn"></button></div>
+    <div id="agents-list"></div>
     <div class="note" id="cx-note" data-i18n-html="agents.codexNoteHtml" hidden></div>
   </div>
   <h2 data-i18n="agents.permissions"></h2>
@@ -155,6 +157,14 @@
     <div class="row"><div class="l"><span data-i18n="agents.wait"></span><div class="d" data-i18n="agents.waitDesc"></div></div><input type="number" min="30" max="1800" data-k="permission_wait" data-num data-lazy></div>
     <div class="row"><div class="l"><span data-i18n="agents.focus"></span><div class="d" data-i18n="agents.focusDesc"></div></div><label class="sw"><input type="checkbox" data-k="focus_terminal_after_decision"><span></span></label></div>
   </div>
+</section>
+
+<section class="page" id="p-hist">
+  <h1 data-i18n="hist.title"></h1><div class="sub" data-i18n="hist.sub"></div>
+  <div class="panel">
+    <div class="row"><div class="l"><span id="hist-sum"></span><div class="d" data-i18n="hist.note"></div><div class="d" id="hist-msg"></div></div><button class="btn" id="hist-csv" data-i18n="hist.export"></button></div>
+  </div>
+  <div class="panel" id="hist-list"></div>
 </section>
 
 <section class="page" id="p-mods">
@@ -231,9 +241,15 @@
 <script>
 // [key, icon, name (literal for product names, or a translation key), description key]
 const MODULES = [
-  ['claude', '✦', 'Claude Code'], ['codex', '◎', 'Codex'], ['media', '🎵'], ['privacy', '🎙️'], ['battery', '🔋'],
+  ['claude', '✦', 'Claude Code'], ['codex', '◎', 'Codex'], ['gemini', '✧', 'Gemini CLI'], ['copilot', '⬢', 'Copilot CLI'], ['media', '🎵'], ['privacy', '🎙️'], ['battery', '🔋'],
   ['bluetooth', '🎧'], ['usage', '📊'], ['timer', '⏱️'], ['calendar', '📅'], ['shelf', '📎'],
 ];
+// [agent, icon, product name, description key]
+const AGENTS = [
+  ['claude', '✦', 'Claude Code', 'agents.claudeDesc'], ['codex', '◎', 'Codex', 'agents.codexDesc'],
+  ['gemini', '✧', 'Gemini CLI', 'agents.geminiDesc'], ['copilot', '⬢', 'GitHub Copilot CLI', 'agents.copilotDesc'],
+];
+const ICON = Object.fromEntries(AGENTS.map(([a, i]) => [a, i]));
 const ACCENTS = ['#d97757','#0a84ff','#30d158','#bf5af2','#ff9f0a','#ff375f','#64d2ff'];
 let D = null;
 const api = () => window.pywebview.api;
@@ -243,6 +259,7 @@ const $ = id => document.getElementById(id);
 function save(k, v){ api().set_setting(k, v).then(() => { setTimeout(load, 120); }); }
 
 function show(p){
+  if (p === 'hist') loadHistory();
   document.querySelectorAll('.page').forEach(s => s.classList.toggle('on', s.id === 'p-' + p));
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.p === p));
   $('main').scrollTop = 0;
@@ -274,8 +291,12 @@ function bind(){
   $('center').onclick = () => save('offset', 0.5);
   $('mon-sel').onchange = async e => { await api().set_monitor(e.target.value); load(); };
   $('m365-btn').onclick = async () => { if (D.connectors.m365.status === 'ok') await api().connector_logout('m365'); else await api().connector_login('m365'); load(); };
-  $('cl-btn').onclick = () => connect('claude');
-  $('cx-btn').onclick = () => connect('codex');
+  $('agents-list').innerHTML = AGENTS.map(([a, i, name]) => `<div class="row"><div class="ico">${i}</div><div class="l">${name}<div class="d" id="${a}-desc"></div></div><span class="badge" id="${a}-badge"></span><button class="btn" id="${a}-btn"></button></div>`).join('');
+  AGENTS.forEach(([a]) => $(a + '-btn').onclick = () => connect(a));
+  $('hist-csv').onclick = async () => {
+    const path = await api().history_export();
+    if (path) $('hist-msg').textContent = t('hist.exported', {path});
+  };
   $('logs').onclick = () => api().open_logs();
   $('onb-btn').onclick = () => api().onboarding_restart();
   $('diag-btn').onclick = async () => {
@@ -320,17 +341,48 @@ function renderUpdate(){
 }
 
 async function connect(agent){
-  const st = D[agent], btn = $(agent === 'claude' ? 'cl-btn' : 'cx-btn');
+  const st = D[agent], btn = $(agent + '-btn');
   btn.disabled = true;
-  const r = await (agent === 'claude' ? api().claude_connect(!st.installed) : api().codex_connect(!st.installed));
+  const r = await api().agent_connect(agent, !st.installed);
   btn.disabled = false;
   if (!r.ok) alert(t('err.operation', {error: r.error}));
   if (agent === 'codex' && r.ok && r.installed) $('cx-note').hidden = false;
   load();
 }
 async function relink(){
-  if (D.claude.installed) await api().claude_connect(true);
-  if (D.codex.installed) await api().codex_connect(true);
+  for (const [a] of AGENTS) if (D[a].installed) await api().agent_connect(a, true);
+}
+
+// ---------------- history (local logs, last 30 days) ----------------
+const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const dur = sec => { const m = Math.round(sec / 60); return m < 60 ? t('hist.minutes', {m}) : t('hist.hours', {h: Math.floor(m / 60), m: m % 60}); };
+const tok = n => n >= 1e6 ? I18N.number(n / 1e6, 1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n);
+const sumTok = s => s.input === null ? null : s.input + s.output + s.cache_write;   // like the island: cache reads excluded
+const money = c => '$' + I18N.number(c, 2);
+async function loadHistory(){
+  $('hist-sum').textContent = t('hist.loading'); $('hist-list').innerHTML = '';
+  const r = await api().history();
+  if (!r.ok){ $('hist-sum').textContent = t('hist.error'); return; }
+  const groups = new Map();
+  for (const s of r.sessions){ const k = s.project || ''; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(s); }
+  const total = (list, f) => list.reduce((a, s) => a + (f(s) || 0), 0);
+  const known = (list, f) => list.some(s => f(s) !== null);
+  const all = r.sessions;
+  $('hist-sum').textContent = all.length ? t('hist.summary', {sessions: t('hist.sessions', {n: all.length}), projects: groups.size,
+    duration: dur(total(all, s => s.duration)), tokens: tok(total(all, sumTok))}) : t('hist.empty');
+  $('hist-list').hidden = !all.length;
+  $('hist-list').innerHTML = [...groups.entries()].map(([project, list], gi) => {
+    const icons = [...new Set(list.map(s => ICON[s.agent] || '•'))].join(' ');
+    const parts = [t('hist.sessions', {n: list.length}), dur(total(list, s => s.duration))];
+    if (known(list, sumTok)) parts.push(t('hist.tokens', {n: tok(total(list, sumTok))}));
+    if (known(list, s => s.cost)) parts.push(money(total(list, s => s.cost)));
+    const rows = list.map(s => `<div class="row"><span>${esc(ICON[s.agent] || '•')}</span><b>${esc(I18N.dateTime(s.start))}</b>
+      <span>${esc(dur(s.duration))}</span>${sumTok(s) !== null ? `<span>${esc(t('hist.tokens', {n: tok(sumTok(s))}))}</span>` : ''}
+      ${s.cost !== null ? `<span>${esc(money(s.cost))}</span>` : ''}<span>${esc(s.model)}</span></div>`).join('');
+    return `<div class="row hproj" data-g="${gi}"><div class="ico">${esc(icons)}</div><div class="l">${project ? esc(project) : tx('hist.noProject')}
+      <div class="d">${esc(parts.join(' · '))}</div></div></div><div class="hsess" id="hs-${gi}" hidden>${rows}</div>`;
+  }).join('');
+  document.querySelectorAll('.hproj').forEach(el => el.onclick = () => { const d = $('hs-' + el.dataset.g); d.hidden = !d.hidden; });
 }
 
 async function load(){
@@ -352,13 +404,14 @@ async function load(){
   document.querySelectorAll('#accents i').forEach(i => i.classList.toggle('on', i.dataset.c.toLowerCase() === String(s.accent).toLowerCase()));
   const badge = (id, st, avail) => { const b = $(id);
     b.className = 'badge ' + (st.installed ? 'ok' : 'no'); b.textContent = t(st.installed ? 'status.connected' : (avail === false ? 'status.notFound' : 'status.notConnected')); };
-  badge('cl-badge', D.claude); badge('cx-badge', D.codex, D.codex.available);
-  $('cl-btn').textContent = t(D.claude.installed ? 'btn.disconnect' : 'btn.connect');
-  $('cl-btn').className = 'btn' + (D.claude.installed ? '' : ' primary');
-  $('cx-btn').textContent = t(D.codex.installed ? 'btn.disconnect' : 'btn.connect');
-  $('cx-btn').className = 'btn' + (D.codex.installed ? '' : ' primary');
-  $('cx-btn').disabled = !D.codex.installed && D.codex.available === false;
-  $('cx-desc').textContent = t(D.codex.available === false ? 'agents.codexMissing' : 'agents.codexDesc');
+  for (const [a, , , desc] of AGENTS){
+    const st = D[a], btn = $(a + '-btn');
+    badge(a + '-badge', st, st.available);
+    btn.textContent = t(st.installed ? 'btn.disconnect' : 'btn.connect');
+    btn.className = 'btn' + (st.installed ? '' : ' primary');
+    btn.disabled = !st.installed && st.available === false;
+    $(a + '-desc').textContent = t(a === 'codex' && st.available === false ? 'agents.codexMissing' : desc);
+  }
   const mc = D.connectors && D.connectors.m365 || {};
   const mb = $('m365-badge'), mbt = $('m365-btn');
   const label = t({signed_out: 'status.notConnected', signing_in: 'status.signingIn', ok: 'status.connected', error: 'status.error'}[mc.status] || 'status.notConnected');

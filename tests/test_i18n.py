@@ -21,7 +21,7 @@ PLACEHOLDER = re.compile(r"\{(\w+)\}")
 KEY_LITERAL = re.compile(r"""['"]([a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9_]+)+)['"]""")
 
 # Product and brand names are the same in every language.
-BRANDS = {"Skerry", "Claude Code", "Codex", "Microsoft 365", "Google Workspace", "SQL Server", "Azure SQL",
+BRANDS = {"Skerry", "Claude Code", "Codex", "Gemini CLI", "Copilot CLI", "GitHub Copilot CLI", "Microsoft 365", "Google Workspace", "SQL Server", "Azure SQL",
           "Azure Data Factory"}
 
 

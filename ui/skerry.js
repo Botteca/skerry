@@ -16,9 +16,10 @@ const mmss = s => { s = Math.max(0, Math.floor(s || 0)); const h = Math.floor(s/
 const pctColor = p => p >= 90 ? 'var(--red)' : p >= 70 ? 'var(--amber)' : 'var(--green)';
 const until = e => { const d = Math.max(0, e - S.now), h = Math.floor(d/3600), m = Math.floor(d%3600/60); return h ? `${h}h ${m}m` : `${m}m`; };
 const when = e => I18N.weekdayTime(e);
-const AGENT = {claude:'Claude Code', codex:'Codex'};
+const AGENT = {claude:'Claude Code', codex:'Codex', gemini:'Gemini CLI', copilot:'Copilot CLI'};
+const GLYPH = {claude:'✦', codex:'◆', gemini:'✧', copilot:'⬢'};
 const GRANT_MINUTES = [5, 15, 60];   // same as skerry/store.py GRANT_MINUTES
-const glyph = (agent, spin) => `<span class="ag ${agent} ${spin ? 'spin' : ''}">${agent === 'codex' ? '◆' : '✦'}</span>`;
+const glyph = (agent, spin) => `<span class="ag ${agent} ${spin ? 'spin' : ''}">${GLYPH[agent] || '✦'}</span>`;
 const mod = m => !S.settings.modules || S.settings.modules[m] !== false;
 const vertical = () => ['left','right'].includes(S.settings.edge);
 
@@ -405,7 +406,7 @@ function act(name, arg, ev, el){
     case 'update': return api.install_update();
     case 'onb-edge': return api.set_setting('edge', arg).then(tick);
     case 'onb-mon': return api.set_monitor(arg).then(tick);
-    case 'onb-connect': el.disabled = true; return (arg === 'codex' ? api.codex_connect(true) : api.claude_connect(true)).then(tick);
+    case 'onb-connect': el.disabled = true; return api.agent_connect(arg, true).then(tick);
     case 'onb-next': onbStep = Math.min(2, onbStep + 1); return render();
     case 'onb-back': onbStep = Math.max(0, onbStep - 1); return render();
     case 'onb-skip': case 'onb-done': return api.onboarding_finish().then(tick);

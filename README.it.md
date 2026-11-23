@@ -50,6 +50,9 @@ Microsoft 365. Tutto gira in locale.
 | Modulo | Cosa fa |
 |---|---|
 | **Claude Code** | Azione in corso, richieste di permesso (*Consenti · Consenti per 5/15/60 min · Sempre · Nega · Terminale*), avanzamento dei task, completamento, contesto per sessione, limiti 5 ore/settimanali con avvisi a soglia |
+| **GitHub Copilot CLI** | Azione in corso, richieste di permesso (*Consenti · Consenti per 5/15/60 min · Nega · Terminale*), completamento, errori |
+| **Gemini CLI** | Solo attività: azione in corso, completamento e *chiede un permesso: rispondi nel terminale* (gli hook di Gemini CLI non possono rispondere ai permessi) |
+| **Cronologia** | Impostazioni → Cronologia: sessioni degli agenti negli ultimi 30 giorni per progetto, con durata, token (Claude Code) e il costo riportato da Claude Code; export CSV. Solo file locali |
 | **Codex** | Azione in corso, richieste di permesso, completamento (tramite gli hook di Codex) |
 | **Musica e video** | "In riproduzione" di Windows (Spotify, YouTube nel browser, VLC…): copertina, colore d'accento dalla copertina, barra di avanzamento cliccabile, controlli, volume con la rotellina o lo slider |
 | **Microfono e fotocamera** | Pallino arancione/verde mentre un'app li usa, con il nome dell'app |
@@ -140,6 +143,19 @@ Poi:
   viene ripristinata.
 - **Codex**: apri Codex e approva i nuovi hook con `/hooks` (Codex esegue solo gli hook approvati).
 
+**GitHub Copilot CLI e Gemini CLI** non vengono mai collegati in automatico: usa **Impostazioni → Agenti → Collega**.
+
+| | Dove | Permessi |
+|---|---|---|
+| **Copilot CLI** | File di Skerry `~/.copilot/hooks/skerry.json` (o `$COPILOT_HOME/hooks/`); scollegando viene cancellato | Risposti tramite l'hook `permissionRequest`. Se Skerry non risponde in tempo, Copilot chiede nel terminale come al solito |
+| **Gemini CLI** | Voci `skerry` negli `hooks` di `~/.gemini/settings.json` (prima un backup; gli altri tuoi hook restano) | **Nessuno.** La notifica di permesso di Gemini CLI è solo osservabile: Skerry mostra che c'è una richiesta e tu rispondi nel terminale |
+
+Entrambi usano `skerry-cli`, che esce sempre con 0 se Skerry non è in esecuzione (Copilot CLI negherebbe lo strumento
+se un hook `preToolUse` fallisse) e per Gemini CLI stampa sempre `{}`, perché si aspetta JSON. Gemini CLI attende ogni
+hook, quindi ogni evento aggiunge il tempo di avvio di `skerry-cli` (timeout brevi: 5 s). Gemini CLI è stato sostituito
+da Antigravity CLI a giugno 2026; Skerry segue la documentazione degli hook di Gemini CLI e non è stato provato con
+Antigravity. Aider non è supportato: non ha hook né un modo per far rispondere un altro programma alle sue conferme.
+
 **Come funzionano i permessi.** Quando un agente chiede un permesso, la richiesta resta in attesa in Skerry. *Consenti*,
 *Sempre* (applica la regola suggerita da Claude Code) e *Nega* rispondono; *Terminale*, o nessuna risposta entro il tempo
 configurato (5 minuti di default), restituisce la decisione al prompt dell'agente. Se rispondi nel terminale, Skerry
@@ -200,6 +216,11 @@ Non serve un segreto client: Skerry è un client pubblico. *Disconnetti* cancell
 - Il server degli hook ascolta solo su `127.0.0.1`. Le decisioni sui permessi arrivano solo dalla finestra di Skerry,
   mai via HTTP.
 - Il consumo di token è calcolato dai file di sessione di Claude Code sul disco; non viene caricato nulla.
+- La **Cronologia** (Impostazioni → Cronologia) legge solo file locali: i file di sessione di Claude Code e
+  `%LOCALAPPDATA%\Skerry\history.jsonl`, dove Skerry scrive una riga per ogni evento di sessione degli agenti (agente,
+  id sessione, nome della cartella di progetto, ora, costo riportato da Claude Code). Le righe più vecchie di 30 giorni
+  vengono cancellate. *Esporta CSV* scrive solo dove scegli tu. I token di Codex, Copilot CLI e Gemini CLI non sono
+  mostrati: i loro log locali non hanno un formato documentato.
 - L'accesso alla rete avviene solo per: il controllo degli aggiornamenti (API delle release di GitHub ogni 6 ore, più
   il download dell'installer quando c'è una nuova versione; disattivabile nelle impostazioni) e, se lo colleghi,
   Microsoft Graph per leggere il calendario.
@@ -212,6 +233,7 @@ Non serve un segreto client: Skerry è un client pubblico. *Disconnetti* cancell
 | `%APPDATA%\Skerry\secrets\` | Token dei connettori (cifrati con DPAPI) |
 | `%LOCALAPPDATA%\Skerry\logs\` | Log a rotazione |
 | `%LOCALAPPDATA%\Skerry\backup\` | Backup della configurazione degli agenti |
+| `%LOCALAPPDATA%\Skerry\history.jsonl` | Cronologia delle sessioni degli agenti (30 giorni) |
 
 ## Come funziona
 

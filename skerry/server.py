@@ -5,6 +5,8 @@ import threading
 from flask import Flask, jsonify, request
 from werkzeug.serving import make_server
 
+from . import agents
+
 log = logging.getLogger("skerry")
 
 
@@ -20,8 +22,12 @@ def create_app(store, settings, on_show=None):
         if not settings.get(f"modules.{agent}", True):
             return jsonify({})
         try:
-            if ev == "PermissionRequest":
-                return jsonify(store.request_permission(payload, settings.get("permission_wait", 300), agent))
+            ev, payload = agents.normalize(agent, ev, payload)
+            if ev is None:
+                return jsonify({})
+            if ev == "PermissionRequest" and agent not in agents.ACTIVITY_ONLY:
+                out = store.request_permission(payload, settings.get("permission_wait", 300), agent)
+                return jsonify(agents.reply(agent, out))
             store.handle(ev, payload, agent)
         except Exception:
             log.exception("Error handling event %s", ev)

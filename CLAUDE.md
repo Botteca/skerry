@@ -15,11 +15,13 @@ Stack: Python 3.11+ (dev venv runs 3.13), pywebview on WinForms/WebView2, a loca
 | Path | Role |
 |---|---|
 | `app.py` | Entry point. `supervise()` restarts the child on crash (max 5 in 10 min; exit 0/3 = stop). `SkerryApp` wires everything, creates the pywebview window, runs the guard loop (fullscreen hide, keep-on-top) and update loop. |
-| `cli.py` | `skerry-cli`: `hook <claude\|codex>` (stdin JSON → HTTP), `statusline` (forwards to Skerry, then runs the chained status line), `connect`/`disconnect`. |
+| `cli.py` | `skerry-cli`: `hook <claude\|codex\|gemini\|copilot> [event]` (stdin JSON → HTTP), `statusline` (forwards to Skerry, then runs the chained status line), `connect`/`disconnect`. |
 | `skerry/server.py` | Flask, 127.0.0.1 only: `POST /hook/<event>`, `POST /statusline`, `POST /ui/show`, `GET /health`. |
+| `skerry/agents.py` | Pure mapping of Gemini CLI and GitHub Copilot CLI hook events onto the Claude Code schema (`normalize`), and of permission answers back to Copilot's format (`reply`). `ACTIVITY_ONLY` = agents whose permission prompts Skerry cannot answer (Gemini). |
+| `skerry/history.py` | Settings > History: last 30 days from `%LOCALAPPDATA%\Skerry\history.jsonl` (a line per session event, written by the Store) + Claude Code session files for tokens; `to_csv()` escapes formula cells. Local files only. |
 | `skerry/store.py` | Thread-safe state: sessions, pending permissions (blocking `threading.Event`), tasks, alerts, rate limits. `snapshot()` is what the UI sees. |
 | `skerry/api.py` | `js_api` exposed to the UI as `window.pywebview.api.*`. `SETTABLE` whitelists settings the UI may write. |
-| `skerry/integrations.py` | Writes/removes our hooks in `~/.claude/settings.json` and `~/.codex/hooks.json` (backup first). Bump `HOOKS_VERSION` when the hook list changes. |
+| `skerry/integrations.py` | Writes/removes our hooks in `~/.claude/settings.json`, `~/.codex/hooks.json`, `~/.gemini/settings.json` (backup first) and our own `~/.copilot/hooks/skerry.json`. Gemini/Copilot are opt-in only (never auto-connected). Bump `HOOKS_VERSION` when the hook list changes. |
 | `skerry/win32.py` | ctypes: pill window (region, DWM, animation, drag/snap), monitors (EnumDisplayMonitors, GetDpiForMonitor, EnumDisplayDevices for name + stable id), fullscreen detection, focus, clipboard (CF_HDROP, text), single-instance mutex, global hotkey. |
 | `skerry/displays.py` | Pure multi-monitor logic: `resolve()` (primary / mouse / chosen screen by stable id, fallback to primary), `changes()` (log lines for connect/disconnect/docking/DPI/taskbar), `geometry()`. Driven by `SkerryApp._display_loop` (1 s layout scan, 0.25 s mouse follow). |
 | `skerry/diagnostics.py` | "Copy diagnostics": report + `redact()` (user paths/name, Bluetooth names/addresses, emails). |
@@ -120,6 +122,9 @@ tags or releases unless the user asks.
   copied once by `paths._migrate` while `%APPDATA%\Skerry` / `%LOCALAPPDATA%\Skerry` do not exist),
   `integrations.CLI_MARKERS`, the legacy uninstall key and Run values in `build/installer.iss`, and
   `tests/test_rename.py`. Don't add new ones elsewhere.
+- `skerry-cli hook` must always exit 0: Copilot CLI **denies** the tool when a `preToolUse` hook errors. For Gemini
+  CLI it always prints `{}` (non-JSON stdout is shown as a system message). Copilot sends no event name, so its
+  hook commands pass it as an argument (`hook copilot preToolUse`); its PowerShell command needs `& "exe" …`.
 - Hook timeouts: `PermissionRequest` uses `permission_wait + 30` in agent config and `+ 20` in the CLI. Keep the
   agent-side timeout larger than Skerry's wait.
 - UI escapes every dynamic string with `esc()` before `innerHTML`, and translated text with `tx()`. Keep it that way.
