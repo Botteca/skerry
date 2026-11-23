@@ -6,6 +6,9 @@ import pytest
 
 from skerry import paths, secrets
 
+# DPAPI files exist only on Windows (elsewhere secrets stay in memory); CI runs on Windows
+pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="DPAPI is Windows only")
+
 
 def secrets_dir():
     return os.path.join(paths.config_dir(), "secrets")
@@ -50,11 +53,10 @@ def test_name_cannot_escape_the_folder():
     assert secrets.load("../../evil\\name") == "x"
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="DPAPI is Windows only")
 def test_file_is_encrypted_on_windows():
     secrets.save("plain-check", "very-recognisable-value")
     with open(os.path.join(secrets_dir(), "plain-check.bin"), "rb") as f:
         raw = f.read()
     assert b"very-recognisable-value" not in raw
     assert "very-recognisable-value".encode("utf-16-le") not in raw
-    assert raw != secrets.base64.b64encode(b"very-recognisable-value")
+    assert b"dmVyeS1yZWNvZ25pc2FibGUtdmFsdWU" not in raw      # nor its base64

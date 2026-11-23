@@ -18,6 +18,8 @@ def isolated_dirs(tmp_path, monkeypatch):
         d.mkdir()
         monkeypatch.setenv(var, str(d))
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "claude"))
+    from skerry import secrets
+    monkeypatch.setattr(secrets, "_MEMORY", {})      # non-Windows secret store: fresh for every test
     return tmp_path
 
 

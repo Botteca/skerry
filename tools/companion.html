@@ -27,17 +27,22 @@
 <script src="../ui/companion.js"></script>
 <script>
 'use strict';
-const P = new URLSearchParams(location.search), MODE = P.get('mode') || 'sheet', STYLE = P.get('style') || 'eyes';
+const P = new URLSearchParams(location.search), MODE = P.get('mode') || 'sheet';
+const STYLE = Object.hasOwn(Companion.styles, P.get('style')) ? P.get('style') : 'eyes';   // known styles only
 const FREEZE_AT = {work: 2500, meet: 0};   // ms into each mood's loop for a still picture
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 if (MODE === 'sheet'){
   document.body.className = 'sheet';
-  document.body.innerHTML = ['dark', 'light'].map(th => `<iframe src="?mode=row&theme=${th}&style=${STYLE}"></iframe>`).join('');
+  for (const th of ['dark', 'light']){
+    const f = document.createElement('iframe');
+    f.src = '?' + new URLSearchParams({mode: 'row', theme: th, style: STYLE});
+    document.body.appendChild(f);
+  }
 }
 
 if (MODE === 'row'){
-  document.documentElement.dataset.theme = P.get('theme') || 'dark';
+  document.documentElement.dataset.theme = P.get('theme') === 'light' ? 'light' : 'dark';
   const row = document.createElement('div'); row.className = 'row';
   for (const m of Companion.MOODS){
     const cell = document.createElement('div'); cell.className = 'cell';

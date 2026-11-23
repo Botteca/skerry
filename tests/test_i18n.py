@@ -31,7 +31,8 @@ def read(*parts):
 
 
 def settings_script():
-    return re.findall(r"<script>(.*?)</script>", read("ui", "settings.html"), re.S)[0]
+    # our own file, not untrusted HTML: the inline script block of the settings window
+    return re.findall(r"<script>(.*?)</script\s*>", read("ui", "settings.html"), re.S | re.I)[0]
 
 
 @pytest.fixture(scope="module")

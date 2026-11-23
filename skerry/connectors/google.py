@@ -71,7 +71,8 @@ def pick_meeting(events, now):
         if best is None or s < best["start"]:
             url = meet_link(e)
             best = {"id": "g:" + str(e.get("id") or ""), "title": e.get("summary") or "", "start": s, "end": en,
-                    "join_url": url, "provider": "Meet" if "meet.google.com" in url else ("Online" if url else ""),
+                    "join_url": url,
+                    "provider": "Meet" if urllib.parse.urlparse(url).hostname == "meet.google.com" else ("Online" if url else ""),
                     "location": "" if url else (e.get("location") or "").strip(),
                     "show_as": "free" if e.get("transparency") == "transparent" else "busy"}
     if best:

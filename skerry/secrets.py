@@ -1,9 +1,9 @@
 """Local store for secrets and tokens (connector token caches).
 
 On Windows the data is encrypted with DPAPI (CryptProtectData): only the same user on this PC can read it.
-Elsewhere (development on Linux/macOS) it falls back to a 0600 file. No passwords in settings.json.
+Elsewhere (development and tests on Linux/macOS) secrets live in memory only, never on disk.
+No passwords in settings.json.
 """
-import base64
 import ctypes
 import logging
 import os
@@ -14,6 +14,7 @@ from . import paths
 
 log = logging.getLogger("skerry")
 IS_WIN = sys.platform == "win32"
+_MEMORY = {}                      # non-Windows only: nothing is written to disk without DPAPI
 
 
 def _dir():
@@ -52,30 +53,35 @@ def _dpapi(data, protect):
 
 
 def save(name, text):
-    raw = text.encode("utf-8")
-    data = _dpapi(raw, True) if IS_WIN else base64.b64encode(raw)
+    if not IS_WIN:
+        _MEMORY[name] = text
+        return
+    encrypted = _dpapi(text.encode("utf-8"), True)
     path = _file(name)
     tmp = path + ".tmp"
     with open(tmp, "wb") as f:
-        f.write(data)
-    if not IS_WIN:
-        os.chmod(tmp, 0o600)
+        f.write(encrypted)
     os.replace(tmp, path)
 
 
 def load(name, default=None):
+    if not IS_WIN:
+        return _MEMORY.get(name, default)
     try:
         with open(_file(name), "rb") as f:
             data = f.read()
-        return (_dpapi(data, False) if IS_WIN else base64.b64decode(data)).decode("utf-8")
+        return _dpapi(data, False).decode("utf-8")
     except FileNotFoundError:
         return default
     except Exception:
-        log.warning("Secret '%s' is unreadable (ignored)", name)
+        log.warning("A stored secret could not be decrypted (ignored)")
         return default
 
 
 def delete(name):
+    if not IS_WIN:
+        _MEMORY.pop(name, None)
+        return
     try:
         os.remove(_file(name))
     except FileNotFoundError:
