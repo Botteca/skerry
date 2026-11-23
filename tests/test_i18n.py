@@ -293,11 +293,13 @@ def test_js_lexer_finds_text():
 
 PY_MODULES = ["app.py", "skerry/store.py", "skerry/timer.py", "skerry/system.py", "skerry/tray.py",
               "skerry/api.py", "skerry/connectors/m365.py", "skerry/connectors/adf.py",
-              "skerry/connectors/azure.py", "skerry/shelf.py", "skerry/usage.py", "skerry/media.py"]
+              "skerry/connectors/azure.py", "skerry/connectors/sql.py", "skerry/shelf.py", "skerry/usage.py", "skerry/media.py"]
 # Strings that look like prose but are data, not UI text.
 PY_ALLOWED = {
     "Skerry overlay",                      # internal window title used by FindWindowW (app.py), never shown
     "Hands-Free AG", "Avrcp Transport",    # suffixes Windows adds to Bluetooth names, stripped (system.py)
+    "ODBC Driver 18 for SQL Server", "ODBC Driver 17 for SQL Server",   # ODBC driver names (connectors/sql.py)
+    r"\[SQL Server\]([^\[\]()]+)",         # pattern that extracts the server message from an ODBC error
 }
 LOG_METHODS = {"debug", "info", "warning", "error", "exception", "critical"}
 

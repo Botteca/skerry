@@ -28,7 +28,7 @@ Stack: Python 3.11+ (dev venv runs 3.13), pywebview on WinForms/WebView2, a loca
 | `skerry/settings.py` | `%APPDATA%\Skerry\settings.json`, `DEFAULTS` merged on load, dotted keys, change listeners. |
 | `skerry/i18n.py` | Python-side user text (tray, alerts, agent actions, errors) in en/it. `Msg` objects are rendered when the state is sent to the UI, so a language switch applies live. `language` setting: `auto` = Windows display language. |
 | `skerry/secrets.py` | DPAPI-encrypted secrets in `%APPDATA%\Skerry\secrets\*.bin`. |
-| `skerry/connectors/` | Optional external services, each with a polling thread that never raises and a `status()` for settings. `m365.py`: MSAL + Graph `calendarView`, read-only; `pick_meeting()` is pure. `azure.py`: Azure tokens via `az account get-access-token` or a service principal (secret in `secrets`). `adf.py`: Data Factory `queryPipelineRuns`, `latest_runs()` is pure, alert on new failures. Tests use the `fake_http` fixture (local server), never real endpoints. |
+| `skerry/connectors/` | Optional external services, each with a polling thread that never raises and a `status()` for settings. `m365.py`: MSAL + Graph `calendarView`, read-only; `pick_meeting()` is pure. `azure.py`: Azure tokens via `az account get-access-token` or a service principal (secret in `secrets`). `adf.py`: Data Factory `queryPipelineRuns`, `latest_runs()` is pure, alert on new failures. `sql.py`: pyodbc query widgets; `check_query()` (single SELECT/WITH, no writing keyword), autocommit off + rollback, widgets saved only through `Api.sql_save` (never `set_setting`). Tests use the `fake_http` fixture (local server), never real endpoints. |
 | `skerry/media.py`, `audio.py` | Now Playing via WinRT GSMTC; master volume via pycaw. |
 | `skerry/system.py` | Mic/camera via ConsentStore registry, battery, Bluetooth battery via SetupAPI. |
 | `skerry/usage.py` | Token usage parsed incrementally from `~/.claude/projects/**/*.jsonl` (no network). |
@@ -131,6 +131,8 @@ tags or releases unless the user asks.
 - **No hard-coded user-facing text.** Add the key to both languages (`ui/i18n.js` or `skerry/i18n.py`);
   `tests/test_i18n.py` checks keys and greps for visible literals. Log messages stay in English.
 - `join_meeting` and `open_release_notes` open only `https://` URLs. Keep that check.
+- **SQL widgets stay read-only**: keep `sql.check_query()` on save and before every run, autocommit off and rollback,
+  and keep `connectors.sql.widgets` out of `SETTABLE`.
 - **Updates are installed only after the SHA-256 matches `SHA256SUMS.txt`** of the same release, and the file is
   re-hashed right before running it. Never skip the check, never install pre-releases, never show error dialogs
   from the updater (log + status only). The installer's `AppMutex=SkerrySingleInstance` must match

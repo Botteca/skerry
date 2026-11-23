@@ -62,6 +62,7 @@ Microsoft 365. Tutto gira in locale.
 | **Mensola** | Trascina dei file sulla pillola, poi *Copia* e Ctrl+V dove vuoi |
 | **Utilizzo di Claude** | Token usati nelle ultime 5 ore / 7 giorni, letti dai file di sessione locali di Claude Code |
 | **Riunioni** | Prossima riunione di Microsoft 365 (Outlook/Teams) con il pulsante *Entra* e un avviso prima dell'inizio (facoltativo) |
+| **SQL Server · Azure SQL** | Widget con una query in sola lettura: il primo valore, verde/ambra/rosso secondo le tue soglie, e un avviso quando uno diventa rosso (facoltativo) |
 | **Azure Data Factory** | Ultima esecuzione delle pipeline scelte (riuscita, non riuscita, in corso) nell'isola espansa e un avviso quando una non riesce (facoltativo) |
 
 **Uso**
@@ -227,6 +228,25 @@ chiama `queryPipelineRuns` di Azure Resource Manager ogni 5 minuti (ultimi 7 gio
 
 Gli errori (`az login` scaduto, ruolo mancante, rete) compaiono accanto all'interruttore; l'isola non si blocca mai.
 
+## Widget SQL Server e Azure SQL (facoltativo)
+
+Ogni widget esegue una query e mostra il primo valore nell'isola espansa, verde, ambra o rosso secondo due soglie (se
+il rosso è più basso dell'ambra, valori più bassi sono peggiori). Ricevi un avviso quando un widget diventa rosso. Si
+configurano in **Impostazioni → Connessioni → SQL Server · Azure SQL**, che ha la stessa guida passo passo.
+
+- **Sola lettura, tre volte.** Una query viene salvata ed eseguita solo se è una sola istruzione `SELECT` o `WITH`
+  senza comandi che scrivono (`INSERT`, `UPDATE`, `DELETE`, `MERGE`, `DROP`, `ALTER`, `CREATE`, `TRUNCATE`, `EXEC`,
+  `SELECT … INTO`, `WAITFOR`, `OPENROWSET`…; commenti e stringhe sono ignorati dal controllo). Ogni query gira con
+  autocommit disattivato e viene annullata (rollback). E la guida chiede un accesso che può solo leggere (`db_datareader`).
+- **Accesso per widget:** Windows (integrato, per SQL Server nella tua rete), utente e password SQL (la password è
+  cifrata con DPAPI in `%APPDATA%\Skerry\secrets\`, mai in `settings.json`; rimuovendo il widget viene cancellata),
+  oppure Microsoft Entra ID per Azure SQL (token da `az login`).
+- Serve **Microsoft ODBC Driver 18 (o 17) for SQL Server** e il pacchetto `pyodbc` (in `requirements.txt`). Timeout
+  di accesso 10 s, di query 15 s, ogni widget al massimo ogni 30 s: gli errori compaiono sul widget, l'isola non si
+  blocca mai.
+- Esempio (nomi inventati): server `sql-contoso.database.windows.net`, database `ContosoSales`,
+  `SELECT COUNT(*) FROM dbo.Orders WHERE Status = 'Open'`, ambra da 10, rosso da 20.
+
 ## Privacy
 
 **Nessuna telemetria; i dati restano sul PC.**
@@ -242,8 +262,9 @@ Gli errori (`az login` scaduto, ruolo mancante, rete) compaiono accanto all'inte
   mostrati: i loro log locali non hanno un formato documentato.
 - L'accesso alla rete avviene solo per: il controllo degli aggiornamenti (API delle release di GitHub ogni 6 ore, più
   il download dell'installer quando c'è una nuova versione; disattivabile nelle impostazioni) e, se li colleghi,
-  Microsoft Graph per leggere il calendario e Azure Resource Manager per leggere le esecuzioni delle pipeline di Data Factory.
-- I segreti (la cache dei token di Microsoft 365, il segreto client di Data Factory) sono cifrati con DPAPI e leggibili solo dal tuo utente Windows.
+  Microsoft Graph per leggere il calendario e Azure Resource Manager per leggere le esecuzioni delle pipeline di Data Factory;
+  i widget SQL si collegano solo ai server che inserisci tu.
+- I segreti (la cache dei token di Microsoft 365, il segreto client di Data Factory, le password SQL) sono cifrati con DPAPI e leggibili solo dal tuo utente Windows.
 
 | Percorso | Contenuto |
 |---|---|

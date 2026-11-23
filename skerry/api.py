@@ -17,6 +17,7 @@ SETTABLE = {
     "connectors.m365.client_id", "connectors.m365.tenant", "connectors.m365.alert_minutes",
     "connectors.adf.enabled", "connectors.adf.auth", "connectors.adf.tenant", "connectors.adf.client_id",
     "connectors.adf.subscription", "connectors.adf.resource_group", "connectors.adf.factory", "connectors.adf.pipelines",
+    "connectors.sql.enabled",   # the widgets themselves only through sql_save(), which checks the queries
 }
 
 
@@ -36,6 +37,7 @@ class Api:
         snap["timer"] = a.timer.state() if mods.get("timer", True) else None
         snap["meeting"] = a.connectors.meeting() if mods.get("calendar", True) else None
         snap["adf"] = a.connectors.adf.runs() if mods.get("adf", True) else None
+        snap["sql"] = a.connectors.sql.widgets() if mods.get("sql", True) else None
         snap["shelf"] = a.shelf.items() if mods.get("shelf", True) else []
         snap["settings"] = {k: a.settings.get(k) for k in ("edge", "monitor", "theme", "accent", "modules")}
         snap["onboarding"] = None if a.settings.get("first_run_done", True) else self._onboarding()
@@ -278,8 +280,13 @@ class Api:
         c = self._app.connectors.get(cid)
         if not c or not hasattr(c, "set_secret"):
             return False
-        c.set_secret(str(value or "").strip())
+        c.set_secret(value if isinstance(value, dict) else str(value or "").strip())
         return True
+
+    def sql_save(self, widgets):
+        """Save the SQL widgets. Refused (nothing saved) while any query is not a single read-only SELECT/WITH."""
+        res = self._app.connectors.sql.save(widgets if isinstance(widgets, list) else [])
+        return {**res, "errors": {wid: i18n.t(key) for wid, key in res["errors"].items()}}
 
     def connector_refresh(self, cid):
         c = self._app.connectors.get(cid)

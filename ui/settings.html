@@ -86,6 +86,13 @@
   @media (max-width:760px){aside{width:64px;padding:16px 8px}.brand div,nav button span,.foot{display:none}.brand{padding:0 0 16px;justify-content:center}.logo{display:none}nav button{justify-content:center;padding:10px}nav button.on::before{left:-8px}}
   body:not(.ready){visibility:hidden}  /* until the first load() applies the language */
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  textarea{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:9px;padding:7px 10px;font:12.5px Consolas,"Cascadia Mono",monospace;outline:0;width:100%;min-height:64px;resize:vertical}
+  textarea:focus{border-color:var(--accent)}
+  .sqlw{border-top:1px solid var(--line);padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+  .sqlw label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)} .sqlw .full{grid-column:1/-1}
+  .sqlw input[type=text],.sqlw input[type=password],.sqlw input[type=number]{width:100%;text-align:left}
+  .sqlw .err{color:var(--red);font-size:12px} .sqlw .ok{color:var(--green);font-size:12px}
+  .sqlw .chk{flex-direction:row;align-items:center;gap:8px}
   .hproj{cursor:pointer} .hsess .row{gap:12px;padding:7px 16px 7px 58px;min-height:0;font-size:12px;color:var(--muted)}
   .hsess .row b{color:var(--fg);font-weight:500}
 </style>
@@ -195,11 +202,17 @@
     <div class="note guide" data-i18n-html="adf.guideHtml"></div>
   </div>
 
+  <h2 data-i18n="sql.heading"></h2>
+  <div class="panel">
+    <div class="row"><div class="ico">🗄️</div><div class="l"><span data-i18n="sql.widgets"></span><div class="d" id="sql-desc"></div></div><span class="badge" id="sql-badge"></span><button class="btn" id="sql-refresh" data-i18n="conn.refresh"></button><label class="sw"><input type="checkbox" data-k="connectors.sql.enabled"><span></span></label></div>
+    <div id="sql-list"></div>
+    <div class="row"><div class="l"></div><button class="btn" id="sql-add" data-i18n="sql.add"></button></div>
+    <div class="note guide" data-i18n-html="sql.guideHtml"></div>
+  </div>
+
   <h2 data-i18n="conn.soon"></h2>
   <div class="panel soon">
     <div class="row"><div class="ico">🔵</div><div class="l">Google Workspace<div class="d" data-i18n="conn.google.desc"></div></div><span class="badge" data-i18n="conn.soonBadge"></span></div>
-    <div class="row"><div class="ico">🗄️</div><div class="l">SQL Server<div class="d" data-i18n="conn.sql.desc"></div></div><span class="badge" data-i18n="conn.soonBadge"></span></div>
-    <div class="row"><div class="ico">☁️</div><div class="l">Azure SQL<div class="d" data-i18n="conn.azsql.desc"></div></div><span class="badge" data-i18n="conn.soonBadge"></span></div>
   </div>
 </section>
 
@@ -255,7 +268,7 @@
 // [key, icon, name (literal for product names, or a translation key), description key]
 const MODULES = [
   ['claude', '✦', 'Claude Code'], ['codex', '◎', 'Codex'], ['gemini', '✧', 'Gemini CLI'], ['copilot', '⬢', 'Copilot CLI'], ['media', '🎵'], ['privacy', '🎙️'], ['battery', '🔋'],
-  ['bluetooth', '🎧'], ['usage', '📊'], ['timer', '⏱️'], ['calendar', '📅'], ['adf', '🏭', 'Azure Data Factory'], ['shelf', '📎'],
+  ['bluetooth', '🎧'], ['usage', '📊'], ['timer', '⏱️'], ['calendar', '📅'], ['adf', '🏭', 'Azure Data Factory'], ['sql', '🗄️'], ['shelf', '📎'],
 ];
 // [agent, icon, product name, description key]
 const AGENTS = [
@@ -311,6 +324,13 @@ function bind(){
     if (path) $('hist-msg').textContent = t('hist.exported', {path});
   };
   $('logs').onclick = () => api().open_logs();
+  $('sql-refresh').onclick = async () => { await api().connector_refresh('sql'); setTimeout(load, 2500); };
+  $('sql-add').onclick = () => { sqlWidgets.push({id: 'w' + Date.now().toString(36), auth: 'windows', interval: 60}); drawSql(); };
+  $('sql-list').addEventListener('change', sqlChanged);
+  $('sql-list').addEventListener('click', e => {
+    const b = e.target.closest('[data-del]'); if (!b) return;
+    sqlWidgets = sqlWidgets.filter(w => w.id !== b.dataset.del); drawSql(); saveSql();
+  });
   $('adf-refresh').onclick = async () => { await api().connector_refresh('adf'); setTimeout(load, 1500); };
   $('adf-secret').addEventListener('change', async e => {
     await api().connector_secret('adf', e.target.value); e.target.value = ''; load();
@@ -402,6 +422,53 @@ async function loadHistory(){
   document.querySelectorAll('.hproj').forEach(el => el.onclick = () => { const d = $('hs-' + el.dataset.g); d.hidden = !d.hidden; });
 }
 
+// ---------------- SQL widgets ----------------
+// Edited locally; saved through api.sql_save, which refuses anything but one read-only SELECT/WITH per query.
+let sqlWidgets = [], sqlSaved = null;
+const SQL_FIELDS = ['name', 'server', 'database', 'user', 'query', 'warn', 'crit', 'interval'];
+function drawSql(){
+  const pw = (D.connectors.sql || {}).has_password || {};
+  $('sql-list').innerHTML = sqlWidgets.map(w => {
+    const f = (k, label, type = 'text', ph = '') => `<label><span>${tx(label)}</span><input type="${type}" data-f="${k}" value="${esc(w[k] ?? '')}" placeholder="${esc(ph)}"></label>`;
+    return `<div class="sqlw" data-id="${esc(w.id)}">
+      ${f('name', 'sql.name', 'text', t('sql.namePh'))}
+      <label><span>${tx('sql.auth')}</span><select data-f="auth">${[['windows', 'sql.authWindows'], ['sql', 'sql.authSql'], ['entra', 'sql.authEntra']]
+        .map(([v, k]) => `<option value="${v}" ${w.auth === v ? 'selected' : ''}>${tx(k)}</option>`).join('')}</select></label>
+      ${f('server', 'sql.server', 'text', t('sql.serverPh'))}${f('database', 'sql.database', 'text', t('sql.databasePh'))}
+      ${w.auth === 'sql' ? f('user', 'sql.user', 'text', t('sql.userPh')) + `<label><span>${tx('sql.password')}</span><input type="password" data-pw="${esc(w.id)}" autocomplete="off" placeholder="${tx(pw[w.id] ? 'sql.passwordSaved' : 'sql.passwordNew')}"></label>` : ''}
+      <label class="full"><span>${tx('sql.query')}</span><textarea data-f="query" spellcheck="false" placeholder="${tx('sql.queryPh')}">${esc(w.query || '')}</textarea><span class="err" data-err></span></label>
+      ${f('warn', 'sql.warn', 'number')}${f('crit', 'sql.crit', 'number')}
+      ${f('interval', 'sql.interval', 'number')}
+      <label class="chk"><input type="checkbox" data-f="trust_cert" ${w.trust_cert ? 'checked' : ''}><span>${tx('sql.trustCert')}</span></label>
+      <div class="full" style="display:flex;align-items:center;gap:10px"><span data-res class="d"></span><span class="sp" style="flex:1"></span><button class="btn" data-del="${esc(w.id)}">${tx('sql.remove')}</button></div>
+    </div>`;
+  }).join('');
+  sqlResults();
+}
+function sqlResults(){
+  const res = (D.connectors.sql || {}).results || {};
+  document.querySelectorAll('.sqlw').forEach(el => {
+    const r = res[el.dataset.id], out = el.querySelector('[data-res]');
+    if (!out) return;
+    out.className = r && r.error ? 'err' : 'ok';
+    out.textContent = !r ? '' : r.error ? r.error : t('sql.lastValue', {value: r.value ?? '—', time: I18N.time(r.at)});
+  });
+}
+function sqlChanged(e){
+  const pw = e.target.dataset.pw;
+  if (pw){ api().connector_secret('sql', {id: pw, password: e.target.value}).then(() => setTimeout(load, 300)); e.target.value = ''; return; }
+  const card = e.target.closest('.sqlw'), w = sqlWidgets.find(x => x.id === card.dataset.id), k = e.target.dataset.f;
+  if (!w || !k) return;
+  w[k] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+  if (k === 'auth') drawSql();
+  saveSql();
+}
+async function saveSql(){
+  const r = await api().sql_save(sqlWidgets);
+  document.querySelectorAll('.sqlw').forEach(el => { el.querySelector('[data-err]').textContent = (r.errors || {})[el.dataset.id] || ''; });
+  if (r.ok){ sqlSaved = null; load(); }
+}
+
 // Status row of a polled connector (Data Factory, SQL): badge + last update or error
 function renderConnector(cid, enabled, descKey){
   const c = D.connectors[cid] || {}, b = $(cid + '-badge'), d = $(cid + '-desc');
@@ -450,6 +517,10 @@ async function load(){
   $('m365-desc').textContent = mc.status === 'error' && mc.error ? mc.error : t('conn.m365Desc');
   $('m365-desc').style.color = mc.status === 'error' ? 'var(--red)' : '';
   renderConnector('adf', s.connectors.adf.enabled, 'conn.adf.desc');
+  renderConnector('sql', s.connectors.sql.enabled, 'conn.sql.desc');
+  const saved = JSON.stringify(s.connectors.sql.widgets || []);
+  if (saved !== sqlSaved){ sqlSaved = saved; sqlWidgets = JSON.parse(saved); drawSql(); }
+  else sqlResults();
   document.querySelectorAll('.adf-sp').forEach(el => el.style.display = s.connectors.adf.auth === 'sp' ? '' : 'none');
   $('adf-secret-desc').textContent = t(D.connectors.adf.has_secret ? 'adf.secretSaved' : 'adf.secretDesc');
   renderUpdate();

@@ -10,3 +10,4 @@ winrt-Windows.Foundation>=2.0; sys_platform == "win32"
 winrt-Windows.Media.Control>=2.0; sys_platform == "win32"
 winrt-Windows.Storage.Streams>=2.0; sys_platform == "win32"
 msal>=1.28
+pyodbc>=5.1

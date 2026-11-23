@@ -61,6 +61,7 @@ your next Microsoft 365 meeting. Everything runs locally.
 | **File shelf** | Drop files on the pill, then *Copy* and Ctrl+V anywhere |
 | **Claude usage** | Tokens used in the last 5 hours / 7 days, read from local Claude Code session files |
 | **Meetings** | Next Microsoft 365 (Outlook/Teams) meeting with a *Join* button and an alert before it starts (optional) |
+| **SQL Server · Azure SQL** | Widgets with a read-only query: the first value, green/amber/red by your thresholds, and an alert when one turns red (optional) |
 | **Azure Data Factory** | Latest run of the pipelines you choose (succeeded, failed, running) in the expanded island, and an alert when one fails (optional) |
 
 **Using it**
@@ -224,6 +225,25 @@ Azure Resource Manager `queryPipelineRuns` every 5 minutes (last 7 days). The st
 
 Errors (expired `az login`, missing role, network) appear next to the switch; the island is never blocked.
 
+## SQL Server and Azure SQL widgets (optional)
+
+Each widget runs one query and shows its first value in the expanded island, green, amber or red by two thresholds
+(if red is lower than amber, lower values are worse). You get an alert when a widget turns red. Set them up in
+**Settings → Connections → SQL Server · Azure SQL**, which has the same step-by-step guide.
+
+- **Read-only, three times over.** A query is saved and run only if it is a single `SELECT` or `WITH` statement with
+  no writing command (`INSERT`, `UPDATE`, `DELETE`, `MERGE`, `DROP`, `ALTER`, `CREATE`, `TRUNCATE`, `EXEC`,
+  `SELECT … INTO`, `WAITFOR`, `OPENROWSET`…; comments and string literals are ignored by the check). Every query runs
+  with autocommit off and is rolled back. And the guide asks for a login that can only read (`db_datareader`).
+- **Sign-in per widget:** Windows (integrated, for SQL Server on your network), SQL user and password (the password
+  is encrypted with DPAPI in `%APPDATA%\Skerry\secrets\`, never in `settings.json`; removing the widget deletes
+  it), or Microsoft Entra ID for Azure SQL (token from `az login`).
+- Needs **Microsoft ODBC Driver 18 (or 17) for SQL Server** and the `pyodbc` package (in `requirements.txt`).
+  Login timeout 10 s, query timeout 15 s, each widget every 30 s or more: errors show on the widget, the island is
+  never blocked.
+- Example (invented names): server `sql-contoso.database.windows.net`, database `ContosoSales`,
+  `SELECT COUNT(*) FROM dbo.Orders WHERE Status = 'Open'`, amber from 10, red from 20.
+
 ## Privacy
 
 **No telemetry; your data stays on your PC.**
@@ -238,8 +258,8 @@ Errors (expired `az login`, missing role, network) appear next to the switch; th
   format.
 - Network access happens only for: the update check (GitHub releases API every 6 hours, plus the installer download
   when an update exists; can be turned off in settings) and, if you connect them, Microsoft Graph to read your calendar
-  and Azure Resource Manager to read Data Factory pipeline runs.
-- Secrets (the Microsoft 365 token cache, the Data Factory client secret) are encrypted with DPAPI and readable only by your Windows user.
+  and Azure Resource Manager to read Data Factory pipeline runs; SQL widgets connect only to the servers you enter.
+- Secrets (the Microsoft 365 token cache, the Data Factory client secret, SQL passwords) are encrypted with DPAPI and readable only by your Windows user.
 
 | Path | Content |
 |---|---|

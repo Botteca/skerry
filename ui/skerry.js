@@ -20,6 +20,7 @@ const AGENT = {claude:'Claude Code', codex:'Codex', gemini:'Gemini CLI', copilot
 // Data Factory run status -> [dot class, translation key]
 const ADF_STATUS = {Succeeded: ['done', 'adf.succeeded'], Failed: ['error', 'adf.failed'], InProgress: ['working', 'adf.running'],
   Queued: ['working', 'adf.queued'], Cancelled: ['idle', 'adf.cancelled'], Canceling: ['idle', 'adf.cancelled'], none: ['idle', 'adf.none']};
+const SQL_DOT = {green: 'done', amber: 'waiting', red: 'error', error: 'error'};
 const GLYPH = {claude:'✦', codex:'◆', gemini:'✧', copilot:'⬢'};
 const GRANT_MINUTES = [5, 15, 60];   // same as skerry/store.py GRANT_MINUTES
 const glyph = (agent, spin) => `<span class="ag ${agent} ${spin ? 'spin' : ''}">${GLYPH[agent] || '✦'}</span>`;
@@ -230,6 +231,16 @@ function vExpanded(){
     }
     h += '</div>';
   }
+  // SQL Server / Azure SQL widgets: first value of a read-only query, green/amber/red
+  if (mod('sql') && S.sql){
+    h += `<div class="sec"><div class="sec-h"><b>${tx('sql.title')}</b></div>`;
+    for (const w of S.sql){
+      const v = w.value === null ? '—' : typeof w.value === 'number' ? I18N.number(w.value, 2) : String(w.value);
+      h += `<div class="sess" title="${esc(w.error)}"><span class="dot ${SQL_DOT[w.level] || 'idle'}"></span><span class="p">${esc(w.name)}</span>
+        <span class="a">${w.error ? tx('sql.error') : esc(v)}</span></div>`;
+    }
+    h += '</div>';
+  }
   // agents
   if (['claude', 'codex', 'gemini', 'copilot'].some(mod)){
     h += `<div class="sec"><div class="sec-h"><b>${tx('agents.title')}</b><span class="sp"></span>${sess.length ? '' : `<span>${tx('agents.none')}</span>`}</div>`;
@@ -284,7 +295,7 @@ function vExpanded(){
   const u = S.update;
   const key = 'x' + JSON.stringify([md && [md.title, md.artist, md.playing, md.duration, thumbId, !!au, au && au.muted],
     sess.map(s => [s.sid, s.status, s.action, s.tasks, s.context_pct, s.has_window]), L, S.statusline && S.statusline.seen, S.usage && [S.usage.h5, S.usage.d7, S.usage.days],
-    Math.floor(S.now/30), sy, S.adf, S.timer && [S.timer.label, S.timer.paused, S.timer.cycle], S.shelf, u && [u.status, u.version]]);
+    Math.floor(S.now/30), sy, S.adf, S.sql, S.timer && [S.timer.label, S.timer.paused, S.timer.cycle], S.shelf, u && [u.status, u.version]]);
   return {w:480, r:28, key, html:h};
 }
 
