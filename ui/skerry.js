@@ -13,7 +13,7 @@ const mmss = s => { s = Math.max(0, Math.floor(s || 0)); const h = Math.floor(s/
   return h ? `${h}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}` : `${m}:${String(x).padStart(2,'0')}`; };
 const pctColor = p => p >= 90 ? 'var(--red)' : p >= 70 ? 'var(--amber)' : 'var(--green)';
 const until = e => { const d = Math.max(0, e - S.now), h = Math.floor(d/3600), m = Math.floor(d%3600/60); return h ? `${h}h ${m}m` : `${m}m`; };
-const when = e => new Date(e*1000).toLocaleString('it-IT', {weekday:'short', hour:'2-digit', minute:'2-digit'});
+const when = e => I18N.weekdayTime(e);
 const AGENT = {claude:'Claude Code', codex:'Codex'};
 const glyph = (agent, spin) => `<span class="ag ${agent} ${spin ? 'spin' : ''}">${agent === 'codex' ? '◆' : '✦'}</span>`;
 const mod = m => !S.settings.modules || S.settings.modules[m] !== false;
@@ -52,8 +52,8 @@ const active = () => S.sessions.filter(s => ['working','waiting','permission'].i
 function current(){ const a = active(); return a.find(s => s.sid === S.selected) || a[0]; }
 function badges(skipTimer){
   const sy = S.system || {}; let h = '';
-  if ((sy.mic || []).length) h += `<span class="pd mic" title="Microfono: ${esc(sy.mic.join(', '))}"></span>`;
-  if ((sy.cam || []).length) h += `<span class="pd cam" title="Fotocamera: ${esc(sy.cam.join(', '))}"></span>`;
+  if ((sy.mic || []).length) h += `<span class="pd mic" title="${tx('privacy.mic', {apps: sy.mic.join(', ')})}"></span>`;
+  if ((sy.cam || []).length) h += `<span class="pd cam" title="${tx('privacy.cam', {apps: sy.cam.join(', ')})}"></span>`;
   if (S.timer && !skipTimer) h += `<span class="chip on" data-live="tmc">${mmss(S.timer.left)}</span>`;
   return h;
 }
@@ -72,14 +72,14 @@ function vCompact(){
   const m = compactMain(), vert = vertical(), b = badges(m.type === 'timer'), f = S.limits && S.limits.five_hour;
   const base = {r: vert ? 22 : 18, auto: !vert, w: vert ? 44 : null, type: m.type};
   if (m.type === 'agent'){
-    const s = m.s, n = active().length, idx = active().indexOf(s), t = s.tasks;
+    const s = m.s, n = active().length, idx = active().indexOf(s), tk = s.tasks;
     const spin = s.status === 'working';
-    if (vert) return {...base, key:`va${s.sid}${s.status}${t&&t.done}${badgeKey()}`, html:`<div class="tab">${glyph(s.agent, spin)}
+    if (vert) return {...base, key:`va${s.sid}${s.status}${tk&&tk.done}${badgeKey()}`, html:`<div class="tab">${glyph(s.agent, spin)}
       ${s.status === 'waiting' ? '<span class="dot waiting"></span>' : ''}
-      ${t ? `<div class="t">${t.done}/${t.total}</div>` : ''}${n > 1 ? `<div class="t">${idx+1}/${n}</div>` : ''}${b}</div>`};
-    return {...base, key:`a${s.sid}${s.status}${s.action}${n}${idx}${t&&[t.done,t.total]}${badgeKey()}`, html:`<div class="bar">
+      ${tk ? `<div class="t">${tk.done}/${tk.total}</div>` : ''}${n > 1 ? `<div class="t">${idx+1}/${n}</div>` : ''}${b}</div>`};
+    return {...base, key:`a${s.sid}${s.status}${s.action}${n}${idx}${tk&&[tk.done,tk.total]}${badgeKey()}`, html:`<div class="bar">
       ${glyph(s.agent, spin)}<span>${esc(s.icon)}</span><span class="txt">${esc(s.action)}</span>
-      ${t ? `<span class="chip on">☑ ${t.done}/${t.total}</span>` : ''}
+      ${tk ? `<span class="chip on">☑ ${tk.done}/${tk.total}</span>` : ''}
       <span class="chip">${esc(s.project || AGENT[s.agent])}</span>${n > 1 ? `<span class="chip">${idx+1}/${n}</span>` : ''}
       ${s.status === 'waiting' ? '<span class="dot waiting"></span>' : ''}${b}</div>`};
   }
@@ -92,12 +92,12 @@ function vCompact(){
       <span class="txt">${esc(md.title)}<span class="muted"> · ${esc(md.artist)}</span></span>${right}${b}</div>`};
   }
   if (m.type === 'timer'){
-    const t = S.timer, p = 100 * (1 - t.left / t.duration), col = t.phase === 'focus' || t.mode === 'timer' ? 'var(--accent)' : 'var(--green)';
-    if (vert) return {...base, key:`vt${t.label}${t.paused}${badgeKey()}`, html:`<div class="tab">${ring(p, 20, col)}<div class="t" data-live="tmb">${mmss(t.left)}</div>${b}</div>`};
-    return {...base, key:`t${t.label}${t.paused}${badgeKey()}`, html:`<div class="bar">${ring(p, 18, col)}
-      <span class="muted sm">${esc(t.label)}${t.paused ? ' · in pausa' : ''}</span><span class="big" data-live="tmb">${mmss(t.left)}</span>${b}</div>`};
+    const tm = S.timer, p = 100 * (1 - tm.left / tm.duration), col = tm.phase === 'focus' || tm.mode === 'timer' ? 'var(--accent)' : 'var(--green)';
+    if (vert) return {...base, key:`vt${tm.label}${tm.paused}${badgeKey()}`, html:`<div class="tab">${ring(p, 20, col)}<div class="t" data-live="tmb">${mmss(tm.left)}</div>${b}</div>`};
+    return {...base, key:`t${tm.label}${tm.paused}${badgeKey()}`, html:`<div class="bar">${ring(p, 18, col)}
+      <span class="muted sm">${esc(tm.label)}${tm.paused ? ' · ' + tx('timer.paused') : ''}</span><span class="big" data-live="tmb">${mmss(tm.left)}</span>${b}</div>`};
   }
-  const lim = f && mod('claude') ? `${ring(f.used_percentage)}<span class="sm">${Math.round(f.used_percentage)}%</span><span class="muted xs">5h</span>` : '';
+  const lim = f && mod('claude') ? `${ring(f.used_percentage)}<span class="sm">${Math.round(f.used_percentage)}%</span><span class="muted xs">${tx('usage.fiveHourShort')}</span>` : '';
   if (vert) return {...base, key:`vi${f&&Math.round(f.used_percentage)}${badgeKey()}`, html:`<div class="tab">${glyph('claude')}${f ? ring(f.used_percentage) : ''}${b}</div>`};
   return {...base, key:`i${f&&Math.round(f.used_percentage)}${badgeKey()}`,
     html:`<div class="bar">${glyph('claude')}${lim || '<span class="muted sm">Skerry</span>'}${b}</div>`};
@@ -107,15 +107,15 @@ function vCompact(){
 function vPermission(){
   const p = S.pending[0], more = S.pending.length - 1;
   return {w:480, r:26, key:'p'+p.id+more, pid:p.id, html:`<div class="card">
-    <div class="hd">${glyph(p.agent)}<b>${esc(p.project || AGENT[p.agent])}</b><span class="muted">· ${AGENT[p.agent]} chiede il permesso</span>
+    <div class="hd">${glyph(p.agent)}<b>${esc(p.project || AGENT[p.agent])}</b><span class="muted">· ${tx('perm.asks', {agent: AGENT[p.agent]})}</span>
       <span class="sp"></span>${more ? `<span class="chip">+${more}</span>` : ''}</div>
     <div class="title">${esc(p.icon)} ${esc(p.text)}</div>
     ${p.detail && p.detail !== p.text ? `<div class="detail mono">${esc(p.detail)}</div>` : ''}
     <div class="btns">
-      <button class="b-allow" data-act="decide" data-arg="allow">Consenti</button>
-      ${p.can_always ? '<button class="b-always" data-act="decide" data-arg="always" title="Consenti e ricorda la regola">Sempre</button>' : ''}
-      <button class="b-deny" data-act="decide" data-arg="deny">Nega</button>
-      <button data-act="decide" data-arg="terminal" title="Rispondi nel terminale">Terminale</button>
+      <button class="b-allow" data-act="decide" data-arg="allow">${tx('perm.allow')}</button>
+      ${p.can_always ? `<button class="b-always" data-act="decide" data-arg="always" title="${tx('perm.alwaysTip')}">${tx('perm.always')}</button>` : ''}
+      <button class="b-deny" data-act="decide" data-arg="deny">${tx('perm.deny')}</button>
+      <button data-act="decide" data-arg="terminal" title="${tx('perm.terminalTip')}">${tx('perm.terminal')}</button>
     </div></div>`};
 }
 function vAlert(a){
@@ -126,43 +126,43 @@ function vDone(s){
   const ok = s.status === 'done';
   return {w:440, r:24, key:'d'+s.sid+s.done_at, done:s.sid+s.done_at, html:`<div class="card" ${s.has_window ? `data-act="focus" data-arg="${esc(s.sid)}"` : ''}>
     <div class="hd"><span class="dot ${s.status}"></span><b>${esc(s.project || AGENT[s.agent])}</b>
-      <span class="muted">· ${AGENT[s.agent]} ${ok ? 'ha finito' : 'si è interrotto'}</span></div>
-    <div class="clamp2 ${ok ? '' : 'muted'}">${esc(ok ? (s.done_msg || 'Fatto.') : s.action)}</div></div>`};
+      <span class="muted">· ${tx(ok ? 'done.finished' : 'done.stopped', {agent: AGENT[s.agent]})}</span></div>
+    <div class="clamp2 ${ok ? '' : 'muted'}">${ok ? (s.done_msg ? esc(s.done_msg) : tx('done.default')) : esc(s.action)}</div></div>`};
 }
-const vDrop = () => ({w:340, r:28, key:'drop', html:`<div class="drop"><b>Rilascia qui</b><span class="muted sm">I file restano sulla mensola dell'isola</span></div>`});
+const vDrop = () => ({w:340, r:28, key:'drop', html:`<div class="drop"><b>${tx('drop.title')}</b><span class="muted sm">${tx('drop.hint')}</span></div>`});
 
 const BT_ICON = {mouse:'🖱️', keyboard:'⌨️', headset:'🎧', speaker:'🔊', pen:'✒️', gamepad:'🎮', phone:'📱', device:'🔹'};
-const fmtTok = n => n >= 1e6 ? (n/1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M' : n >= 1e3 ? Math.round(n/1e3) + 'k' : String(n);
+const fmtTok = n => n >= 1e6 ? I18N.number(n/1e6, n >= 1e7 ? 0 : 1) + 'M' : n >= 1e3 ? Math.round(n/1e3) + 'k' : String(n);
 function claudeBlock(){
   if (!mod('claude')) return '';
   const L = S.limits, sl = S.statusline || {}, u = mod('usage') && S.usage;
   const g = (label, w, sub) => `<div class="gauge">${ring(w.used_percentage, 46, undefined, 4.5)}
     <div class="gv"><b>${Math.floor(w.used_percentage)}%</b><span>${label}</span><span class="muted">${sub}</span></div></div>`;
   const age = L && L.received_at ? Math.max(0, S.now - L.received_at) : 0;
-  const ago = age > 120 ? ' · dato di ' + (age >= 3600 ? Math.floor(age/3600) + 'h' : Math.floor(age/60) + 'm') + ' fa' : '';
+  const ago = age > 120 ? ' · ' + t('usage.dataAge', {age: age >= 3600 ? Math.floor(age/3600) + 'h' : Math.floor(age/60) + 'm'}) : '';
   const hasPct = !!(L && (L.five_hour || L.seven_day || L.spend_limit));
   let body = '';
   if (hasPct){
-    if (L.five_hour) body += g('Sessione 5 ore', L.five_hour, 'reset tra ' + until(L.five_hour.resets_at) + ago);
-    if (L.seven_day) body += g('Settimana', L.seven_day, 'reset ' + when(L.seven_day.resets_at));
+    if (L.five_hour) body += g(tx('usage.session5h'), L.five_hour, esc(t('usage.resetsIn', {time: until(L.five_hour.resets_at)}) + ago));
+    if (L.seven_day) body += g(tx('usage.week'), L.seven_day, tx('usage.resetsAt', {when: when(L.seven_day.resets_at)}));
     const sp = L.spend_limit;
-    if (sp) body += g('Spesa' + (sp.period ? ' · ' + esc(sp.period) : ''), sp,
-      sp.used_usd != null && sp.limit_usd != null ? `$${(+sp.used_usd).toFixed(0)} / $${(+sp.limit_usd).toFixed(0)}` : (sp.resets_at ? 'reset tra ' + until(sp.resets_at) : ''));
+    if (sp) body += g(tx('usage.spend') + (sp.period ? ' · ' + esc(sp.period) : ''), sp,
+      sp.used_usd != null && sp.limit_usd != null ? `$${(+sp.used_usd).toFixed(0)} / $${(+sp.limit_usd).toFixed(0)}` : (sp.resets_at ? tx('usage.resetsIn', {time: until(sp.resets_at)}) : ''));
     body = `<div class="gauges">${body}</div>`;
   }
   if (u){
-    const card = (label, w) => `<div class="ucard" title="input ${fmtTok(w.input)} · output ${fmtTok(w.output)} · cache scritta ${fmtTok(w.cache_write)} · cache letta ${fmtTok(w.cache_read)}">
-      <span class="muted">${label}</span><div class="n"><b>${fmtTok(w.tokens)}</b><em>token</em></div><span class="muted">${w.requests} risposte</span></div>`;
+    const card = (label, w) => `<div class="ucard" title="${tx('usage.breakdown', {input: fmtTok(w.input), output: fmtTok(w.output), cacheWrite: fmtTok(w.cache_write), cacheRead: fmtTok(w.cache_read)})}">
+      <span class="muted">${label}</span><div class="n"><b>${fmtTok(w.tokens)}</b><em>${tx('usage.tokens')}</em></div><span class="muted">${tx('usage.responses', {n: w.requests})}</span></div>`;
     const max = Math.max(1, ...u.days);
-    const bars = u.days.map((v, i) => `<div class="bc" title="${fmtTok(v)} token"><i class="${i === 6 ? 'now' : ''}" style="height:${Math.max(4, Math.round(86 * v / max))}%"></i>
-      <span>${new Date((S.now - (6 - i) * 86400) * 1000).toLocaleDateString('it-IT', {weekday: 'narrow'})}</span></div>`).join('');
-    body += `<div class="usage">${card('Ultime 5 ore', u.h5)}${card('Ultimi 7 giorni', u.d7)}<div class="bars">${bars}</div></div>`;
+    const bars = u.days.map((v, i) => `<div class="bc" title="${tx('usage.tokensTip', {tokens: fmtTok(v)})}"><i class="${i === 6 ? 'now' : ''}" style="height:${Math.max(4, Math.round(86 * v / max))}%"></i>
+      <span>${esc(I18N.weekdayNarrow(S.now - (6 - i) * 86400))}</span></div>`).join('');
+    body += `<div class="usage">${card(tx('usage.last5h'), u.h5)}${card(tx('usage.last7d'), u.d7)}<div class="bars">${bars}</div></div>`;
   }
   if (!hasPct){
-    body += `<div class="fn-note">${!sl.seen ? 'Apri una nuova sessione di Claude Code per iniziare a ricevere i dati.'
-      : 'Con il tuo piano Claude Code non invia la percentuale dei limiti: per il dato ufficiale usa <span class="mono">/usage</span>.'}</div>`;
+    body += `<div class="fn-note">${!sl.seen ? tx('usage.noData')
+      : tx('usage.noPlan', {cmd: I18N.html('<span class="mono">/usage</span>')})}</div>`;
   }
-  return `<div class="sec"><div class="sec-h"><b>Utilizzo di Claude</b><span class="sp"></span>${u ? '<span class="xs">token su questo PC</span>' : ''}</div>${body}</div>`;
+  return `<div class="sec"><div class="sec-h"><b>${tx('usage.title')}</b><span class="sp"></span>${u ? `<span class="xs">${tx('usage.local')}</span>` : ''}</div>${body}</div>`;
 }
 
 function vExpanded(){
@@ -172,7 +172,7 @@ function vExpanded(){
   // media
   if (md){
     h += `<div class="sec" data-wheel="vol"><div class="media">${art('art')}<div class="mi">
-      <div class="title">${esc(md.title || 'In riproduzione')}</div>
+      <div class="title">${md.title ? esc(md.title) : tx('media.nowPlaying')}</div>
       <div class="muted sm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(md.artist)}${md.app ? ' · ' + esc(md.app) : ''}</div>
       ${md.duration ? `<div class="prog" data-act="seek"><i data-live="pg"></i></div>
         <div class="times"><span data-live="pt"></span><span>${mmss(md.duration)}</span></div>` : ''}
@@ -186,26 +186,26 @@ function vExpanded(){
   }
   // meeting (Microsoft 365)
   if (mod('calendar') && S.meeting){
-    const m = S.meeting, hm = t => new Date(t * 1000).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'});
+    const m = S.meeting, hm = ts => I18N.time(ts);
     const left = m.start - S.now;
-    const when = m.in_progress ? 'in corso · finisce alle ' + hm(m.end)
-      : left < 3600 ? 'tra ' + Math.max(1, Math.round(left / 60)) + ' min' : 'alle ' + hm(m.start);
-    const sub = [when, m.provider, m.location].filter(Boolean).map(esc).join(' · ');
-    h += `<div class="sec"><div class="sec-h"><b>Riunione</b></div><div class="meet ${m.in_progress ? 'live' : (left < 300 ? 'soon' : '')}">
+    const whenTxt = m.in_progress ? t('meeting.inProgress', {time: hm(m.end)})
+      : left < 3600 ? t('meeting.inMinutes', {n: Math.max(1, Math.round(left / 60))}) : t('meeting.at', {time: hm(m.start)});
+    const sub = [whenTxt, m.provider, m.location].filter(Boolean).map(esc).join(' · ');
+    h += `<div class="sec"><div class="sec-h"><b>${tx('meeting.title')}</b></div><div class="meet ${m.in_progress ? 'live' : (left < 300 ? 'soon' : '')}">
       <div class="mt"><b>${hm(m.start)}</b><span>${hm(m.end)}</span></div>
-      <div class="mi2"><div class="mn">${esc(m.title)}</div><div class="muted sm">${sub}</div></div>
-      ${m.join_url ? '<button class="b-join" data-act="join">Entra</button>' : ''}</div></div>`;
+      <div class="mi2"><div class="mn">${m.title ? esc(m.title) : tx('meeting.untitled')}</div><div class="muted sm">${sub}</div></div>
+      ${m.join_url ? `<button class="b-join" data-act="join">${tx('meeting.join')}</button>` : ''}</div></div>`;
   }
   // agents
   if (mod('claude') || mod('codex')){
-    h += `<div class="sec"><div class="sec-h"><b>Agenti</b><span class="sp"></span>${sess.length ? '' : '<span>nessuna sessione</span>'}</div>`;
+    h += `<div class="sec"><div class="sec-h"><b>${tx('agents.title')}</b><span class="sp"></span>${sess.length ? '' : `<span>${tx('agents.none')}</span>`}</div>`;
     for (const s of sess){
-      const t = s.tasks;
-      h += `<div class="sess ${s.has_window ? 'click' : ''}" ${s.has_window ? `data-act="focus" data-arg="${esc(s.sid)}" title="Porta in primo piano il terminale"` : ''}>
+      const tk = s.tasks;
+      h += `<div class="sess ${s.has_window ? 'click' : ''}" ${s.has_window ? `data-act="focus" data-arg="${esc(s.sid)}" title="${tx('agents.focusTip')}"` : ''}>
         <span class="dot ${s.status}"></span>${glyph(s.agent)}<span class="p">${esc(s.project || AGENT[s.agent])}</span>
-        <span class="a">${esc(t && t.current && s.status === 'working' ? t.current : (s.action || s.model || ''))}</span>
-        ${t ? `<span class="chip on">☑ ${t.done}/${t.total}</span>` : ''}
-        ${s.context_pct != null ? `<span class="chip" style="color:${s.context_pct >= 80 ? 'var(--amber)' : ''}">ctx ${Math.round(s.context_pct)}%</span>` : ''}</div>`;
+        <span class="a">${esc(tk && tk.current && s.status === 'working' ? tk.current : (s.action || s.model || ''))}</span>
+        ${tk ? `<span class="chip on">☑ ${tk.done}/${tk.total}</span>` : ''}
+        ${s.context_pct != null ? `<span class="chip" style="color:${s.context_pct >= 80 ? 'var(--amber)' : ''}">${tx('agents.context', {pct: Math.round(s.context_pct)})}</span>` : ''}</div>`;
     }
     h += '</div>';
   }
@@ -218,34 +218,34 @@ function vExpanded(){
   const devs = [];
   (sy.bluetooth || []).forEach(d => devs.push(`<span title="${esc(d.name)}" class="chip on dev ${d.battery <= 15 ? 'low' : ''}"><span class="di">${BT_ICON[d.kind] || '🔹'}</span><span class="dn">${esc(d.name.replace(/\s*Bluetooth\s*/i,' ').trim())}</span>
     <span class="bt"><i style="width:${d.battery}%;background:${d.battery <= 15 ? 'var(--red)' : d.battery <= 30 ? 'var(--amber)' : 'var(--green)'}"></i></span><b>${d.battery}%</b></span>`));
-  if (chips.length || devs.length) h += `<div class="sec"><div class="sec-h"><b>Sistema</b></div>${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}${devs.length ? `<div class="devs">${devs.join('')}</div>` : ''}</div>`;
+  if (chips.length || devs.length) h += `<div class="sec"><div class="sec-h"><b>${tx('system.title')}</b></div>${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}${devs.length ? `<div class="devs">${devs.join('')}</div>` : ''}</div>`;
   // timer
   if (mod('timer')){
-    const t = S.timer;
-    h += `<div class="sec"><div class="sec-h"><b>Timer</b>${t ? `<span class="muted">· ${esc(t.label)}${t.mode === 'pomodoro' ? ' #' + t.cycle : ''}</span>` : ''}</div>`;
-    h += t ? `<div class="timer">${ring(100*(1 - t.left/t.duration), 26, t.phase === 'focus' || t.mode === 'timer' ? 'var(--accent)' : 'var(--green)')}
-          <span class="big" data-live="tm">${mmss(t.left)}</span><span class="sp"></span>
-          <span class="chip act" data-act="tpause">${t.paused ? '▶ Riprendi' : '⏸ Pausa'}</span><span class="chip act" data-act="tstop">✕ Stop</span></div>`
-       : `<div class="chips">${[5, 15, 25, 45].map(m => `<span class="chip act" data-act="timer" data-arg="${m}">${m} min</span>`).join('')}
-          <span class="chip act" data-act="pomo">🍅 Pomodoro</span></div>`;
+    const tm = S.timer;
+    h += `<div class="sec"><div class="sec-h"><b>${tx('timer.title')}</b>${tm ? `<span class="muted">· ${esc(tm.label)}${tm.mode === 'pomodoro' ? ' #' + tm.cycle : ''}</span>` : ''}</div>`;
+    h += tm ? `<div class="timer">${ring(100*(1 - tm.left/tm.duration), 26, tm.phase === 'focus' || tm.mode === 'timer' ? 'var(--accent)' : 'var(--green)')}
+          <span class="big" data-live="tm">${mmss(tm.left)}</span><span class="sp"></span>
+          <span class="chip act" data-act="tpause">${tm.paused ? '▶ ' + tx('timer.resume') : '⏸ ' + tx('timer.pause')}</span><span class="chip act" data-act="tstop">✕ ${tx('timer.stop')}</span></div>`
+       : `<div class="chips">${[5, 15, 25, 45].map(m => `<span class="chip act" data-act="timer" data-arg="${m}">${tx('timer.minutes', {n: m})}</span>`).join('')}
+          <span class="chip act" data-act="pomo">🍅 ${tx('timer.pomodoro')}</span></div>`;
     h += '</div>';
   }
   // shelf
   if (mod('shelf')){
     const it = S.shelf || [];
-    h += `<div class="sec"><div class="sec-h"><b>Mensola</b><span class="sp"></span>
-      ${it.length ? '<span class="link" data-act="shelf-copyall">Copia tutto</span><span class="link" data-act="shelf-clear">Svuota</span>' : ''}</div>`;
-    if (!it.length) h += `<div class="muted xs">Trascina dei file sull'isola per tenerli a portata di mano. Poi “Copia” e Ctrl+V dove vuoi.</div>`;
+    h += `<div class="sec"><div class="sec-h"><b>${tx('shelf.title')}</b><span class="sp"></span>
+      ${it.length ? `<span class="link" data-act="shelf-copyall">${tx('shelf.copyAll')}</span><span class="link" data-act="shelf-clear">${tx('shelf.clear')}</span>` : ''}</div>`;
+    if (!it.length) h += `<div class="muted xs">${tx('shelf.empty')}</div>`;
     it.forEach((f, i) => {
       h += `<div class="file" title="${esc(f.path)}"><span class="fi">${f.ext === 'dir' ? '📁' : esc((f.ext || '?').slice(0, 4))}</span>
         <span class="fn ${f.exists ? '' : 'gone'}">${esc(f.name)}</span><span class="fa">
-        ${f.exists ? `<span data-act="shelf-copy" data-arg="${i}">Copia</span><span data-act="shelf-open" data-arg="${i}">Apri</span><span data-act="shelf-reveal" data-arg="${i}">Cartella</span>` : ''}
+        ${f.exists ? `<span data-act="shelf-copy" data-arg="${i}">${tx('shelf.copy')}</span><span data-act="shelf-open" data-arg="${i}">${tx('shelf.open')}</span><span data-act="shelf-reveal" data-arg="${i}">${tx('shelf.folder')}</span>` : ''}
         <span data-act="shelf-remove" data-arg="${i}">✕</span></span></div>`;
     });
     h += '</div>';
   }
-  h += `<div class="foot"><span>Skerry ${esc(S.version)}</span>${S.update ? `<span class="upd" data-act="update">· aggiorna a ${esc(S.update.version)}</span>` : ''}
-    <span class="sp"></span><span class="link" data-act="settings">⚙ Impostazioni</span></div></div>`;
+  h += `<div class="foot"><span>Skerry ${esc(S.version)}</span>${S.update ? `<span class="upd" data-act="update">· ${tx('foot.update', {version: S.update.version})}</span>` : ''}
+    <span class="sp"></span><span class="link" data-act="settings">⚙ ${tx('foot.settings')}</span></div></div>`;
   const key = 'x' + JSON.stringify([md && [md.title, md.artist, md.playing, md.duration, thumbId, !!au, au && au.muted],
     sess.map(s => [s.sid, s.status, s.action, s.tasks, s.context_pct, s.has_window]), L, S.statusline && S.statusline.seen, S.usage && [S.usage.h5, S.usage.d7, S.usage.days],
     Math.floor(S.now/30), sy, S.timer && [S.timer.label, S.timer.paused, S.timer.cycle], S.shelf, S.update]);
@@ -284,7 +284,7 @@ function render(){
   document.documentElement.dataset.theme = S.settings.theme || 'dark';
   document.documentElement.style.setProperty('--accent', S.settings.accent || '#d97757');
   view = pick();
-  const key = `${S.settings.edge}|${S.settings.theme}|${view.key}`;
+  const key = `${S.settings.edge}|${S.settings.theme}|${I18N.lang}|${view.key}`;
   const root = document.documentElement;
   root.dataset.edge = S.settings.edge || 'top';
   root.dataset.state = S.pending.length ? 'perm' : (S.alerts.length ? 'alert' : '');
@@ -307,6 +307,7 @@ async function tick(){
   let st;
   try { st = await A().get_state(); } catch (e) { return; }
   S = st;
+  I18N.setLang(S.lang);
   if (uiSeq === null) uiSeq = S.ui_seq;
   if (S.ui_seq !== uiSeq){ uiSeq = S.ui_seq; expanded = !expanded; }
   const m = S.media;
@@ -330,8 +331,8 @@ function act(name, arg, ev, el){
     case 'pomo': return api.pomodoro_start();
     case 'tstop': return api.timer_stop();
     case 'tpause': return api.timer_toggle_pause();
-    case 'shelf-copy': return api.shelf_copy(+arg).then(ok => ok && flash(el, 'Copiato'));
-    case 'shelf-copyall': return api.shelf_copy_all().then(ok => ok && flash(el, 'Copiati'));
+    case 'shelf-copy': return api.shelf_copy(+arg).then(ok => ok && flash(el, t('shelf.copied')));
+    case 'shelf-copyall': return api.shelf_copy_all().then(ok => ok && flash(el, t('shelf.copiedAll')));
     case 'shelf-open': return api.shelf_open(+arg);
     case 'shelf-reveal': return api.shelf_reveal(+arg);
     case 'shelf-remove': return api.shelf_remove(+arg);
@@ -345,8 +346,8 @@ function flash(el, text){ const old = el.textContent; el.textContent = text; set
 
 document.addEventListener('click', e => {
   if (suppressClick || !S) return;
-  const t = e.target.closest('[data-act]');
-  if (t){ e.stopPropagation(); act(t.dataset.act, t.dataset.arg, e, t); return; }
+  const tg = e.target.closest('[data-act]');
+  if (tg){ e.stopPropagation(); act(tg.dataset.act, tg.dataset.arg, e, tg); return; }
   if (e.target.closest('input')) return;
   if (S.pending.length) return;
   if (view && view.done){ dismissedDone.add(view.done); tick(); return; }

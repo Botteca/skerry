@@ -53,7 +53,7 @@ class LocalUsage:
                 if self._enabled():
                     self.refresh()
             except Exception:
-                log.exception("Lettura consumo locale non riuscita")
+                log.exception("Could not read local usage")
             time.sleep(REFRESH)
 
     # ---------------- incremental read ----------------

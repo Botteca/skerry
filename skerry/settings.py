@@ -10,6 +10,7 @@ DEFAULTS = {
     "edge": "top",            # top | bottom | left | right
     "offset": 0.5,            # position along the edge (0..1)
     "monitor": "",            # monitor device name ("" = primary)
+    "language": "auto",       # auto (Windows display language) | en | it
     "theme": "dark",          # dark | light
     "accent": "#d97757",
     "hotkey": "win+alt+i",
@@ -94,7 +95,7 @@ class Settings:
                 fn(key, value)
             except Exception:
                 import logging
-                logging.getLogger("skerry").exception("listener impostazioni")
+                logging.getLogger("skerry").exception("settings listener")
 
     def update(self, values):
         for k, v in values.items():

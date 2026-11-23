@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **English and Italian interface.** The language follows Windows by default; *Settings → General → Language*
+  (Automatic / English / Italiano) switches the pill, the settings window, alerts and the tray menu immediately,
+  without a restart. Dates, times and numbers follow the language. Log messages are now always in English.
+- Screenshots regenerated in English (`docs/img/`) and Italian (`docs/img/it/`) by `tools/screenshots.py`.
 - **Renamed to Skerry**: `Skerry.exe` / `skerry-cli.exe`, new installer identity, data in `%APPDATA%\Skerry` and
   `%LOCALAPPDATA%\Skerry`. On first run the data of the previous version is copied over once; old autostart entries,
   old installs and old agent hooks are removed and replaced automatically (hooks v3).

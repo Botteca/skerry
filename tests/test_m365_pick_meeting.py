@@ -89,4 +89,4 @@ def test_missing_subject_and_bad_dates():
               {"id": "y", "start": graph_time(NOW + timedelta(minutes=5)), "end": graph_time(NOW + timedelta(minutes=35))}]
     m = pick(events)
     assert m["id"] == "y"
-    assert m["title"] == "(senza titolo)"
+    assert m["title"] == ""  # the UI shows a translated "(untitled)"

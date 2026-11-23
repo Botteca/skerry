@@ -24,9 +24,9 @@ volume, microphone/camera in use, laptop and Bluetooth battery, a timer/Pomodoro
 your next Microsoft 365 meeting. Everything runs locally.
 
 <p align="center">
-  <img src="docs/img/00-stati-compatti.png" alt="Compact states: agent at work, music, Pomodoro, task finished, permission request" width="48%">
+  <img src="docs/img/00-compact-states.png" alt="Compact states: agent at work, music, Pomodoro, task finished, permission request" width="48%">
   &nbsp;
-  <img src="docs/img/06-espanso.png" alt="Expanded view with music, meeting, agents, usage, system, timer and shelf" width="48%">
+  <img src="docs/img/06-expanded.png" alt="Expanded view with music, meeting, agents, usage, system, timer and shelf" width="48%">
 </p>
 
 <details>
@@ -34,14 +34,15 @@ your next Microsoft 365 meeting. Everything runs locally.
 
 | | |
 |---|---|
-| ![Agent at work](docs/img/01-agente.png) | ![Permission request](docs/img/04-permesso.png) |
-| ![Music](docs/img/02-musica.png) | ![Timer](docs/img/03-timer.png) |
-| ![Task finished](docs/img/05-finito.png) | ![Settings: appearance](docs/img/07-impostazioni-look.png) |
-| ![Settings: modules](docs/img/07-impostazioni-mods.png) | ![Settings: connections](docs/img/07-impostazioni-conn.png) |
+| ![Agent at work](docs/img/01-agent.png) | ![Permission request](docs/img/04-permission.png) |
+| ![Music](docs/img/02-music.png) | ![Timer](docs/img/03-timer.png) |
+| ![Task finished](docs/img/05-done.png) | ![Settings: appearance](docs/img/07-settings-appearance.png) |
+| ![Settings: modules](docs/img/07-settings-modules.png) | ![Settings: connections](docs/img/07-settings-connections.png) |
 
 </details>
 
-> The user interface is currently in Italian.
+> The interface is available in English and Italian: it follows the Windows display language, or pick one in
+> *Settings → General → Language* (it switches immediately, no restart).
 
 ## Features
 

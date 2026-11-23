@@ -13,7 +13,8 @@ import threading
 import time
 import urllib.request
 
-from skerry import APP_ID, APP_NAME, VERSION, autostart, log as logsetup, paths, updater, win32
+from skerry import APP_ID, APP_NAME, VERSION, autostart, i18n, log as logsetup, paths, updater, win32
+from skerry.i18n import Msg
 
 TITLE = "Skerry overlay"   # internal title: deliberately not just "Skerry" (an Explorer folder could match FindWindow)
 SETTINGS_TITLE = "Settings · Skerry"
@@ -26,16 +27,16 @@ def supervise():
     args.append("--child")
     crashes = []
     while True:
-        log.info("Avvio isola (supervisore pid %s)", os.getpid())
+        log.info("Starting the island (supervisor pid %s)", os.getpid())
         code = subprocess.call(args, creationflags=0x08000000 if sys.platform == "win32" else 0)
         if code in (0, 3):  # 0 = normal exit, 3 = already running
-            log.info("Isola terminata (codice %s)", code)
+            log.info("Island exited (code %s)", code)
             return
         now = time.time()
         crashes = [t for t in crashes if now - t < 600] + [now]
-        log.error("Isola terminata in modo anomalo (codice %s), crash recenti: %s", code, len(crashes))
+        log.error("Island exited abnormally (code %s), recent crashes: %s", code, len(crashes))
         if len(crashes) >= 5:
-            log.critical("Troppi crash in 10 minuti: mi fermo")
+            log.critical("Too many crashes in 10 minutes: giving up")
             return
         time.sleep(2)
 
@@ -59,6 +60,7 @@ class SkerryApp:
 
         self.log = logging.getLogger("skerry")
         self.settings = Settings()
+        i18n.set_language(self.settings.get("language", "auto"))
         self.sounds = Sounds(self.settings)
         self.store = Store(self.settings, on_event=self.sounds.play)
         self.media = MediaWatcher()
@@ -88,7 +90,7 @@ class SkerryApp:
         try:
             start_server(self.store, self.settings, on_show=self.toggle_expand)
         except OSError:
-            self.log.error("Porta %s occupata", self.settings.get("port"))
+            self.log.error("Port %s is already in use", self.settings.get("port"))
             raise SystemExit(3)
 
         self.media.start()
@@ -113,7 +115,7 @@ class SkerryApp:
             background_color="#000000", text_select=False, easy_drag=False, min_size=(20, 20), shadow=False)
         self.window.events.shown += self._on_shown
         self.window.events.loaded += self._on_loaded
-        self.log.info("%s %s avviata", APP_NAME, VERSION)
+        self.log.info("%s %s started (language %s)", APP_NAME, VERSION, i18n.current())
         webview.start(self._after_start, debug=bool(os.environ.get("SKERRY_DEBUG")))
         self._shutdown()
 
@@ -126,7 +128,7 @@ class SkerryApp:
                 outdated = st.get("installed") and self.settings.get("hooks_version", 0) != integrations.HOOKS_VERSION
                 if outdated or (not st.get("installed") and not self.settings.get("auto_connect_done", False)):
                     integrations.claude_install(self.settings)
-                    self.log.info("Claude Code collegato automaticamente (hook v%s)", integrations.HOOKS_VERSION)
+                    self.log.info("Claude Code connected automatically (hooks v%s)", integrations.HOOKS_VERSION)
             cx = integrations.codex_status()
             if cx.get("available") and not cx.get("installed") and not self.settings.get("auto_connect_done", False):
                 integrations.codex_install(self.settings)
@@ -134,7 +136,7 @@ class SkerryApp:
                 integrations.codex_install(self.settings)
             self.settings.update({"auto_connect_done": True, "hooks_version": integrations.HOOKS_VERSION})
         except Exception:
-            self.log.exception("Collegamento automatico agenti non riuscito")
+            self.log.exception("Automatic agent connection failed")
 
     def _after_start(self):
         self.tray.start()
@@ -178,14 +180,14 @@ class SkerryApp:
                 found = [f.get("pywebviewFullPath") for f in files if f.get("pywebviewFullPath")]
                 if found and self.settings.get("modules.shelf", True):
                     self.shelf.add(found)
-                    self.log.info("Mensola: aggiunti %s file", len(found))
+                    self.log.info("Shelf: added %s file(s)", len(found))
 
             doc = self.window.dom.document
             doc.events.dragenter += DOMEventHandler(lambda e: None, True, False)
             doc.events.dragover += DOMEventHandler(lambda e: None, True, False)
             doc.events.drop += DOMEventHandler(on_drop, True, False)
         except Exception:
-            self.log.exception("Drag & drop dei file non disponibile")
+            self.log.exception("File drag & drop not available")
 
     def _start_hotkey(self):
         if self.hotkey:
@@ -237,17 +239,17 @@ class SkerryApp:
             integrations.claude_install(self.settings)
             if integrations.codex_status().get("available"):
                 integrations.codex_install(self.settings)
-            self.store.alert("info", "🔗", "Claude Code collegato: riavvia le sessioni aperte", sound=False)
+            self.store.alert("info", "🔗", Msg("alert.reconnected"), sound=False)
         except Exception:
-            self.log.exception("Ricollegamento agenti")
-            self.store.alert("danger", "🔗", "Collegamento non riuscito (vedi log)")
+            self.log.exception("Reconnecting agents")
+            self.store.alert("danger", "🔗", Msg("alert.connect_failed"))
 
     def toggle_autostart(self):
         self.settings.set("autostart", not autostart.is_enabled())
 
     def on_snapped(self, edge, offset, monitor):
         self.settings.update({"edge": edge, "offset": offset, "monitor": monitor})
-        self.log.info("Isola agganciata al bordo %s (%.2f) %s", edge, offset, monitor or "principale")
+        self.log.info("Island snapped to edge %s (%.2f) %s", edge, offset, monitor or "primary")
 
     def open_settings(self):
         import webview
@@ -274,7 +276,7 @@ class SkerryApp:
         self.update = info
         self.tray.refresh()
         if info:
-            self.store.alert("info", "⬆️", f"Disponibile Skerry {info['version']}", sound=False)
+            self.store.alert("info", "⬆️", Msg("alert.update_available", version=info["version"]), sound=False)
         return info
 
     def update_action(self):
@@ -282,14 +284,14 @@ class SkerryApp:
             threading.Thread(target=self.check_updates, daemon=True).start()
             return
         if not paths.FROZEN:
-            self.store.alert("info", "⬆️", "In sviluppo aggiorna con git pull", sound=False)
+            self.store.alert("info", "⬆️", Msg("alert.update_dev"), sound=False)
             return
         try:
             updater.download_and_run(self.update)
             self.quit()
         except Exception:
-            self.log.exception("Aggiornamento")
-            self.store.alert("danger", "⬆️", "Aggiornamento non riuscito (vedi log)")
+            self.log.exception("Update")
+            self.store.alert("danger", "⬆️", Msg("alert.update_failed"))
 
     def _on_setting(self, key, value):
         if key == "autostart":
@@ -299,6 +301,9 @@ class SkerryApp:
             self._start_hotkey()
         elif key in ("edge", "offset", "monitor"):
             self.win.replace()
+        elif key == "language":
+            i18n.set_language(value)
+            self.tray.refresh()
 
     def quit(self):
         import webview
@@ -315,7 +320,7 @@ class SkerryApp:
         if self.hotkey:
             self.hotkey.stop()
         self.tray.stop()
-        self.log.info("Isola chiusa")
+        self.log.info("Island closed")
 
 
 def run_child():
@@ -331,14 +336,14 @@ def run_child():
                                                           headers={"Content-Type": "application/json"}), timeout=2)
         except Exception:
             pass
-        log.info("Istanza già attiva")
+        log.info("Already running")
         sys.exit(3)
     try:
         SkerryApp().run()
     except SystemExit:
         raise
     except Exception:
-        log.critical("Errore fatale", exc_info=True)
+        log.critical("Fatal error", exc_info=True)
         sys.exit(1)
     sys.exit(0)
 

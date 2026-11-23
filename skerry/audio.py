@@ -37,7 +37,7 @@ class Audio:
             ep = self._endpoint()
             self.available = True
         except Exception as e:
-            log.info("Controllo volume via pycaw non disponibile (%s)", e)
+            log.info("Volume control via pycaw not available (%s)", e)
             ep = None
         last_refresh = time.time()
         while True:

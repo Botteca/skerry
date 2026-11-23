@@ -116,7 +116,7 @@ def claude_install(settings):
     data["statusLine"] = {"type": "command", "command": cli_command("statusline")}
     _write(CLAUDE_SETTINGS, data)
     settings.set("hooks_version", HOOKS_VERSION)
-    log.info("Claude Code collegato")
+    log.info("Claude Code connected")
 
 
 def claude_uninstall(settings):
@@ -135,7 +135,7 @@ def claude_uninstall(settings):
         else:
             data.pop("statusLine", None)
     _write(CLAUDE_SETTINGS, data)
-    log.info("Claude Code scollegato")
+    log.info("Claude Code disconnected")
 
 
 # ---------------- Codex ----------------
@@ -160,7 +160,7 @@ def codex_install(settings):
             group = {"matcher": ".*", **group}
         hooks.setdefault(ev, []).append(group)
     _write(CODEX_HOOKS, data)
-    log.info("Codex collegato")
+    log.info("Codex connected")
 
 
 def codex_uninstall(settings):
@@ -169,4 +169,4 @@ def codex_uninstall(settings):
     data = _read(CODEX_HOOKS)
     _strip(data.get("hooks", {}), "codex")
     _write(CODEX_HOOKS, data)
-    log.info("Codex scollegato")
+    log.info("Codex disconnected")

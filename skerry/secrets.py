@@ -43,7 +43,7 @@ def _dpapi(data, protect):
     out = _Blob()
     fn = crypt.CryptProtectData if protect else crypt.CryptUnprotectData
     if not fn(ctypes.byref(inb), None, None, None, None, 0, ctypes.byref(out)):
-        raise OSError(ctypes.get_last_error(), "DPAPI non riuscito")
+        raise OSError(ctypes.get_last_error(), "DPAPI call failed")
     try:
         return ctypes.string_at(out.pbData, out.cbData)
     finally:
@@ -71,7 +71,7 @@ def load(name, default=None):
     except FileNotFoundError:
         return default
     except Exception:
-        log.warning("Segreto '%s' illeggibile (verrà ignorato)", name)
+        log.warning("Secret '%s' is unreadable (ignored)", name)
         return default
 
 

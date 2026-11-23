@@ -3,6 +3,7 @@ import logging
 import os
 
 from . import APP_NAME, VERSION, autostart, paths
+from .i18n import t
 
 log = logging.getLogger("skerry")
 
@@ -30,7 +31,7 @@ class Tray:
         try:
             import pystray
         except Exception:
-            log.warning("pystray non disponibile: niente icona di notifica")
+            log.warning("pystray not available: no tray icon")
             return
         app = self.app
         item, menu = pystray.MenuItem, pystray.Menu
@@ -38,17 +39,18 @@ class Tray:
             "skerry", tray_image(), APP_NAME,
             menu(
                 item(f"{APP_NAME} {VERSION}", None, enabled=False),
-                item("Espandi / riduci", lambda: app.toggle_expand(), default=True),
-                item("Impostazioni…", lambda: app.open_settings()),
-                item("Pausa", lambda: app.toggle_pause(), checked=lambda i: app.paused),
-                item("Ricollega Claude Code / Codex", lambda: app.reconnect()),
-                item("Avvia con Windows", lambda: app.toggle_autostart(), checked=lambda i: autostart.is_enabled()),
+                # texts are callables: refresh() re-reads them after a language change
+                item(lambda i: t("tray.expand"), lambda: app.toggle_expand(), default=True),
+                item(lambda i: t("tray.settings"), lambda: app.open_settings()),
+                item(lambda i: t("tray.pause"), lambda: app.toggle_pause(), checked=lambda i: app.paused),
+                item(lambda i: t("tray.reconnect"), lambda: app.reconnect()),
+                item(lambda i: t("tray.autostart"), lambda: app.toggle_autostart(), checked=lambda i: autostart.is_enabled()),
                 menu.SEPARATOR,
-                item(lambda i: f"Installa aggiornamento {app.update['version']}" if app.update
-                     else "Cerca aggiornamenti", lambda: app.update_action()),
-                item("Apri cartella log", lambda: os.startfile(paths.log_dir())),
+                item(lambda i: t("tray.install_update", version=app.update["version"]) if app.update
+                     else t("tray.check_updates"), lambda: app.update_action()),
+                item(lambda i: t("tray.logs"), lambda: os.startfile(paths.log_dir())),
                 menu.SEPARATOR,
-                item("Esci", lambda: app.quit()),
+                item(lambda i: t("tray.quit"), lambda: app.quit()),
             ))
         self.icon.run_detached()
 

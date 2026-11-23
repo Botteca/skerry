@@ -25,9 +25,9 @@ dispositivi Bluetooth, un timer/Pomodoro, una mensola per i file, il consumo loc
 Microsoft 365. Tutto gira in locale.
 
 <p align="center">
-  <img src="docs/img/00-stati-compatti.png" alt="Stati compatti: agente al lavoro, musica, Pomodoro, attività finita, richiesta di permesso" width="48%">
+  <img src="docs/img/it/00-compact-states.png" alt="Stati compatti: agente al lavoro, musica, Pomodoro, attività finita, richiesta di permesso" width="48%">
   &nbsp;
-  <img src="docs/img/06-espanso.png" alt="Vista espansa con musica, riunione, agenti, consumo, sistema, timer e mensola" width="48%">
+  <img src="docs/img/it/06-expanded.png" alt="Vista espansa con musica, riunione, agenti, consumo, sistema, timer e mensola" width="48%">
 </p>
 
 <details>
@@ -35,12 +35,15 @@ Microsoft 365. Tutto gira in locale.
 
 | | |
 |---|---|
-| ![Agente al lavoro](docs/img/01-agente.png) | ![Richiesta di permesso](docs/img/04-permesso.png) |
-| ![Musica](docs/img/02-musica.png) | ![Timer](docs/img/03-timer.png) |
-| ![Attività finita](docs/img/05-finito.png) | ![Impostazioni: aspetto](docs/img/07-impostazioni-look.png) |
-| ![Impostazioni: moduli](docs/img/07-impostazioni-mods.png) | ![Impostazioni: connessioni](docs/img/07-impostazioni-conn.png) |
+| ![Agente al lavoro](docs/img/it/01-agent.png) | ![Richiesta di permesso](docs/img/it/04-permission.png) |
+| ![Musica](docs/img/it/02-music.png) | ![Timer](docs/img/it/03-timer.png) |
+| ![Attività finita](docs/img/it/05-done.png) | ![Impostazioni: aspetto](docs/img/it/07-settings-appearance.png) |
+| ![Impostazioni: moduli](docs/img/it/07-settings-modules.png) | ![Impostazioni: connessioni](docs/img/it/07-settings-connections.png) |
 
 </details>
+
+> L'interfaccia è in inglese e in italiano: segue la lingua di Windows, oppure scegli in *Impostazioni → Generale →
+> Lingua* (cambia subito, senza riavvio).
 
 ## Funzioni
 

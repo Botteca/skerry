@@ -22,16 +22,19 @@ Stack: Python 3.11+ (dev venv runs 3.13), pywebview on WinForms/WebView2, a loca
 | `skerry/integrations.py` | Writes/removes our hooks in `~/.claude/settings.json` and `~/.codex/hooks.json` (backup first). Bump `HOOKS_VERSION` when the hook list changes. |
 | `skerry/win32.py` | ctypes: pill window (region, DWM, animation, drag/snap), fullscreen detection, focus, clipboard (CF_HDROP), single-instance mutex, global hotkey. |
 | `skerry/settings.py` | `%APPDATA%\Skerry\settings.json`, `DEFAULTS` merged on load, dotted keys, change listeners. |
+| `skerry/i18n.py` | Python-side user text (tray, alerts, agent actions, errors) in en/it. `Msg` objects are rendered when the state is sent to the UI, so a language switch applies live. `language` setting: `auto` = Windows display language. |
 | `skerry/secrets.py` | DPAPI-encrypted secrets in `%APPDATA%\Skerry\secrets\*.bin`. |
 | `skerry/connectors/` | Optional external services. `m365.py`: MSAL + Graph `calendarView`, read-only; `pick_meeting()` is pure. |
 | `skerry/media.py`, `audio.py` | Now Playing via WinRT GSMTC; master volume via pycaw. |
 | `skerry/system.py` | Mic/camera via ConsentStore registry, battery, Bluetooth battery via SetupAPI. |
 | `skerry/usage.py` | Token usage parsed incrementally from `~/.claude/projects/**/*.jsonl` (no network). |
 | `skerry/timer.py`, `shelf.py`, `sounds.py`, `tray.py`, `autostart.py`, `updater.py`, `terminal.py`, `paths.py`, `log.py` | Timer/Pomodoro, shelf, beeps, tray menu, HKCU Run key, GitHub release updater, terminal HWND lookup, paths, rotating log. |
-| `ui/index.html`, `skerry.js`, `skerry.css` | The pill. Polls `get_state()` every 250 ms, picks a view, calls `resize(w,h,r)`. |
+| `ui/i18n.js` | UI dictionaries (en reference, it), `t()` / `tx()` (escaped, for `innerHTML`), plurals, locale date/time/number formatting, `I18N.apply()` for `data-i18n*` attributes. Loaded before `skerry.js` and the settings script. |
+| `ui/index.html`, `skerry.js`, `skerry.css` | The pill. Polls `get_state()` every 250 ms (which carries `lang`), picks a view, calls `resize(w,h,r)`. |
 | `ui/settings.html` | Settings window (inline script, same `js_api`). |
 | `build/` | `skerry.spec` (two exes: `Skerry.exe` windowed, `skerry-cli.exe` console), `installer.iss`, `version_info.txt`. |
 | `demo.py` | Simulates Claude Code and Codex against a running Skerry (includes a permission request). |
+| `tools/screenshots.py` | Regenerates `docs/img/` (en) and `docs/img/it/` from invented data with headless Edge. |
 
 ## Data flow
 
@@ -108,14 +111,16 @@ Runtime files: settings `%APPDATA%\Skerry\settings.json`, shelf `%APPDATA%\Skerr
   `tests/test_rename.py`. Don't add new ones elsewhere.
 - Hook timeouts: `PermissionRequest` uses `permission_wait + 30` in agent config and `+ 20` in the CLI. Keep the
   agent-side timeout larger than Skerry's wait.
-- UI escapes every dynamic string with `esc()` before `innerHTML`. Keep it that way.
+- UI escapes every dynamic string with `esc()` before `innerHTML`, and translated text with `tx()`. Keep it that way.
+- **No hard-coded user-facing text.** Add the key to both languages (`ui/i18n.js` or `skerry/i18n.py`);
+  `tests/test_i18n.py` checks keys and greps for visible literals. Log messages stay in English.
 - `join_meeting` opens only `https://` URLs. Keep that check.
 
 ## Working rules
 
 - **Language.** Code, comments, commit messages and docs in **English**. In any file you touch, translate existing
-  Italian comments/docstrings to English. (User-facing UI strings are currently Italian; change them only when
-  asked.) Replies to the user in **Italian**.
+  Italian comments/docstrings to English. User-facing strings are bilingual (English reference, Italian).
+  Replies to the user in **Italian**.
 - **Definition of done.** Before saying something is finished: `py_compile` on all `.py`, `node --check` on
   `ui/*.js` (and the settings inline script if touched), automated tests when they exist, and a real launch with
   `.\run_dev.bat` while checking `logs\skerry.log` for errors/tracebacks.

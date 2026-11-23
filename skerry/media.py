@@ -39,7 +39,7 @@ class MediaWatcher:
                 GlobalSystemMediaTransportControlsSessionPlaybackStatus as Status,
             )
         except Exception:
-            log.info("API media di Windows non disponibili")
+            log.info("Windows media APIs not available")
             return
         self._Status = Status
         self._mgr = await Manager.request_async()
@@ -51,7 +51,7 @@ class MediaWatcher:
                 self._state = None
                 if not self._err_logged:
                     self._err_logged = True
-                    log.exception("Lettura media non riuscita")
+                    log.exception("Could not read media state")
             await asyncio.sleep(self._interval)
 
     async def _poll(self):
@@ -141,7 +141,7 @@ class MediaWatcher:
                 await s.try_change_playback_position_async(int(max(0, cmd[1]) * 10_000_000))
 
         fut = asyncio.run_coroutine_threadsafe(run(), self._loop)
-        fut.add_done_callback(lambda f: f.exception() and log.warning("Comando media %s: %s", cmd, f.exception()))
+        fut.add_done_callback(lambda f: f.exception() and log.warning("Media command %s: %s", cmd, f.exception()))
         return True
 
     def seek(self, seconds):

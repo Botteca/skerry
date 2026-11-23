@@ -151,7 +151,7 @@ class SkerryWindow:
     def setup(self):
         h = self.handle()
         if not h:
-            log.warning("Finestra dell'isola non trovata")
+            log.warning("Island window not found")
             return
         ex = user32.GetWindowLongW(h, GWL_EXSTYLE)
         user32.SetWindowLongW(h, GWL_EXSTYLE, (ex | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW)
@@ -202,7 +202,7 @@ class SkerryWindow:
             margins = (ctypes.c_int * 4)(0, 0, 0, 0)
             dwm.DwmExtendFrameIntoClientArea(h, margins)
         except Exception:
-            log.debug("DWM non disponibile", exc_info=True)
+            log.debug("DWM not available", exc_info=True)
 
     def diag(self, why=""):
         """Log the real window and WebView sizes (diagnostics)."""
@@ -214,7 +214,7 @@ class SkerryWindow:
         child = user32.GetWindow(hwnd, 5)  # GW_CHILD
         if child:
             user32.GetWindowRect(child, ctypes.byref(cc))
-        log.info("diag %s: richiesto=%s finestra=%sx%s@%s,%s webview=%sx%s", why,
+        log.info("diag %s: requested=%s window=%sx%s@%s,%s webview=%sx%s", why,
                  tuple(round(v) for v in self.cur), rc.right - rc.left, rc.bottom - rc.top, rc.left, rc.top,
                  cc.right - cc.left, cc.bottom - cc.top)
 
@@ -461,11 +461,11 @@ class Hotkey:
     def _run(self):
         mods, vk = self.parse(self.spec)
         if vk is None:
-            log.warning("Scorciatoia non valida: %s", self.spec)
+            log.warning("Invalid hotkey: %s", self.spec)
             return
         self._tid = kernel32.GetCurrentThreadId()
         if not user32.RegisterHotKey(None, 1, mods, vk):
-            log.warning("Scorciatoia %s già usata da un'altra app", self.spec)
+            log.warning("Hotkey %s is already used by another app", self.spec)
             return
         msg = wintypes.MSG()
         while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
@@ -473,7 +473,7 @@ class Hotkey:
                 try:
                     self.callback()
                 except Exception:
-                    log.exception("scorciatoia")
+                    log.exception("hotkey")
         user32.UnregisterHotKey(None, 1)
 
     def stop(self):

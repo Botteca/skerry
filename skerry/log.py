@@ -28,10 +28,10 @@ def setup(name="skerry", filename="skerry.log"):
         logger.addHandler(logging.StreamHandler())
 
     def excepthook(exc_type, exc, tb):
-        logger.critical("Eccezione non gestita", exc_info=(exc_type, exc, tb))
+        logger.critical("Unhandled exception", exc_info=(exc_type, exc, tb))
 
     def thread_excepthook(args):
-        logger.error("Eccezione nel thread %s", args.thread.name if args.thread else "?",
+        logger.error("Exception in thread %s", args.thread.name if args.thread else "?",
                      exc_info=(args.exc_type, args.exc_value, args.exc_traceback))
 
     sys.excepthook = excepthook

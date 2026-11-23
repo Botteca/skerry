@@ -4,6 +4,8 @@ import sys
 import threading
 import time
 
+from .i18n import Msg, t
+
 log = logging.getLogger("skerry")
 CONSENT = r"Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore"
 
@@ -202,7 +204,7 @@ def bluetooth_batteries():
     bluetooth_batteries.last_stats = {"scanned": scanned, "with_battery": with_batt, "devices": details}
     out = []
     for d in best.values():
-        short = ("BLE ·" + d["mac"][-4:]) if d["mac"] else (d["raw"] or "Dispositivo Bluetooth")
+        short = ("BLE ·" + d["mac"][-4:]) if d["mac"] else (d["raw"] or t("device.bluetooth"))
         name = d["name"] or short
         out.append({"name": name, "battery": d["battery"], "kind": _bt_kind(name)})
     return sorted(out, key=lambda d: d["name"].lower())
@@ -235,7 +237,7 @@ class SystemMonitor:
                 if tick % 10 == 0:
                     self._battery()
             except Exception:
-                log.exception("monitor di sistema")
+                log.exception("system monitor")
             tick += 1
             time.sleep(1.5)
 
@@ -249,11 +251,12 @@ class SystemMonitor:
             return
         if prev and prev["plugged"] != cur["plugged"]:
             self._store.alert("info", "🔌" if cur["plugged"] else "🔋",
-                              f"{'In carica' if cur['plugged'] else 'A batteria'} · {cur['percent']}%", sound=False)
+                              Msg("alert.charging" if cur["plugged"] else "alert.on_battery", pct=cur["percent"]),
+                              sound=False)
         low = self._settings.get("alerts.battery_low", 20)
         if not cur["plugged"] and cur["percent"] <= low and not self._batt_low:
             self._batt_low = True
-            self._store.alert("warn", "🪫", f"Batteria al {cur['percent']}%: collega l'alimentatore")
+            self._store.alert("warn", "🪫", Msg("alert.battery_low", pct=cur["percent"]))
         elif cur["plugged"]:
             self._batt_low = False
 
@@ -265,7 +268,7 @@ class SystemMonitor:
                 try:
                     devs = bluetooth_batteries()
                 except Exception:
-                    log.exception("Lettura batterie Bluetooth non riuscita")
+                    log.exception("Could not read Bluetooth batteries")
                     devs = []
                 aliases = self._settings.get("bluetooth_names", {}) or {}
                 devs = [{**d, "name": aliases.get(d["name"], d["name"]), "kind": _bt_kind(aliases.get(d["name"], d["name"])) if d["name"] in aliases else d["kind"]}
@@ -273,13 +276,13 @@ class SystemMonitor:
                 snapshot = (bluetooth_batteries.last_stats.get("scanned") is not None, devs)
                 if snapshot != last:  # log only on change: useful to see what Windows reports
                     last = snapshot
-                    log.info("Bluetooth: %s -> %s", bluetooth_batteries.last_stats, devs or "nessun dispositivo con batteria")
+                    log.info("Bluetooth: %s -> %s", bluetooth_batteries.last_stats, devs or "no device with a battery")
                 self.state["bluetooth"] = devs
                 low = self._settings.get("alerts.bluetooth_low", 15)
                 for d in devs:
                     if d["battery"] <= low and d["name"] not in self._bt_low:
                         self._bt_low.add(d["name"])
-                        self._store.alert("warn", "🎧", f"{d['name']}: batteria al {d['battery']}%")
+                        self._store.alert("warn", "🎧", Msg("alert.device_battery_low", name=d["name"], pct=d["battery"]))
                     elif d["battery"] > low + 10:
                         self._bt_low.discard(d["name"])
             else:

@@ -7,6 +7,8 @@ import time
 import uuid
 from collections import OrderedDict
 
+from .i18n import Msg, render, t
+
 log = logging.getLogger("skerry")
 
 TOOL_ICONS = {
@@ -25,35 +27,35 @@ def short(text, n=90):
 
 
 def describe(tool, inp):
-    """(icon, short text, detail) for an agent action."""
+    """(icon, short text, detail) for an agent action. The text is a `Msg` (translated when shown) or plain text."""
     tool = tool or ""
     inp = inp if isinstance(inp, dict) else {"input": inp}
     icon = TOOL_ICONS.get(tool, "🔌" if tool.startswith("mcp__") else "⚙️")
     fp = inp.get("file_path") or inp.get("notebook_path") or inp.get("path")
     if tool in ("Read", "Edit", "MultiEdit", "Write", "NotebookEdit") and fp:
-        verb = {"Read": "Legge", "Write": "Scrive"}.get(tool, "Modifica")
-        return icon, f"{verb} {os.path.basename(str(fp))}", str(fp)
+        key = {"Read": "action.read", "Write": "action.write"}.get(tool, "action.edit")
+        return icon, Msg(key, file=os.path.basename(str(fp))), str(fp)
     if tool == "apply_patch":
-        return icon, "Applica una modifica ai file", short(inp.get("input") or inp.get("patch") or "", 400)
+        return icon, Msg("action.patch"), short(inp.get("input") or inp.get("patch") or "", 400)
     cmd = inp.get("command") or inp.get("cmd")
     if cmd is not None:
         if isinstance(cmd, list):
             cmd = " ".join(str(c) for c in cmd)
         return TOOL_ICONS.get(tool, "⌨️"), short(cmd, 60), str(cmd)
     if tool in ("Grep", "Glob"):
-        return icon, f"Cerca {short(inp.get('pattern', ''), 50)}", str(inp.get("path") or "")
+        return icon, Msg("action.search", pattern=short(inp.get("pattern", ""), 50)), str(inp.get("path") or "")
     if tool == "WebFetch":
-        return icon, f"Apre {short(inp.get('url', ''), 50)}", str(inp.get("url", ""))
+        return icon, Msg("action.fetch", url=short(inp.get("url", ""), 50)), str(inp.get("url", ""))
     if tool in ("WebSearch", "web_search"):
-        return icon, f"Cerca sul web: {short(inp.get('query', ''), 40)}", str(inp.get("query", ""))
+        return icon, Msg("action.web_search", query=short(inp.get("query", ""), 40)), str(inp.get("query", ""))
     if tool in ("Task", "Agent"):
-        return icon, f"Agente: {short(inp.get('description', ''), 50)}", str(inp.get("prompt", ""))[:400]
+        return icon, Msg("action.agent", description=short(inp.get("description", ""), 50)), str(inp.get("prompt", ""))[:400]
     if tool in ("TodoWrite", "TaskCreate", "TaskUpdate", "update_plan"):
-        return icon, "Aggiorna la lista dei task", ""
+        return icon, Msg("action.tasks"), ""
     if tool.startswith("mcp__"):
         parts = tool.split("__")
         return icon, f"{parts[1]} · {parts[-1]}", short(inp, 300)
-    return icon, tool or "Azione", short(inp, 300)
+    return icon, tool or Msg("action.generic"), short(inp, 300)
 
 
 class Store:
@@ -76,7 +78,7 @@ class Store:
         sid = f"{agent}:{payload.get('session_id') or 'default'}"
         s = self._sessions.get(sid)
         if s is None:
-            log.info("Nuova sessione %s (%s)", sid, payload.get("cwd") or "?")
+            log.info("New session %s (%s)", sid, payload.get("cwd") or "?")
             s = self._sessions[sid] = {
                 "sid": sid, "agent": agent, "project": "", "status": "idle", "icon": "", "action": "",
                 "updated": time.time(), "done_msg": "", "done_at": 0, "model": "",
@@ -124,7 +126,7 @@ class Store:
                     s["model"] = str(payload["model"])
             elif event == "UserPromptSubmit":
                 self._cancel_pending_for(s["sid"])
-                s.update(status="working", icon="✦", action="Sta pensando…")
+                s.update(status="working", icon="✦", action=Msg("action.thinking"))
             elif event == "PreToolUse":
                 icon, text, _ = describe(tool, payload.get("tool_input"))
                 s.update(status="working", icon=icon, action=text)
@@ -143,15 +145,15 @@ class Store:
                         p["result"] = "cancelled"
                         p["event"].set()
                 if s["status"] in ("permission", "waiting"):
-                    s.update(status="working", icon="✦", action="Sta lavorando…")
+                    s.update(status="working", icon="✦", action=Msg("action.working"))
             elif event == "PostToolUseFailure":
                 _, text, _ = describe(tool, payload.get("tool_input"))
-                s.update(status="working", icon="⚠️", action=f"Errore: {text}")
+                s.update(status="working", icon="⚠️", action=Msg("action.error", action=text))
             elif event in ("TaskCreated", "TaskCompleted"):
                 tid = str(payload.get("task_id") or len(s["_tasks"]))
-                t = s["_tasks"].setdefault(tid, {"title": payload.get("task_subject", ""), "status": "pending"})
+                task = s["_tasks"].setdefault(tid, {"title": payload.get("task_subject", ""), "status": "pending"})
                 if event == "TaskCompleted":
-                    t["status"] = "completed"
+                    task["status"] = "completed"
                 s["tasks"] = self._task_summary(s)
             elif event == "Notification":
                 ntype = payload.get("notification_type", "")
@@ -159,15 +161,17 @@ class Store:
                 if ntype == "permission_prompt" and has_pending:
                     return
                 if ntype in ("idle_prompt", "permission_prompt", "elicitation_dialog", "agent_needs_input"):
-                    s.update(status="waiting", icon="⏳", action=short(payload.get("message") or "Ti aspetta", 70))
+                    msg = payload.get("message")
+                    s.update(status="waiting", icon="⏳", action=short(msg, 70) if msg else Msg("action.waiting"))
             elif event == "Stop":
                 self._cancel_pending_for(s["sid"])
-                s.update(status="done", icon="✓", action="Fatto", done_at=time.time(),
+                s.update(status="done", icon="✓", action=Msg("action.done"), done_at=time.time(),
                          done_msg=short(payload.get("last_assistant_message", ""), 180))
                 self._on_event("done")
             elif event == "StopFailure":
+                err = payload.get("error")
                 s.update(status="error", icon="✕", done_at=time.time(),
-                         action=short(payload.get("error") or "Interrotto per errore", 70))
+                         action=short(err, 70) if err else Msg("action.failed"))
 
     def statusline(self, data):
         with self._lock:
@@ -180,20 +184,21 @@ class Store:
             key = ("ctx", s["sid"])
             if pct is not None and th and pct >= th and key not in self._fired:
                 self._fired.add(key)
-                self._alert("warn", "🧠", f"{s['project'] or 'Sessione'}: contesto al {pct:.0f}%. "
-                                         f"Valuta /compact o una nuova sessione.")
+                self._alert("warn", "🧠", Msg("alert.context", project=s["project"] or Msg("alert.session"),
+                                             pct=f"{pct:.0f}"))
             elif pct is not None and pct < th * 0.6:
                 self._fired.discard(key)
             rl = data.get("rate_limits")
             if not self._sl["seen"]:
-                log.info("Status line ricevuta da Claude Code (rate_limits %s)", "presenti" if rl else "assenti: serve piano Pro/Max")
+                log.info("Status line received from Claude Code (rate_limits %s)",
+                         "present" if rl else "missing: needs a Pro/Max plan")
             self._sl.update(seen=True, at=time.time(), limits=bool(rl))
             if rl:
                 self._limits = {**rl, "received_at": time.time()}
                 self._check_limits(rl)
 
     def _check_limits(self, rl):
-        names = {"five_hour": "Limite 5 ore", "seven_day": "Limite settimanale", "spend_limit": "Limite di spesa"}
+        names = {"five_hour": "limit.five_hour", "seven_day": "limit.seven_day", "spend_limit": "limit.spend"}
         for win, label in names.items():
             w = rl.get(win) or {}
             pct = w.get("used_percentage")
@@ -205,14 +210,16 @@ class Store:
             key = ("lim", win, crossed[-1], w.get("resets_at"))
             if key in self._fired:
                 continue
-            for t in crossed:
-                self._fired.add(("lim", win, t, w.get("resets_at")))
+            for th in crossed:
+                self._fired.add(("lim", win, th, w.get("resets_at")))
             level = "danger" if crossed[-1] >= 90 else "warn"
-            reset = ""
             if w.get("resets_at"):
                 left = max(0, w["resets_at"] - time.time())
-                reset = f" · reset tra {int(left // 3600)}h {int(left % 3600 // 60)}m"
-            self._alert(level, "⏱", f"{label} al {pct:.0f}%{reset}")
+                text = Msg("alert.limit_reset", label=Msg(label), pct=f"{pct:.0f}",
+                           h=int(left // 3600), m=int(left % 3600 // 60))
+            else:
+                text = Msg("alert.limit", label=Msg(label), pct=f"{pct:.0f}")
+            self._alert(level, "⏱", text)
 
     def _live_limits(self):
         """Known limits without windows that already reset (Claude Code drops them only on the next message)."""
@@ -253,7 +260,7 @@ class Store:
                      "event": threading.Event(), "result": None}
             self._pending[pid] = entry
         self._on_event("permission")
-        log.info("Permesso richiesto (%s) %s: %s", agent, tool, text)
+        log.info("Permission requested (%s) %s: %s", agent, tool, text)
 
         entry["event"].wait(wait)
 
@@ -262,14 +269,14 @@ class Store:
             if s["status"] == "permission":
                 s["status"] = "working"
         result = entry["result"]
-        log.info("Permesso %s → %s", pid, result or "timeout")
+        log.info("Permission %s -> %s", pid, result or "timeout")
         out = {"hookEventName": "PermissionRequest"}
         if result == "allow":
             out["decision"] = {"behavior": "allow"}
         elif result == "always":
             out["decision"] = {"behavior": "allow", "updatedPermissions": suggestions}
         elif result == "deny":
-            out["decision"] = {"behavior": "deny", "message": "Negato dall'utente da Skerry"}
+            out["decision"] = {"behavior": "deny", "message": t("perm.denied")}
         else:
             return {}  # terminal, timeout or cancelled: the agent shows its normal prompt
         return {"hookSpecificOutput": out}
@@ -320,10 +327,12 @@ class Store:
                 if d["status"] in ("working", "waiting") and now - d["updated"] > stale_after:
                     d["status"] = "idle"
                 d["has_window"] = bool(d.pop("hwnd"))
+                d["action"] = render(d["action"])
                 sessions.append(d)
             sessions.sort(key=lambda x: x["updated"], reverse=True)
-            pending = [{k: v for k, v in p.items() if k not in ("event", "result") and not k.startswith("_")}
+            pending = [{**{k: v for k, v in p.items() if k not in ("event", "result") and not k.startswith("_")},
+                        "text": render(p["text"])}
                        for p in self._pending.values() if p["result"] is None]
-            alerts = [a for a in self._alerts if now - a["at"] < 7]
+            alerts = [{**a, "text": render(a["text"])} for a in self._alerts if now - a["at"] < 7]
             return {"now": now, "sessions": sessions, "pending": pending, "alerts": alerts,
                     "limits": self._live_limits(), "statusline": dict(self._sl), "selected": self._selected, "ui_seq": self._ui_seq}

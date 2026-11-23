@@ -3,12 +3,12 @@ permission decisions never go through HTTP."""
 import logging
 import os
 
-from . import VERSION, autostart, integrations, paths, win32
+from . import VERSION, autostart, i18n, integrations, paths, win32
 
 log = logging.getLogger("skerry")
 
 SETTABLE = {
-    "theme", "accent", "hotkey", "autostart", "hide_fullscreen", "hide_from_capture", "permission_over_fullscreen",
+    "language", "theme", "accent", "hotkey", "autostart", "hide_fullscreen", "hide_from_capture", "permission_over_fullscreen",
     "permission_wait", "focus_terminal_after_decision", "edge", "offset", "check_updates", "update_url",
     "alerts.context", "alerts.limits", "alerts.battery_low", "alerts.bluetooth_low",
     "pomodoro.focus", "pomodoro.short_break", "pomodoro.long_break", "pomodoro.cycles",
@@ -35,6 +35,7 @@ class Api:
         snap["settings"] = {k: a.settings.get(k) for k in ("edge", "theme", "accent", "modules")}
         snap["update"] = a.update
         snap["version"] = VERSION
+        snap["lang"] = i18n.current()
         return snap
 
     def get_thumb(self):
@@ -130,7 +131,7 @@ class Api:
         return {"settings": a.settings.all(), "version": VERSION, "autostart": autostart.is_enabled(),
                 "claude": integrations.claude_status(), "codex": integrations.codex_status(),
                 "monitors": [m["device"] for m in win32.monitors()], "log_dir": paths.log_dir(),
-                "update": a.update, "connectors": a.connectors.states()}
+                "update": a.update, "connectors": a.connectors.states(), "lang": i18n.current()}
 
     def set_setting(self, key, value):
         if key.startswith("modules.") or key.startswith("sounds.") or key in SETTABLE:
@@ -143,7 +144,7 @@ class Api:
             (integrations.claude_install if on else integrations.claude_uninstall)(self._app.settings)
             return {"ok": True, **integrations.claude_status()}
         except Exception as e:
-            log.exception("Collegamento Claude Code")
+            log.exception("Connecting Claude Code")
             return {"ok": False, "error": str(e)}
 
     def codex_connect(self, on):
@@ -151,7 +152,7 @@ class Api:
             (integrations.codex_install if on else integrations.codex_uninstall)(self._app.settings)
             return {"ok": True, **integrations.codex_status()}
         except Exception as e:
-            log.exception("Collegamento Codex")
+            log.exception("Connecting Codex")
             return {"ok": False, "error": str(e)}
 
     def check_updates(self):

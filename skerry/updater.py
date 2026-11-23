@@ -30,7 +30,7 @@ def check(url, token=None):
         with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=10) as r:
             rel = json.loads(r.read().decode("utf-8"))
     except Exception as e:
-        log.info("Controllo aggiornamenti non riuscito: %s", e)
+        log.info("Update check failed: %s", e)
         return None
     tag = rel.get("tag_name", "")
     if _ver(tag) <= _ver(VERSION):
@@ -43,6 +43,6 @@ def check(url, token=None):
 
 def download_and_run(info):
     path = os.path.join(tempfile.gettempdir(), f"Skerry-Setup-{info['version']}.exe")
-    log.info("Scarico aggiornamento %s", info["version"])
+    log.info("Downloading update %s", info["version"])
     urllib.request.urlretrieve(info["url"], path)
     subprocess.Popen([path, "/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART"], close_fds=True)

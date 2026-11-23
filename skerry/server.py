@@ -24,7 +24,7 @@ def create_app(store, settings, on_show=None):
                 return jsonify(store.request_permission(payload, settings.get("permission_wait", 300), agent))
             store.handle(ev, payload, agent)
         except Exception:
-            log.exception("Errore gestendo l'evento %s", ev)
+            log.exception("Error handling event %s", ev)
         return jsonify({})
 
     @app.post("/statusline")
@@ -32,7 +32,7 @@ def create_app(store, settings, on_show=None):
         try:
             store.statusline(request.get_json(silent=True) or {})
         except Exception:
-            log.exception("Errore status line")
+            log.exception("Status line error")
         return jsonify({})
 
     @app.post("/ui/show")
