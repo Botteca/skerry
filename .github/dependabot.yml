@@ -1,11 +1,21 @@
+# Dependabot: no routine version bumps for Python packages (a new pywebview or winrt release can break the window
+# or media code, so those are upgraded by hand and tested on Windows). Security fixes still arrive as pull requests
+# through "Dependabot security updates". GitHub Actions get one grouped pull request a month.
 version: 2
 updates:
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
   - package-ecosystem: pip
     directory: /
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+      interval: monthly
+    open-pull-requests-limit: 0
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
