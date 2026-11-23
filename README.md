@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/fabrisimo/skerry/releases/latest"><img src="https://img.shields.io/github/v/release/fabrisimo/skerry?label=version" alt="Latest version"></a>
+  <a href="https://github.com/fabrisimo/skerry/releases/latest"><img src="https://img.shields.io/github/v/release/fabrisimo/skerry?label=version&cacheSeconds=3600" alt="Latest version"></a>
   <a href="https://github.com/fabrisimo/skerry/actions/workflows/ci.yml"><img src="https://github.com/fabrisimo/skerry/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078d4.svg" alt="Windows 10 | 11">
