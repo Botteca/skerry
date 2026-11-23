@@ -12,7 +12,7 @@ log = logging.getLogger("skerry")
 SETTABLE = {
     "language", "theme", "accent", "hotkey", "autostart", "hide_fullscreen", "hide_from_capture", "permission_over_fullscreen",
     "companion.style", "companion.energy",
-    "permission_wait", "focus_terminal_after_decision", "edge", "offset", "updates", "update_url",
+    "permission_wait", "focus_terminal_after_decision", "edge", "offset", "updates",
     "alerts.context", "alerts.limits", "alerts.battery_low", "alerts.bluetooth_low",
     "pomodoro.focus", "pomodoro.short_break", "pomodoro.long_break", "pomodoro.cycles",
     "connectors.m365.client_id", "connectors.m365.tenant", "connectors.m365.alert_minutes",

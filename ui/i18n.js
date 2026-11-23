@@ -441,8 +441,6 @@ const I18N_STRINGS = {
     'upd.status.ready': 'Version {version} is ready: it installs at a quiet moment',
     'upd.status.installing': 'Installing…',
     'upd.status.error': 'Problem: {error}',
-    'upd.source': 'Source',
-    'upd.sourceDesc': 'GitHub releases API',
     // ---------- settings: about ----------
     'info.title': 'About and logs',
     'info.sub': 'Diagnostics for when something goes wrong.',
@@ -881,8 +879,6 @@ const I18N_STRINGS = {
     'upd.status.ready': 'La versione {version} è pronta: si installa in un momento tranquillo',
     'upd.status.installing': 'Installazione…',
     'upd.status.error': 'Problema: {error}',
-    'upd.source': 'Sorgente',
-    'upd.sourceDesc': 'API release GitHub',
     'info.title': 'Info e log',
     'info.sub': 'Diagnostica per quando qualcosa non va.',
     'info.version': 'Versione {version}',

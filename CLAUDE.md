@@ -108,6 +108,10 @@ tags or releases unless the user asks.
   Animation (`SkerryWindow.animate_to`) is time-based (ease-out, 300 ms) and paced by `DwmFlush` with 1 ms timer
   resolution. `dwm_flat()` turns off Mica backdrop, NC rendering, rounded corners and border, and is re-applied
   periodically. **Never re-enable pywebview's shadow or Mica**: they cause the grey border/rectangle.
+- **The local server talks only to agents.** `server._refused()` rejects any request with an `Origin` or
+  `Sec-Fetch-*` header (browsers, CSRF), a `Host` other than `127.0.0.1`/`localhost` (DNS rebinding) and non-JSON
+  POSTs; bodies over `MAX_BODY` get 413. Every client we ship (`cli.py`, `app.py`) sends `Content-Type:
+  application/json`: keep it that way. `update_url` and `chained_statusline` stay out of `SETTABLE`.
 - **Permission decisions go only through `js_api`** (`Api.decide`), never through HTTP. Do not add any HTTP
   endpoint that resolves, lists or alters pending permissions. The server only receives requests.
 - **No passwords or tokens in `settings.json`.** Secrets go through `skerry/secrets.py` (DPAPI). Connectors store

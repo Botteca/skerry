@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.0.0
+
+First public release.
+
+- **Security hardening**: the local server refuses requests from web browsers (any `Origin` or `Sec-Fetch-*`
+  header), from a non-loopback `Host` (DNS rebinding) and non-JSON or oversized (> 1 MB) bodies. The update source
+  can no longer be changed from the settings window: it decides what gets installed.
 - **Multiple screens**: choose the primary screen, a specific one (remembered by a stable id, so docking and
   renumbering don't lose it) or the screen with the mouse pointer. The island follows screens being connected,
   disconnected or docked, sizes itself with the target screen's DPI, comes back if it ends up off-screen, and logs
@@ -40,7 +46,6 @@
 - "Claude usage" section: tokens of the last 5 hours / 7 days read from local files.
 - Fixed the grey (Mica) background around the pill.
 
-## 1.0.0
 - Pill snaps to any edge and monitor, with dragging and a vertical tab on the sides
 - Start with Windows, single instance, supervisor with automatic restart, tray icon
 - Settings page, light/dark themes, accent colour, global hotkey
