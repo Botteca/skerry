@@ -2,6 +2,7 @@
 import itertools
 import logging
 import os
+import re
 import threading
 import time
 import uuid
@@ -19,6 +20,16 @@ TOOL_ICONS = {
     "update_plan": "☑️", "apply_patch": "✏️",
 }
 AGENTS = {"claude": "Claude Code", "codex": "Codex"}
+
+# "Allow for N minutes": durations offered in the UI, and what such a rule never covers.
+GRANT_MINUTES = (5, 15, 60)
+DANGEROUS = re.compile(
+    r"\b(rm|rmdir|rd|del|erase|remove-item|format|drop|truncate)\b"
+    r"|\bgit\b.*\bpush\b.*(--force|\s-[a-z]*f|\s\+\S)", re.I)
+# paths that may leave the project: parent dirs, home, environment variables, POSIX absolute paths
+OUTSIDE = re.compile(r"""(^|[\s"'=\\/])\.\.($|[\s"'\\/])|(^|\s)~|\$env:|\$home\b|%\w+%|(^|[\s"'=])/\w+/""", re.I)
+WIN_PATH = re.compile(r"""(?:[A-Za-z]:[\\/]|\\\\)[^\s"'|;&<>()]*""")
+PATCH_FILE = re.compile(r"^\*\*\* (Add|Update|Delete) File: (.+)$", re.M)
 
 
 def short(text, n=90):
@@ -58,12 +69,45 @@ def describe(tool, inp):
     return icon, tool or Msg("action.generic"), short(inp, 300)
 
 
+def _inside(path, cwd):
+    root = os.path.normcase(os.path.abspath(cwd))
+    p = os.path.normcase(os.path.abspath(os.path.join(cwd, os.path.expanduser(str(path).strip()))))
+    return p == root or p.startswith(root.rstrip("\\/") + os.sep)
+
+
+def risky(tool, inp, cwd):
+    """True when a timed rule must not approve this request: destructive command or a path outside the project.
+
+    shortcut: only the usual path keys (file_path, notebook_path, path), commands and apply_patch are inspected;
+    extend this if an agent tool takes paths under other keys.
+    """
+    if not cwd:
+        return True
+    inp = inp if isinstance(inp, dict) else {"input": inp}
+    for key in ("file_path", "notebook_path", "path"):
+        if inp.get(key) and not _inside(inp[key], cwd):
+            return True
+    cmd = inp.get("command") or inp.get("cmd")
+    if isinstance(cmd, list):
+        cmd = " ".join(str(c) for c in cmd)
+    if cmd is not None:
+        cmd = str(cmd)
+        if DANGEROUS.search(cmd) or OUTSIDE.search(cmd) or any(not _inside(m, cwd) for m in WIN_PATH.findall(cmd)):
+            return True
+    if tool == "apply_patch":
+        for m in PATCH_FILE.finditer(str(inp.get("input") or inp.get("patch") or "")):
+            if m.group(1) == "Delete" or not _inside(m.group(2), cwd):
+                return True
+    return False
+
+
 class Store:
     def __init__(self, settings, on_event=None):
         self._settings = settings
         self._lock = threading.RLock()
         self._sessions = {}
         self._pending = OrderedDict()
+        self._grants = []   # "allow for N minutes" rules: same agent, project folder and tool, until expiry
         self._alerts = []
         self._fired = set()
         self._limits = None
@@ -251,12 +295,18 @@ class Store:
         icon, text, detail = describe(tool, payload.get("tool_input"))
         pid = uuid.uuid4().hex[:12]
         suggestions = payload.get("permission_suggestions") or []
+        cwd = str(payload.get("cwd") or "")
+        safe = not risky(tool, payload.get("tool_input"), cwd)
         with self._lock:
             s = self._session(payload, agent)
+            if safe and self._grant_for(agent, cwd, tool):
+                log.info("Permission auto-approved by a timed rule (%s) %s: %s", agent, tool, text)
+                return {"hookSpecificOutput": {"hookEventName": "PermissionRequest", "decision": {"behavior": "allow"}}}
             s.update(status="permission", icon=icon, action=text)
             entry = {"id": pid, "sid": s["sid"], "agent": agent, "project": s["project"], "tool": tool,
                      "icon": icon, "text": text, "detail": short(detail, 400), "created": time.time(),
                      "can_always": bool(suggestions), "_suggestions": suggestions,
+                     "can_grant": safe, "_cwd": cwd,
                      "event": threading.Event(), "result": None}
             self._pending[pid] = entry
         self._on_event("permission")
@@ -281,14 +331,45 @@ class Store:
             return {}  # terminal, timeout or cancelled: the agent shows its normal prompt
         return {"hookSpecificOutput": out}
 
+    @staticmethod
+    def _rule_key(agent, cwd, tool):
+        return agent, os.path.normcase(os.path.normpath(cwd)), tool
+
+    def _grant_for(self, agent, cwd, tool):
+        now = time.time()
+        self._grants = [g for g in self._grants if g["until"] > now]
+        key = self._rule_key(agent, cwd, tool)
+        return next((g for g in self._grants if g["_key"] == key), None)
+
     def decide(self, pid, behavior):
+        """behavior: allow | always | deny | terminal | grant:<minutes> (allow + a timed rule)."""
         with self._lock:
             p = self._pending.get(pid)
             if p and p["result"] is None:
+                if behavior.startswith("grant:"):
+                    if not p["can_grant"]:
+                        return False
+                    minutes = int(behavior.split(":")[1])
+                    key = self._rule_key(p["agent"], p["_cwd"], p["tool"])
+                    self._grants = [g for g in self._grants if g["_key"] != key]
+                    self._grants.append({"id": next(self._ids), "agent": p["agent"], "project": p["project"],
+                                         "tool": p["tool"], "until": time.time() + 60 * minutes, "_key": key})
+                    log.info("Timed rule: %s %s in %s for %d min", p["agent"], p["tool"], p["project"], minutes)
+                    for q in self._pending.values():  # identical requests already waiting
+                        same = self._rule_key(q["agent"], q["_cwd"], q["tool"]) == key
+                        if q["result"] is None and q["can_grant"] and same:
+                            q["result"] = "allow"
+                            q["event"].set()
+                    behavior = "allow"
                 p["result"] = behavior
                 p["event"].set()
                 return self._sessions.get(p["sid"], {}).get("hwnd", 0) or True
         return False
+
+    def revoke_grant(self, gid):
+        with self._lock:
+            self._grants = [g for g in self._grants if g["id"] != gid]
+            log.info("Timed rule %s revoked", gid)
 
     # ---------------- selection / UI ----------------
     def _active(self):
@@ -334,5 +415,6 @@ class Store:
                         "text": render(p["text"])}
                        for p in self._pending.values() if p["result"] is None]
             alerts = [{**a, "text": render(a["text"])} for a in self._alerts if now - a["at"] < 7]
-            return {"now": now, "sessions": sessions, "pending": pending, "alerts": alerts,
+            grants = [{k: v for k, v in g.items() if not k.startswith("_")} for g in self._grants if g["until"] > now]
+            return {"now": now, "sessions": sessions, "pending": pending, "alerts": alerts, "grants": grants,
                     "limits": self._live_limits(), "statusline": dict(self._sl), "selected": self._selected, "ui_seq": self._ui_seq}

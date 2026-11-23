@@ -48,7 +48,7 @@ your next Microsoft 365 meeting. Everything runs locally.
 
 | Module | What it does |
 |---|---|
-| **Claude Code** | Current action, permission requests (*Allow · Always · Deny · Terminal*), task progress, completion, per-session context, 5-hour/weekly limits with threshold alerts |
+| **Claude Code** | Current action, permission requests (*Allow · Allow for 5/15/60 min · Always · Deny · Terminal*), task progress, completion, per-session context, 5-hour/weekly limits with threshold alerts |
 | **Codex** | Current action, permission requests, completion (through Codex hooks) |
 | **Music and video** | Windows Now Playing (Spotify, YouTube in the browser, VLC…): cover art, accent colour from the cover, clickable progress bar, controls, volume with the wheel or a slider |
 | **Microphone and camera** | Orange/green dot while an app is using them, with the app name |
@@ -143,6 +143,22 @@ Then:
 the configured time (5 minutes by default), hands the decision back to the agent's own prompt. If you answer in the
 terminal instead, Skerry drops the request. If Skerry is not running, the hooks exit silently and the agents are never
 blocked.
+
+**Allow for N minutes.** The **⏱▾** button next to *Allow* offers *5 / 15 / 60 min*: it allows the request and, until
+the time runs out, Skerry approves on its own the requests of the same agent for the same tool (e.g. `Bash`, `Edit`) in
+the same project folder. A green **⏱ Bash 14:32** chip on the island shows each active rule with its countdown; click
+it to revoke the rule. Rules live only in memory: they end when Skerry quits. Some requests always ask, and cannot
+start a rule:
+
+- commands containing `rm`, `rmdir`, `rd`, `del`, `erase`, `Remove-Item`, `format`, `drop`, `truncate`, or a forced
+  `git push` (`--force`, `-f`, `+branch`);
+- anything that may reach outside the project folder: absolute paths elsewhere, `..`, `~`, environment variables
+  (`%VAR%`, `$env:`), POSIX absolute paths, file tools on files outside the folder, patches that delete files;
+- requests that do not say which folder they run in.
+
+The check reads the command text, so it errs on the side of asking (`git log --format=…` contains *format*). It
+cannot see what a script or program does once it runs (`python clean.py` is approved like any other `python` call):
+use short rules for tools that run arbitrary code.
 
 > **Note** — the 5-hour/weekly limits are reported by Claude Code only on Pro/Max plans. On other plans Skerry still
 > shows context, sessions and local token usage.

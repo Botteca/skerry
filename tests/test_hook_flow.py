@@ -211,3 +211,75 @@ def test_no_http_endpoint_touches_permissions(env):
              if r.endpoint != "static"}
     assert rules == {("/hook/<event>", ("POST",)), ("/statusline", ("POST",)),
                      ("/ui/show", ("POST",)), ("/health", ("GET",))}
+
+
+# ---------------------------------------------------------------- "allow for N minutes"
+
+def test_timed_rule_auto_approves_the_same_tool_in_the_same_project(env):
+    t, result = start_permission(env)
+    (p,) = wait_pending(env["store"])
+    assert p["can_grant"] is True and "_cwd" not in p
+    assert env["api"].decide(p["id"], "grant:15") is True
+    assert finish(t, result)["hookSpecificOutput"]["decision"] == {"behavior": "allow"}
+    (g,) = env["store"].snapshot()["grants"]
+    assert (g["tool"], g["project"]) == ("Bash", "ExampleApp")
+    assert 14 * 60 < g["until"] - time.time() <= 15 * 60
+
+    # same project and tool: answered at once, nothing waits in the UI
+    again = post(env, "PermissionRequest", {**BASH, "tool_input": {"command": "npm run lint"}})
+    assert again["hookSpecificOutput"]["decision"] == {"behavior": "allow"}
+
+    # another project, another tool or another agent still ask
+    for payload, agent in (({**BASH, "cwd": "C:/rep/OtherApp"}, "claude"),
+                           ({**BASH, "tool_name": "PowerShell"}, "claude"), (BASH, "codex")):
+        t, result = start_permission(env, payload, agent)
+        (p,) = wait_pending(env["store"])
+        env["api"].decide(p["id"], "deny")
+        finish(t, result)
+
+
+@pytest.mark.parametrize("command", ["rm -rf build", "del /q *.log", "git push --force", "git push -f origin main",
+                                     "sqlcmd -Q \"DROP TABLE Orders\"", "type C:/Users/x/secret.txt", "cat ../x"])
+def test_timed_rule_never_covers_dangerous_commands(env, command):
+    t, result = start_permission(env)
+    (p,) = wait_pending(env["store"])
+    env["api"].decide(p["id"], "grant:60")
+    finish(t, result)
+
+    t, result = start_permission(env, {**BASH, "tool_input": {"command": command}})
+    (p,) = wait_pending(env["store"])
+    assert p["can_grant"] is False
+    assert env["api"].decide(p["id"], "grant:5") is False  # a dangerous request cannot start a rule either
+    env["api"].decide(p["id"], "deny")
+    assert finish(t, result)["hookSpecificOutput"]["decision"]["behavior"] == "deny"
+
+
+def test_timed_rule_expires_and_can_be_revoked(env):
+    t, result = start_permission(env)
+    (p,) = wait_pending(env["store"])
+    env["api"].decide(p["id"], "grant:5")
+    finish(t, result)
+    (g,) = env["store"].snapshot()["grants"]
+
+    env["store"]._grants[0]["until"] = time.time() - 1  # expired
+    assert env["store"].snapshot()["grants"] == []
+    t, result = start_permission(env)
+    (p,) = wait_pending(env["store"])
+    env["api"].decide(p["id"], "grant:5")
+    finish(t, result)
+
+    (g,) = env["store"].snapshot()["grants"]
+    env["api"].revoke_grant(g["id"])
+    assert env["store"].snapshot()["grants"] == []
+    t, result = start_permission(env)
+    wait_pending(env["store"])
+    post(env, "Stop", {"session_id": SID})
+    assert finish(t, result) == {}
+
+
+def test_only_offered_durations_are_accepted(env):
+    t, result = start_permission(env)
+    (p,) = wait_pending(env["store"])
+    assert env["api"].decide(p["id"], "grant:9999") is False
+    env["api"].decide(p["id"], "deny")
+    finish(t, result)

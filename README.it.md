@@ -49,7 +49,7 @@ Microsoft 365. Tutto gira in locale.
 
 | Modulo | Cosa fa |
 |---|---|
-| **Claude Code** | Azione in corso, richieste di permesso (*Consenti · Sempre · Nega · Terminale*), avanzamento dei task, completamento, contesto per sessione, limiti 5 ore/settimanali con avvisi a soglia |
+| **Claude Code** | Azione in corso, richieste di permesso (*Consenti · Consenti per 5/15/60 min · Sempre · Nega · Terminale*), avanzamento dei task, completamento, contesto per sessione, limiti 5 ore/settimanali con avvisi a soglia |
 | **Codex** | Azione in corso, richieste di permesso, completamento (tramite gli hook di Codex) |
 | **Musica e video** | "In riproduzione" di Windows (Spotify, YouTube nel browser, VLC…): copertina, colore d'accento dalla copertina, barra di avanzamento cliccabile, controlli, volume con la rotellina o lo slider |
 | **Microfono e fotocamera** | Pallino arancione/verde mentre un'app li usa, con il nome dell'app |
@@ -144,6 +144,22 @@ Poi:
 *Sempre* (applica la regola suggerita da Claude Code) e *Nega* rispondono; *Terminale*, o nessuna risposta entro il tempo
 configurato (5 minuti di default), restituisce la decisione al prompt dell'agente. Se rispondi nel terminale, Skerry
 scarta la richiesta. Se Skerry non è in esecuzione, gli hook terminano in silenzio e gli agenti non restano mai bloccati.
+
+**Consenti per N minuti.** Il pulsante **⏱▾** accanto a *Consenti* offre *5 / 15 / 60 min*: consente la richiesta e,
+fino alla scadenza, Skerry approva da solo le richieste dello stesso agente per lo stesso strumento (es. `Bash`, `Edit`)
+nella stessa cartella di progetto. Un chip verde **⏱ Bash 14:32** sull'isola mostra ogni regola attiva con il conto alla
+rovescia; un clic la revoca. Le regole restano solo in memoria: finiscono quando Skerry si chiude. Alcune richieste
+chiedono sempre e non possono avviare una regola:
+
+- comandi che contengono `rm`, `rmdir`, `rd`, `del`, `erase`, `Remove-Item`, `format`, `drop`, `truncate` o un
+  `git push` forzato (`--force`, `-f`, `+branch`);
+- tutto ciò che può uscire dalla cartella di progetto: percorsi assoluti altrove, `..`, `~`, variabili d'ambiente
+  (`%VAR%`, `$env:`), percorsi assoluti POSIX, strumenti su file fuori dalla cartella, patch che cancellano file;
+- richieste che non indicano in quale cartella girano.
+
+Il controllo legge il testo del comando, quindi nel dubbio chiede (`git log --format=…` contiene *format*). Non vede cosa
+fa uno script o un programma una volta avviato (`python clean.py` è approvato come ogni altra chiamata `python`): usa
+regole brevi per strumenti che eseguono codice arbitrario.
 
 > **Nota** — i limiti 5 ore/settimanali vengono comunicati da Claude Code solo con i piani Pro/Max. Con gli altri piani
 > Skerry mostra comunque contesto, sessioni e consumo locale di token.

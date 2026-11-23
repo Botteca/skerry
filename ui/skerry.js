@@ -5,6 +5,7 @@ const A = () => window.pywebview.api;
 let S = null, expanded = false, lastKey = '', lastSize = '', uiSeq = null, view = null;
 let thumbId = 0, thumbSrc = null, dropping = false, dropTimer = null, collapseTimer = null;
 let drag = null, suppressClick = false, volFlash = 0, lastKind = '';
+let grantMenu = null;                 // pid whose "allow for N minutes" choices are open
 let onbStep = 0, onbActive = false;   // guided setup: current step, shown while S.onboarding is set
 const dismissedDone = new Set();
 
@@ -16,6 +17,7 @@ const pctColor = p => p >= 90 ? 'var(--red)' : p >= 70 ? 'var(--amber)' : 'var(-
 const until = e => { const d = Math.max(0, e - S.now), h = Math.floor(d/3600), m = Math.floor(d%3600/60); return h ? `${h}h ${m}m` : `${m}m`; };
 const when = e => I18N.weekdayTime(e);
 const AGENT = {claude:'Claude Code', codex:'Codex'};
+const GRANT_MINUTES = [5, 15, 60];   // same as skerry/store.py GRANT_MINUTES
 const glyph = (agent, spin) => `<span class="ag ${agent} ${spin ? 'spin' : ''}">${agent === 'codex' ? '◆' : '✦'}</span>`;
 const mod = m => !S.settings.modules || S.settings.modules[m] !== false;
 const vertical = () => ['left','right'].includes(S.settings.edge);
@@ -56,9 +58,11 @@ function badges(skipTimer){
   if ((sy.mic || []).length) h += `<span class="pd mic" title="${tx('privacy.mic', {apps: sy.mic.join(', ')})}"></span>`;
   if ((sy.cam || []).length) h += `<span class="pd cam" title="${tx('privacy.cam', {apps: sy.cam.join(', ')})}"></span>`;
   if (S.timer && !skipTimer) h += `<span class="chip on" data-live="tmc">${mmss(S.timer.left)}</span>`;
+  for (const g of S.grants || []) h += `<span class="chip on grant" data-act="revoke" data-arg="${g.id}"
+    title="${tx('grant.tip', {tool: g.tool, project: g.project || AGENT[g.agent]})}">⏱ ${vertical() ? '' : esc(g.tool) + ' '}<span data-live="gr" data-until="${g.until}">${mmss(g.until - S.now)}</span></span>`;
   return h;
 }
-const badgeKey = () => { const sy = S.system || {}; return [(sy.mic||[]).length, (sy.cam||[]).length, !!S.timer].join(); };
+const badgeKey = () => { const sy = S.system || {}; return [(sy.mic||[]).length, (sy.cam||[]).length, !!S.timer, (S.grants||[]).map(g => g.id)].join(); };
 
 function compactMain(){
   const s = current();
@@ -106,18 +110,21 @@ function vCompact(){
 
 // ---------------- cards ----------------
 function vPermission(){
-  const p = S.pending[0], more = S.pending.length - 1;
-  return {w:480, r:26, key:'p'+p.id+more, pid:p.id, html:`<div class="card">
+  const p = S.pending[0], more = S.pending.length - 1, menu = grantMenu === p.id;
+  const btns = menu
+    ? `${GRANT_MINUTES.map(m => `<button class="b-always" data-act="decide" data-arg="grant:${m}">${tx('perm.minutes', {n: m})}</button>`).join('')}
+      <button data-act="grant-menu">${tx('perm.back')}</button>`
+    : `<button class="b-allow" data-act="decide" data-arg="allow">${tx('perm.allow')}</button>
+      ${p.can_grant ? `<button class="b-grant" data-act="grant-menu" title="${tx('perm.grantTip')}">⏱▾</button>` : ''}
+      ${p.can_always ? `<button class="b-always" data-act="decide" data-arg="always" title="${tx('perm.alwaysTip')}">${tx('perm.always')}</button>` : ''}
+      <button class="b-deny" data-act="decide" data-arg="deny">${tx('perm.deny')}</button>
+      <button data-act="decide" data-arg="terminal" title="${tx('perm.terminalTip')}">${tx('perm.terminal')}</button>`;
+  return {w:480, r:26, key:'p'+p.id+more+menu, pid:p.id, html:`<div class="card">
     <div class="hd">${glyph(p.agent)}<b>${esc(p.project || AGENT[p.agent])}</b><span class="muted">· ${tx('perm.asks', {agent: AGENT[p.agent]})}</span>
       <span class="sp"></span>${more ? `<span class="chip">+${more}</span>` : ''}</div>
     <div class="title">${esc(p.icon)} ${esc(p.text)}</div>
     ${p.detail && p.detail !== p.text ? `<div class="detail mono">${esc(p.detail)}</div>` : ''}
-    <div class="btns">
-      <button class="b-allow" data-act="decide" data-arg="allow">${tx('perm.allow')}</button>
-      ${p.can_always ? `<button class="b-always" data-act="decide" data-arg="always" title="${tx('perm.alwaysTip')}">${tx('perm.always')}</button>` : ''}
-      <button class="b-deny" data-act="decide" data-arg="deny">${tx('perm.deny')}</button>
-      <button data-act="decide" data-arg="terminal" title="${tx('perm.terminalTip')}">${tx('perm.terminal')}</button>
-    </div></div>`};
+    <div class="btns">${btns}</div></div>`};
 }
 function vAlert(a){
   return {w:420, r:24, key:'al'+a.id, aid:a.id, html:`<div class="alert ${a.level}" data-act="dismiss" data-arg="${a.id}">
@@ -324,6 +331,7 @@ function live(){
     set('pg', el => el.style.width = (S.media.duration ? 100*p/S.media.duration : 0) + '%');
     set('pt', el => el.textContent = mmss(p));
   }
+  set('gr', el => el.textContent = mmss(+el.dataset.until - S.now));
   if (S.timer){ ['tm','tmb','tmc'].forEach(k => set(k, el => el.textContent = mmss(S.timer.left))); }
   if (S.audio){
     set('vol', el => { if (document.activeElement !== el) el.value = Math.round((S.audio.volume || 0)*100); });
@@ -374,7 +382,9 @@ async function tick(){
 function act(name, arg, ev, el){
   const api = A();
   switch (name){
-    case 'decide': return api.decide(view.pid, arg);
+    case 'decide': grantMenu = null; return api.decide(view.pid, arg);
+    case 'grant-menu': grantMenu = grantMenu ? null : view.pid; return render();
+    case 'revoke': api.revoke_grant(+arg); return tick();
     case 'dismiss': api.dismiss_alert(+arg); return tick();
     case 'focus': if (view.done){ dismissedDone.add(view.done); setTimeout(tick, 50); } return api.focus_session(arg);
     case 'media': return api.media(arg);

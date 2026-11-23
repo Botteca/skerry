@@ -5,6 +5,7 @@ import os
 import time
 
 from . import VERSION, autostart, displays, i18n, integrations, paths, win32
+from .store import GRANT_MINUTES
 
 log = logging.getLogger("skerry")
 
@@ -74,13 +75,16 @@ class Api:
 
     # ---------- agents ----------
     def decide(self, pid, behavior):
-        if behavior not in ("allow", "always", "deny", "terminal"):
+        if behavior not in ("allow", "always", "deny", "terminal", *(f"grant:{m}" for m in GRANT_MINUTES)):
             return False
         res = self._app.store.decide(pid, behavior)
         if isinstance(res, int) and not isinstance(res, bool) and res and \
                 self._app.settings.get("focus_terminal_after_decision", True):
             win32.focus_window(res)
         return bool(res)
+
+    def revoke_grant(self, gid):
+        self._app.store.revoke_grant(int(gid))
 
     def dismiss_alert(self, aid):
         self._app.store.dismiss_alert(aid)
