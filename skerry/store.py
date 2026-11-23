@@ -206,6 +206,11 @@ class Store:
                         p["event"].set()
                 if s["status"] in ("permission", "waiting"):
                     s.update(status="working", icon="✦", action=Msg("action.working"))
+            elif event == "PermissionResolved":
+                # answered in the agent itself (OpenCode): withdraw the island's request for this session
+                self._cancel_pending_for(s["sid"])
+                if s["status"] == "permission":
+                    s.update(status="working", icon="✦", action=Msg("action.working"))
             elif event == "PostToolUseFailure":
                 _, text, _ = describe(tool, payload.get("tool_input"))
                 s.update(status="working", icon="⚠️", action=Msg("action.error", action=text))

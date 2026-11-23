@@ -81,8 +81,6 @@ def _opencode(event, p):
     out = {**p, "tool_name": OPENCODE_TOOLS.get(tool, tool), "tool_input": inp}
     if event == "PermissionRequest" and p.get("can_always"):
         out["permission_suggestions"] = [{"type": "opencode", "behavior": "always"}]   # enables "Always"
-    if event == "PermissionResolved":
-        return "PostToolUse", {**out, "tool_name": ""}
     return event, out
 
 

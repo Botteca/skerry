@@ -206,7 +206,7 @@ def test_opencode_tools_and_permission_are_mapped():
                                                               "tool_input": {"patterns": ["npm test"]}, "can_always": True})
     assert (ev, p["tool_name"], p["tool_input"]["command"]) == ("PermissionRequest", "Bash", "npm test")
     assert p["permission_suggestions"]
-    assert agents.normalize("opencode", "PermissionResolved", {"session_id": "s1"})[0] == "PostToolUse"
+    assert agents.normalize("opencode", "PermissionResolved", {"session_id": "s1"})[0] == "PermissionResolved"
 
 
 def test_opencode_reply_format():
@@ -228,14 +228,12 @@ def test_opencode_permission_is_answered_from_the_island(env):
                            "can_always": True})
     th = threading.Thread(target=ask)
     th.start()
-    for _ in range(100):
-        pend = env["store"].snapshot()["pending"]
-        if pend:
-            break
+    deadline = time.time() + 10
+    while not (pend := env["store"].snapshot()["pending"]) and time.time() < deadline:
         time.sleep(0.02)
     assert pend[0]["agent"] == "opencode" and pend[0]["can_always"]
     env["api"].decide(pend[0]["id"], "always")
-    th.join(5)
+    th.join(10)
     assert res["out"] == {"decision": "always"}
 
 
@@ -244,13 +242,15 @@ def test_opencode_answer_in_the_terminal_withdraws_the_request(env):
     th = threading.Thread(target=lambda: res.update(out=post_new(env, "opencode", "PermissionRequest", {
         "session_id": "s1", "cwd": CWD, "tool_name": "bash", "tool_input": {"patterns": ["ls"]}})))
     th.start()
-    for _ in range(100):
-        if env["store"].snapshot()["pending"]:
-            break
+    deadline = time.time() + 10
+    while not env["store"].snapshot()["pending"] and time.time() < deadline:
         time.sleep(0.02)
+    assert env["store"].snapshot()["pending"], "the request never reached the store"
+    t0 = time.time()
     post(env, "opencode", "PermissionResolved", {"session_id": "s1", "cwd": CWD})
-    th.join(5)
-    assert res["out"] == {} and env["store"].snapshot()["pending"] == []
+    th.join(10)
+    assert res.get("out") == {} and env["store"].snapshot()["pending"] == []
+    assert time.time() - t0 < 4          # withdrawn at once, not after permission_wait (5 s)
 
 
 def test_opencode_connect_writes_its_plugin(tmp_path, monkeypatch):
