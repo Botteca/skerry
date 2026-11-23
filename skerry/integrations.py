@@ -15,12 +15,18 @@ CLAUDE_SETTINGS = os.path.join(HOME, ".claude", "settings.json")
 CODEX_DIR = os.path.join(HOME, ".codex")
 CODEX_HOOKS = os.path.join(CODEX_DIR, "hooks.json")
 
-HOOKS_VERSION = 3  # bump when the hooks change: they are rewritten on the first run after an update
+HOOKS_VERSION = 4  # bump when the hooks change: they are rewritten on the first run after an update
 OUR_URL = re.compile(r"^http://127\.0\.0\.1:\d+/hook/")
-CLAUDE_HTTP_EVENTS = {
-    "UserPromptSubmit": 5, "PreToolUse": 5, "PostToolUse": 5, "PostToolUseFailure": 5, "PermissionRequest": None,
-    "Notification": 5, "Stop": 5, "StopFailure": 5, "SessionEnd": 2, "TaskCreated": 5, "TaskCompleted": 5,
+# Claude Code hooks: all are `skerry-cli hook claude` commands, which exit 0 with no output when Skerry is not
+# running, so Claude Code shows nothing (an "http" hook would show "hook failed: ECONNREFUSED" on every event).
+# Only PermissionRequest waits for the answer; the others run in the background ("async") and add no latency.
+# Up to hooks v3 these were "http" hooks: _is_ours() still recognises them by URL so they get replaced/removed.
+CLAUDE_EVENTS = {   # event -> timeout in seconds (None = permission_wait + 30)
+    "SessionStart": 10, "UserPromptSubmit": 5, "PreToolUse": 5, "PostToolUse": 5, "PostToolUseFailure": 5,
+    "PermissionRequest": None, "Notification": 5, "Stop": 5, "StopFailure": 5, "SessionEnd": 5,
+    "TaskCreated": 5, "TaskCompleted": 5,
 }
+CLAUDE_SYNC = {"PermissionRequest"}
 CODEX_EVENTS = {"SessionStart": 10, "UserPromptSubmit": 10, "PreToolUse": 10, "PermissionRequest": None,
                 "Stop": 10, "SessionEnd": 10}
 # Hook commands we own. "island-cli" was written by versions before the rename: still ours, so it gets stripped.
@@ -100,13 +106,13 @@ def claude_install(settings):
     data = _read(CLAUDE_SETTINGS)
     hooks = data.setdefault("hooks", {})
     _strip(hooks, "claude")
-    port = settings.get("port", 47800)
     wait = int(settings.get("permission_wait", 300)) + 30
-    hooks.setdefault("SessionStart", []).append(
-        {"hooks": [{"type": "command", "command": cli_command("hook", "claude"), "timeout": 10}]})
-    for ev, timeout in CLAUDE_HTTP_EVENTS.items():
-        group = {"hooks": [{"type": "http", "url": f"http://127.0.0.1:{port}/hook/{ev}?agent=claude",
-                            "timeout": timeout or wait}]}
+    command = cli_command("hook", "claude")
+    for ev, timeout in CLAUDE_EVENTS.items():
+        hook = {"type": "command", "command": command, "timeout": timeout or wait}
+        if ev not in CLAUDE_SYNC:
+            hook["async"] = True
+        group = {"hooks": [hook]}
         if ev in WITH_MATCHER:
             group = {"matcher": "*", **group}
         hooks.setdefault(ev, []).append(group)

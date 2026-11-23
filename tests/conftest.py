@@ -59,6 +59,11 @@ def no_registry(monkeypatch):
     def blocked(*args, **kwargs):
         raise RuntimeError("Registry access is not allowed in tests")
 
+    # urllib reads the system proxy from the registry: tests never use a proxy (they only talk to 127.0.0.1)
+    import urllib.request
+    monkeypatch.setattr(urllib.request, "getproxies", lambda: {})
+    monkeypatch.setattr(urllib.request, "_opener", None)
+
     for name in ("OpenKey", "OpenKeyEx", "CreateKey", "CreateKeyEx", "ConnectRegistry",
                  "SetValue", "SetValueEx", "DeleteKey", "DeleteKeyEx", "DeleteValue"):
         if hasattr(winreg, name):

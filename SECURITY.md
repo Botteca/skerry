@@ -33,7 +33,8 @@ In scope, for example:
 - the local server (`127.0.0.1:47800`) being reachable from other machines or from web pages in a harmful way;
 - tokens or secrets stored in clear text or readable by other users;
 - changes to `~/.claude/settings.json` or `~/.codex/hooks.json` that break or weaken the user's configuration;
-- the updater installing something that is not an official release.
+- the updater installing something that is not an official release (it must only run an installer whose SHA-256
+  matches the release's `SHA256SUMS.txt`).
 
 Out of scope: issues that need an attacker who already runs code as the same Windows user (they could edit the agent
 configuration directly), and the unsigned-executable SmartScreen warning.

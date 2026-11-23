@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- **No more "hook failed: ECONNREFUSED" in Claude Code when Skerry is not running.** Claude Code hooks are now
+  `skerry-cli` command hooks that exit silently in that case (hooks v4, rewritten automatically). They run in the
+  background, except the permission request, so they add no latency.
+- **Automatic updates.** Skerry checks GitHub releases at startup and every 6 hours (ETag), ignores pre-releases and,
+  in the default *Automatic* mode, downloads the installer, verifies its SHA-256 against `SHA256SUMS.txt` and installs
+  it silently at a quiet moment (or with *Update now*), then restarts. Modes: Automatic / Notify only / Off
+  (the old "check automatically" switch is migrated). *Settings → Updates* shows status, last check and release notes.
+- Releases are built and published by GitHub Actions on a `v*` tag; the version lives only in `skerry/__init__.py`.
+- Installer in English and Italian, detects a running Skerry (AppMutex) and supports silent updates.
 - **English and Italian interface.** The language follows Windows by default; *Settings → General → Language*
   (Automatic / English / Italiano) switches the pill, the settings window, alerts and the tray menu immediately,
   without a restart. Dates, times and numbers follow the language. Log messages are now always in English.

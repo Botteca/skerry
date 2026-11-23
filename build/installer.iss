@@ -1,6 +1,11 @@
-; Inno Setup 6: per-user installer (no admin rights)
+; Inno Setup 6: per-user installer (no admin rights).
+; The version is not written here: build.bat and the release workflow pass it from skerry/__init__.py:
+;   ISCC /DAppVersion=1.2.0 build\installer.iss      (python tools\release.py version prints it)
+; Silent update, as started by Skerry itself:  Skerry-Setup-X.Y.Z.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+#ifndef AppVersion
+  #error AppVersion is not defined: run ISCC /DAppVersion=X.Y.Z (see build.bat)
+#endif
 #define AppName "Skerry"
-#define AppVersion "1.0.0"
 #define AppExe "Skerry.exe"
 ; Uninstall key of the installer used before the rename (same per-user scope).
 #define LegacyUninstallKey "Software\Microsoft\Windows\CurrentVersion\Uninstall\{6E3B1C52-8E7A-4B4E-9C1D-6A0F5D2B9A11}_is1"
@@ -9,10 +14,16 @@
 AppId={{6FCF8BCB-3479-4913-B7B6-E586160E575F}
 AppName={#AppName}
 AppVersion={#AppVersion}
+AppVerName={#AppName} {#AppVersion}
 AppPublisher={#AppName}
+AppPublisherURL=https://github.com/fabrisimo/skerry
+AppSupportURL=https://github.com/fabrisimo/skerry/issues
+AppUpdatesURL=https://github.com/fabrisimo/skerry/releases
+VersionInfoVersion={#AppVersion}
 DefaultDirName={localappdata}\Programs\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
+DisableDirPage=auto
 PrivilegesRequired=lowest
 OutputDir=..\dist
 OutputBaseFilename=Skerry-Setup-{#AppVersion}
@@ -21,16 +32,34 @@ UninstallDisplayIcon={app}\{#AppExe}
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
+; Same name as win32.single_instance(): Setup knows when Skerry is running.
+AppMutex=SkerrySingleInstance
+; Close Skerry (Restart Manager) if it still runs when files are replaced, and restart what was closed.
 CloseApplications=force
-RestartApplications=no
+RestartApplications=yes
+ShowLanguageDialog=auto
+UsePreviousTasks=yes
 
 [Languages]
+Name: "en"; MessagesFile: "compiler:Default.isl"
 Name: "it"; MessagesFile: "compiler:Languages\Italian.isl"
 
+[CustomMessages]
+en.Options=Options:
+it.Options=Opzioni:
+en.TaskAutostart=Start Skerry with Windows
+it.TaskAutostart=Avvia Skerry con Windows
+en.TaskConnect=Connect Claude Code and Codex to Skerry
+it.TaskConnect=Collega Claude Code e Codex a Skerry
+en.TaskDesktop=Desktop icon
+it.TaskDesktop=Icona sul desktop
+en.LaunchApp=Start Skerry
+it.LaunchApp=Avvia Skerry
+
 [Tasks]
-Name: "autostart"; Description: "Avvia Skerry con Windows"; GroupDescription: "Opzioni:"
-Name: "connect"; Description: "Collega Claude Code e Codex a Skerry"; GroupDescription: "Opzioni:"
-Name: "desktopicon"; Description: "Icona sul desktop"; GroupDescription: "Opzioni:"; Flags: unchecked
+Name: "autostart"; Description: "{cm:TaskAutostart}"; GroupDescription: "{cm:Options}"
+Name: "connect"; Description: "{cm:TaskConnect}"; GroupDescription: "{cm:Options}"
+Name: "desktopicon"; Description: "{cm:TaskDesktop}"; GroupDescription: "{cm:Options}"; Flags: unchecked
 
 [Files]
 Source: "..\dist\Skerry\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -47,7 +76,8 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 
 [Run]
 Filename: "{app}\skerry-cli.exe"; Parameters: "connect"; Flags: runhidden; Tasks: connect
-Filename: "{app}\{#AppExe}"; Description: "Avvia {#AppName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchApp}"; Flags: nowait postinstall skipifsilent
+; silent install or update: start (again) the app; a second instance only expands the first one
 Filename: "{app}\{#AppExe}"; Flags: nowait; Check: WizardSilent
 
 [UninstallRun]

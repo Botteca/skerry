@@ -9,7 +9,7 @@ log = logging.getLogger("skerry")
 
 SETTABLE = {
     "language", "theme", "accent", "hotkey", "autostart", "hide_fullscreen", "hide_from_capture", "permission_over_fullscreen",
-    "permission_wait", "focus_terminal_after_decision", "edge", "offset", "check_updates", "update_url",
+    "permission_wait", "focus_terminal_after_decision", "edge", "offset", "updates", "update_url",
     "alerts.context", "alerts.limits", "alerts.battery_low", "alerts.bluetooth_low",
     "pomodoro.focus", "pomodoro.short_break", "pomodoro.long_break", "pomodoro.cycles",
     "connectors.m365.client_id", "connectors.m365.tenant", "connectors.m365.alert_minutes",
@@ -33,7 +33,7 @@ class Api:
         snap["meeting"] = a.connectors.meeting() if mods.get("calendar", True) else None
         snap["shelf"] = a.shelf.items() if mods.get("shelf", True) else []
         snap["settings"] = {k: a.settings.get(k) for k in ("edge", "theme", "accent", "modules")}
-        snap["update"] = a.update
+        snap["update"] = a.updater.visible_state()
         snap["version"] = VERSION
         snap["lang"] = i18n.current()
         return snap
@@ -131,7 +131,7 @@ class Api:
         return {"settings": a.settings.all(), "version": VERSION, "autostart": autostart.is_enabled(),
                 "claude": integrations.claude_status(), "codex": integrations.codex_status(),
                 "monitors": [m["device"] for m in win32.monitors()], "log_dir": paths.log_dir(),
-                "update": a.update, "connectors": a.connectors.states(), "lang": i18n.current()}
+                "update": a.updater.public_state(), "connectors": a.connectors.states(), "lang": i18n.current()}
 
     def set_setting(self, key, value):
         if key.startswith("modules.") or key.startswith("sounds.") or key in SETTABLE:
@@ -156,10 +156,21 @@ class Api:
             return {"ok": False, "error": str(e)}
 
     def check_updates(self):
-        return self._app.check_updates()
+        return self._app.updater.check(manual=True)
 
     def install_update(self):
-        self._app.update_action()
+        return self._app.updater.install_now()
+
+    def open_release_notes(self):
+        """Open the release page of the available update. https only."""
+        import webbrowser
+        from urllib.parse import urlparse
+        url = self._app.updater.public_state().get("notes_url") or ""
+        u = urlparse(url)
+        if u.scheme != "https" or not u.hostname:
+            return False
+        webbrowser.open(url)
+        return True
 
     def open_logs(self):
         os.startfile(paths.log_dir())

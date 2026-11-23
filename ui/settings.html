@@ -204,8 +204,11 @@
 <section class="page" id="p-upd">
   <h1 data-i18n="upd.title"></h1><div class="sub" data-i18n="upd.sub"></div>
   <div class="panel">
-    <div class="row"><div class="l"><span id="upd-msg"></span></div><button class="btn" id="upd-btn"></button></div>
-    <div class="row"><div class="l" data-i18n="upd.auto"></div><label class="sw"><input type="checkbox" data-k="check_updates"><span></span></label></div>
+    <div class="row"><div class="ico">⬆️</div><div class="l"><span id="upd-msg"></span><div class="d" id="upd-detail"></div></div><button class="btn primary" id="upd-now" data-i18n="update.now" hidden></button><button class="btn" id="upd-btn" data-i18n="upd.checkNow"></button></div>
+    <div class="row"><div class="l"><span data-i18n="upd.mode"></span><div class="d" data-i18n="upd.modeDesc"></div></div><div class="seg" data-seg="updates"><button data-v="auto" data-i18n="upd.modeAuto"></button><button data-v="notify" data-i18n="upd.modeNotify"></button><button data-v="off" data-i18n="upd.modeOff"></button></div></div>
+    <div class="row"><div class="l" data-i18n="upd.installedRow"></div><span class="msg" id="upd-ver"></span></div>
+    <div class="row"><div class="l" data-i18n="upd.lastCheck"></div><span class="msg" id="upd-last"></span></div>
+    <div class="row" id="upd-notes-row" hidden><div class="l"><span data-i18n="upd.notes"></span><div class="d" id="upd-notes-desc"></div></div><button class="btn" id="upd-notes" data-i18n="upd.openNotes"></button></div>
     <div class="row"><div class="l"><span data-i18n="upd.source"></span><div class="d" data-i18n="upd.sourceDesc"></div><input type="text" class="wide" data-k="update_url" data-lazy style="margin-top:7px"></div></div>
   </div>
 </section>
@@ -228,7 +231,6 @@ const MODULES = [
 ];
 const ACCENTS = ['#d97757','#0a84ff','#30d158','#bf5af2','#ff9f0a','#ff375f','#64d2ff'];
 let D = null;
-let updMsg = null;   // last update-check message as [key, params]; null = show the installed version
 const api = () => window.pywebview.api;
 const get = (o, k) => k.split('.').reduce((a, p) => a == null ? a : a[p], o);
 const $ = id => document.getElementById(id);
@@ -269,26 +271,26 @@ function bind(){
   $('cl-btn').onclick = () => connect('claude');
   $('cx-btn').onclick = () => connect('codex');
   $('logs').onclick = () => api().open_logs();
-  $('upd-btn').onclick = async () => {
-    const b = $('upd-btn');
-    if (D.update){ api().install_update(); return; }
-    b.disabled = true; updMsg = ['upd.checking']; renderUpdate();
-    const r = await api().check_updates(); b.disabled = false;
-    if (r){ D.update = r; updMsg = ['upd.available', {version: r.version}]; }
-    else updMsg = ['upd.none', {version: D.version}];
-    renderUpdate();
-  };
+  $('upd-btn').onclick = async () => { $('upd-btn').disabled = true; D.update = await api().check_updates(); renderUpdate(); load(); };
+  $('upd-now').onclick = async () => { $('upd-now').disabled = true; await api().install_update(); setTimeout(load, 300); };
+  $('upd-notes').onclick = () => api().open_release_notes();
   let p = 'gen'; try { p = localStorage.getItem('skerry.page') || 'gen'; } catch (e) {}
   show(document.getElementById('p-' + p) ? p : 'gen');
 }
 
+const UPD_BUSY = ['checking', 'downloading', 'installing'];
 function renderUpdate(){
-  const b = $('upd-btn');
-  $('upd-msg').textContent = updMsg ? t(...updMsg) : t('upd.installed', {version: D.version});
-  if (D.update){
-    b.textContent = updMsg ? t('upd.install') : t('upd.installVersion', {version: D.update.version});
-    b.classList.add('primary'); $('upd-dot').hidden = false;
-  } else b.textContent = t('upd.checkNow');
+  const u = D.update || {}, v = {version: u.version, error: u.error};
+  $('upd-msg').textContent = t('upd.status.' + (u.status || 'idle'), v);
+  $('upd-detail').textContent = u.can_install === false ? t('upd.devNote') : '';
+  $('upd-ver').textContent = D.version;
+  $('upd-last').textContent = u.last_check ? I18N.dateTime(u.last_check) : t('upd.never');
+  $('upd-now').hidden = !(u.can_install && ['available', 'ready'].includes(u.status));
+  $('upd-now').disabled = false;
+  $('upd-btn').disabled = UPD_BUSY.includes(u.status);
+  $('upd-notes-row').hidden = !u.notes_url;
+  $('upd-notes-desc').textContent = u.notes_url ? t('upd.notesDesc', v) : '';
+  $('upd-dot').hidden = !['available', 'ready'].includes(u.status);
 }
 
 async function connect(agent){
@@ -341,9 +343,11 @@ async function load(){
   mbt.disabled = mc.status === 'signing_in';
   $('m365-desc').textContent = mc.status === 'error' && mc.error ? mc.error : t('conn.m365Desc');
   $('m365-desc').style.color = mc.status === 'error' ? 'var(--red)' : '';
-  if (mc.status === 'signing_in' && !window.__poll) window.__poll = setInterval(load, 1500);
-  else if (mc.status !== 'signing_in' && window.__poll){ clearInterval(window.__poll); window.__poll = null; }
   renderUpdate();
+  // refresh while something is in progress (Microsoft sign-in, update check or download)
+  const busy = mc.status === 'signing_in' || UPD_BUSY.includes((D.update || {}).status);
+  if (busy && !window.__poll) window.__poll = setInterval(load, 1500);
+  else if (!busy && window.__poll){ clearInterval(window.__poll); window.__poll = null; }
 }
 
 window.addEventListener('pywebviewready', () => { bind(); load(); });

@@ -82,9 +82,12 @@ def test_ui_keys_used_exist_and_are_used(ui_strings):
     sources = read("ui", "skerry.js") + read("ui", "settings.html")
     used = {k for k in KEY_LITERAL.findall(sources) if k.split(".")[0] in namespaces}
     used |= set(re.findall(r'data-i18n(?:-html|-title|-placeholder)?="([^"]+)"', sources))
-    modules = re.findall(r"\['(\w+)', '[^']+'", settings_script())          # MODULES: mod.<k> and mod.<k>.desc
+    block = re.search(r"const MODULES = \[(.*?)\];", settings_script(), re.S).group(1)
+    modules = re.findall(r"\['(\w+)', '[^']+'", block)                       # MODULES: mod.<k> and mod.<k>.desc
     assert modules, "MODULES list not found"
     used |= {f"mod.{m}.desc" for m in modules} | {f"mod.{m}" for m in modules if f"mod.{m}" in en}
+    from skerry.updater import VISIBLE                                        # 'upd.status.' + updater status
+    used |= {f"upd.status.{s}" for s in ("idle", "checking", "up_to_date", "error") + VISIBLE}
     assert sorted(used - set(en)) == [], "keys used in the UI but missing from ui/i18n.js"
     assert sorted(set(en) - used) == [], "keys never used by the UI"
 

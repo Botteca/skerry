@@ -67,6 +67,37 @@ Finally, launch the app with `.\run_dev.bat` and check `logs\skerry.log` for err
   (`Contoso`-style, `C:/rep/ExampleApp`, `example.invalid`).
 - If you change the list of hooks, bump `HOOKS_VERSION` in `skerry/integrations.py`.
 - Add an entry to `CHANGELOG.md` under *Unreleased* for user-visible changes.
+- Never write the version anywhere but `skerry/__init__.py`.
+
+## Making a release
+
+Releases are built and published by [`.github/workflows/release.yml`](.github/workflows/release.yml) when a tag
+`vX.Y.Z` is pushed. The version lives **only** in `skerry/__init__.py` (`VERSION`): PyInstaller, the Windows version
+resource (`build/version_info.txt` is a template) and the installer (`ISCC /DAppVersion=…`) all read it from there
+through `tools/release.py`.
+
+1. Update `CHANGELOG.md`: rename *Unreleased* to the new version, optionally with a date, e.g.
+   `## 1.2.0 — 2026-12-01`, and start a new empty *Unreleased* section above it. The workflow uses the text of
+   that section as the release notes.
+2. Set `VERSION = "1.2.0"` in `skerry/__init__.py` (semantic versioning; a suffix such as `1.3.0-rc.1` makes a
+   pre-release, which installed copies ignore).
+3. Check locally: `python -m pytest`, and optionally `.\build.bat` to try the installer.
+4. Commit and push to `main`, wait for CI to be green.
+5. Tag and push the tag:
+
+   ```powershell
+   git tag v1.2.0
+   git push origin v1.2.0
+   ```
+
+The workflow fails early if the tag does not match `VERSION` or if `CHANGELOG.md` has no section for it. Otherwise it
+runs the tests, builds `Skerry.exe` and `skerry-cli.exe`, compiles `Skerry-Setup-1.2.0.exe` with Inno Setup, writes
+`SHA256SUMS.txt` and publishes the GitHub release with both files. Installed copies find it within 6 hours.
+
+Don't edit or replace the files of a published release: installed copies verify the installer against
+`SHA256SUMS.txt`. If a release is broken, publish a new version instead.
+
+Code signing is prepared but disabled: see the commented steps (SignPath or your own certificate) in `release.yml`.
 
 ## Pull requests
 

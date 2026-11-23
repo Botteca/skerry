@@ -28,7 +28,7 @@ DEFAULTS = {
     "sounds": {"permission": True, "done": True, "alert": True, "timer": True},
     "alerts": {"context": 80, "limits": [80, 90], "battery_low": 20, "bluetooth_low": 15},
     "pomodoro": {"focus": 25, "short_break": 5, "long_break": 15, "cycles": 4},
-    "check_updates": True,
+    "updates": "auto",        # auto (download, verify, install at a quiet moment) | notify | off
     "update_url": "https://api.github.com/repos/fabrisimo/skerry/releases/latest",
     "chained_statusline": None,
     "auto_connect_done": False,
@@ -49,6 +49,15 @@ def _merge(data, defaults):
     return data
 
 
+def _migrate(data):
+    """Rename settings from older versions before the defaults are merged in."""
+    if "check_updates" in data:                     # bool before 1.1: off -> "off", on -> the new default
+        if "updates" not in data and data["check_updates"] is False:
+            data["updates"] = "off"
+        del data["check_updates"]
+    return data
+
+
 def load_raw(path=None):
     """Plain read (used by the hook CLI)."""
     path = path or paths.settings_file()
@@ -57,7 +66,7 @@ def load_raw(path=None):
             data = json.load(f)
     except Exception:
         data = {}
-    return _merge(data if isinstance(data, dict) else {}, DEFAULTS)
+    return _merge(_migrate(data) if isinstance(data, dict) else {}, DEFAULTS)
 
 
 class Settings:

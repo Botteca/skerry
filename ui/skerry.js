@@ -165,6 +165,17 @@ function claudeBlock(){
   return `<div class="sec"><div class="sec-h"><b>${tx('usage.title')}</b><span class="sp"></span>${u ? `<span class="xs">${tx('usage.local')}</span>` : ''}</div>${body}</div>`;
 }
 
+// Update offer above the footer: "Update to vX ready" + "Update now" (auto) or "vX available" + "Update" (notify).
+function updateBar(){
+  const u = S.update;
+  if (!u) return '';
+  const v = {version: u.version}, busy = u.status === 'downloading' || u.status === 'installing';
+  const text = u.status === 'ready' ? tx('update.ready', v) : u.status === 'downloading' ? tx('update.downloading', v)
+    : u.status === 'installing' ? tx('update.installing') : tx('update.available', v);
+  const btn = busy || !u.can_install ? '' : `<button class="b-join" data-act="update">${tx('update.now')}</button>`;
+  return `<div class="updbar"><span class="ui">⬆</span><span class="ut">${text}</span>${btn}</div>`;
+}
+
 function vExpanded(){
   const md = mod('media') && S.media, L = S.limits, sy = S.system || {}, au = S.audio;
   const sess = S.sessions.slice(0, 4);
@@ -244,11 +255,13 @@ function vExpanded(){
     });
     h += '</div>';
   }
-  h += `<div class="foot"><span>Skerry ${esc(S.version)}</span>${S.update ? `<span class="upd" data-act="update">· ${tx('foot.update', {version: S.update.version})}</span>` : ''}
+  h += updateBar();
+  h += `<div class="foot"><span>Skerry ${esc(S.version)}</span>
     <span class="sp"></span><span class="link" data-act="settings">⚙ ${tx('foot.settings')}</span></div></div>`;
+  const u = S.update;
   const key = 'x' + JSON.stringify([md && [md.title, md.artist, md.playing, md.duration, thumbId, !!au, au && au.muted],
     sess.map(s => [s.sid, s.status, s.action, s.tasks, s.context_pct, s.has_window]), L, S.statusline && S.statusline.seen, S.usage && [S.usage.h5, S.usage.d7, S.usage.days],
-    Math.floor(S.now/30), sy, S.timer && [S.timer.label, S.timer.paused, S.timer.cycle], S.shelf, S.update]);
+    Math.floor(S.now/30), sy, S.timer && [S.timer.label, S.timer.paused, S.timer.cycle], S.shelf, u && [u.status, u.version]]);
   return {w:480, r:28, key, html:h};
 }
 

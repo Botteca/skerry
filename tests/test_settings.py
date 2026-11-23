@@ -116,3 +116,18 @@ def test_no_secrets_in_defaults():
     flat = json.dumps(settings_mod.DEFAULTS).lower()
     for word in ("password", "secret", "token", "refresh"):
         assert word not in flat
+
+
+@pytest.mark.parametrize("old, expected", [(False, "off"), (True, "auto")])
+def test_check_updates_is_migrated_to_updates(path, old, expected):
+    write(path, {"check_updates": old})
+    s = Settings(str(path))
+    assert s.get("updates") == expected
+    assert s.get("check_updates") is None
+    s.set("theme", "light")
+    assert "check_updates" not in read(path)
+
+
+def test_explicit_updates_mode_wins_over_old_flag(path):
+    write(path, {"check_updates": False, "updates": "notify"})
+    assert Settings(str(path)).get("updates") == "notify"

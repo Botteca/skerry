@@ -13,7 +13,7 @@ import threading
 import time
 import urllib.request
 
-from skerry import APP_ID, APP_NAME, VERSION, autostart, i18n, log as logsetup, paths, updater, win32
+from skerry import APP_ID, APP_NAME, VERSION, autostart, i18n, log as logsetup, paths, win32
 from skerry.i18n import Msg
 
 TITLE = "Skerry overlay"   # internal title: deliberately not just "Skerry" (an Explorer folder could match FindWindow)
@@ -57,6 +57,7 @@ class SkerryApp:
         from skerry.usage import LocalUsage
         from skerry.timer import Timer
         from skerry.tray import Tray
+        from skerry.updater import Updater
 
         self.log = logging.getLogger("skerry")
         self.settings = Settings()
@@ -74,8 +75,9 @@ class SkerryApp:
         self.win = win32.SkerryWindow(TITLE, self.settings)
         self.api = Api(self)
         self.tray = Tray(self)
+        self.updater = Updater(self.settings, self.store, is_quiet=self._quiet_moment,
+                               on_change=self.tray.refresh, quit_app=self.quit)
         self.paused = False
-        self.update = None
         self.window = None
         self.settings_window = None
         self.hotkey = None
@@ -142,7 +144,7 @@ class SkerryApp:
         self.tray.start()
         self._start_hotkey()
         threading.Thread(target=self._guard_loop, daemon=True, name="guard").start()
-        threading.Thread(target=self._update_loop, daemon=True, name="updates").start()
+        self.updater.start()
 
     def _on_shown(self):
         self._prepare_form(self.window, release_min_size=True)
@@ -216,12 +218,9 @@ class SkerryApp:
             tick += 1
             time.sleep(1)
 
-    def _update_loop(self):
-        time.sleep(60)
-        while not self._quitting:
-            if self.settings.get("check_updates", True):
-                self.check_updates()
-            time.sleep(24 * 3600)
+    def _quiet_moment(self):
+        """Good time to restart for an update: no permission waiting and nothing fullscreen (presentations, video)."""
+        return not self.store.has_pending() and not win32.is_fullscreen({self.win.handle()})
 
     # ---------- actions ----------
     def toggle_expand(self):
@@ -271,28 +270,6 @@ class SkerryApp:
         w.events.closed += closed
         self.settings_window = w
 
-    def check_updates(self):
-        info = updater.check(self.settings.get("update_url"))
-        self.update = info
-        self.tray.refresh()
-        if info:
-            self.store.alert("info", "⬆️", Msg("alert.update_available", version=info["version"]), sound=False)
-        return info
-
-    def update_action(self):
-        if not self.update:
-            threading.Thread(target=self.check_updates, daemon=True).start()
-            return
-        if not paths.FROZEN:
-            self.store.alert("info", "⬆️", Msg("alert.update_dev"), sound=False)
-            return
-        try:
-            updater.download_and_run(self.update)
-            self.quit()
-        except Exception:
-            self.log.exception("Update")
-            self.store.alert("danger", "⬆️", Msg("alert.update_failed"))
-
     def _on_setting(self, key, value):
         if key == "autostart":
             autostart.set_enabled(bool(value))
@@ -301,6 +278,8 @@ class SkerryApp:
             self._start_hotkey()
         elif key in ("edge", "offset", "monitor"):
             self.win.replace()
+        elif key in ("updates", "update_url"):
+            self.updater.wake()
         elif key == "language":
             i18n.set_language(value)
             self.tray.refresh()
@@ -317,6 +296,7 @@ class SkerryApp:
     def _shutdown(self):
         self._quitting = True
         self.connectors.stop()
+        self.updater.stop()
         if self.hotkey:
             self.hotkey.stop()
         self.tray.stop()

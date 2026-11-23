@@ -46,8 +46,8 @@ class Tray:
                 item(lambda i: t("tray.reconnect"), lambda: app.reconnect()),
                 item(lambda i: t("tray.autostart"), lambda: app.toggle_autostart(), checked=lambda i: autostart.is_enabled()),
                 menu.SEPARATOR,
-                item(lambda i: t("tray.install_update", version=app.update["version"]) if app.update
-                     else t("tray.check_updates"), lambda: app.update_action()),
+                item(lambda i: t("tray.install_update", version=app.updater.visible_state()["version"])
+                     if app.updater.visible_state() else t("tray.check_updates"), lambda: app.updater.install_now()),
                 item(lambda i: t("tray.logs"), lambda: os.startfile(paths.log_dir())),
                 menu.SEPARATOR,
                 item(lambda i: t("tray.quit"), lambda: app.quit()),

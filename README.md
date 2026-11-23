@@ -77,8 +77,27 @@ your next Microsoft 365 meeting. Everything runs locally.
 2. Run it. No admin rights are needed; it installs to `%LOCALAPPDATA%\Programs\Skerry`.
    *Start with Windows* and *Connect Claude Code and Codex* are preselected.
 
-The executables are not code-signed yet, so SmartScreen may show "Unknown publisher" (*More info → Run anyway*).
 Uninstalling disconnects the hooks from Claude Code and Codex and removes autostart.
+
+> **Unsigned builds.** The executables and the installer are not code-signed yet, so Windows SmartScreen may show
+> "Windows protected your PC / Unknown publisher" (*More info → Run anyway*) and some antivirus products may warn
+> about or quarantine them. Each release lists the SHA-256 of the installer in `SHA256SUMS.txt`: you can compare it
+> with `Get-FileHash .\Skerry-Setup-x.y.z.exe`.
+
+### Updates
+
+Skerry checks the GitHub releases at startup and every 6 hours (with an ETag, so unchanged answers cost nothing).
+Pre-releases are ignored. *Settings → Updates* shows the status, the installed version, the last check and the
+release notes, and lets you pick a mode:
+
+- **Automatic** (default): the installer is downloaded, its **SHA-256 is verified** against the release's
+  `SHA256SUMS.txt` (a mismatch deletes the file and nothing is installed), then the pill shows
+  *Update to vX ready*. It installs at a quiet moment (no permission request waiting, nothing in fullscreen or
+  presenting) or right away with *Update now*. The update is silent and Skerry restarts by itself.
+- **Notify only**: the pill offers the update, you decide when.
+- **Off**: no automatic checks (*Check now* still works).
+
+If anything fails, the installed version keeps running and the reason goes to the log; no error windows.
 
 ### From source
 
@@ -92,7 +111,9 @@ cd skerry
 ```
 
 To build the installer yourself, install [Inno Setup 6](https://jrsoftware.org/isinfo.php) and run `.\build.bat`.
-It creates `dist\Skerry\` (`Skerry.exe` and `skerry-cli.exe`) and `dist\Skerry-Setup-x.y.z.exe`.
+It creates `dist\Skerry\` (`Skerry.exe` and `skerry-cli.exe`), `dist\Skerry-Setup-x.y.z.exe` and
+`dist\SHA256SUMS.txt`. Official releases are built by GitHub Actions when a version tag is pushed (see
+[CONTRIBUTING.md](CONTRIBUTING.md#making-a-release)).
 
 ## Setting up Claude Code and Codex
 
@@ -107,8 +128,9 @@ Connect them in one of these ways:
 
 Then:
 
-- **Claude Code**: start a new session. Skerry registers HTTP hooks, a `SessionStart` command hook (to find the terminal
-  window) and a status line. An existing status line is kept and chained; disconnecting restores it.
+- **Claude Code**: start a new session. Skerry registers `skerry-cli` command hooks (in the background, except the
+  permission request, which waits for your answer) and a status line. When Skerry is not running they exit silently:
+  no errors in Claude Code. An existing status line is kept and chained; disconnecting restores it.
 - **Codex**: open Codex and approve the new hooks with `/hooks` (Codex only runs approved hooks).
 
 **How permissions work.** When an agent asks for permission, the request waits in Skerry. *Consenti* (allow),
@@ -153,8 +175,8 @@ No client secret is needed: Skerry is a public client. *Disconnetti* (sign out) 
 - Skerry sends no analytics, crash reports or usage data anywhere.
 - The hook server listens only on `127.0.0.1`. Permission decisions come only from the Skerry window, never over HTTP.
 - Token usage is computed from the Claude Code session files on disk; nothing is uploaded.
-- Network access happens only for: the update check (GitHub releases API, can be turned off in settings) and, if you
-  connect it, Microsoft Graph to read your calendar.
+- Network access happens only for: the update check (GitHub releases API every 6 hours, plus the installer download
+  when an update exists; can be turned off in settings) and, if you connect it, Microsoft Graph to read your calendar.
 - Secrets (the Microsoft 365 token cache) are encrypted with DPAPI and readable only by your Windows user.
 
 | Path | Content |
@@ -168,7 +190,7 @@ No client secret is needed: Skerry is a public client. *Disconnetti* (sign out) 
 ## How it works
 
 ```
-Claude Code ──http hooks─────────────────▶ 127.0.0.1:47800 ─┐
+Claude Code ──skerry-cli hook claude─────▶ 127.0.0.1:47800 ─┐
 Claude Code ──skerry-cli statusline──────▶ /statusline      ─┼─▶ Store ─▶ UI (pywebview / WebView2)
 Codex ───────skerry-cli hook codex───────▶ /hook/...        ─┘
 Windows (media, audio, registry, power, Bluetooth), M365, local usage ─▶ modules ─▶ UI

@@ -28,19 +28,21 @@ Stack: Python 3.11+ (dev venv runs 3.13), pywebview on WinForms/WebView2, a loca
 | `skerry/media.py`, `audio.py` | Now Playing via WinRT GSMTC; master volume via pycaw. |
 | `skerry/system.py` | Mic/camera via ConsentStore registry, battery, Bluetooth battery via SetupAPI. |
 | `skerry/usage.py` | Token usage parsed incrementally from `~/.claude/projects/**/*.jsonl` (no network). |
-| `skerry/timer.py`, `shelf.py`, `sounds.py`, `tray.py`, `autostart.py`, `updater.py`, `terminal.py`, `paths.py`, `log.py` | Timer/Pomodoro, shelf, beeps, tray menu, HKCU Run key, GitHub release updater, terminal HWND lookup, paths, rotating log. |
+| `skerry/timer.py`, `shelf.py`, `sounds.py`, `tray.py`, `autostart.py`, `terminal.py`, `paths.py`, `log.py` | Timer/Pomodoro, shelf, beeps, tray menu, HKCU Run key, terminal HWND lookup, paths, rotating log. |
+| `skerry/updater.py` | GitHub release check (startup + every 6 h, ETag), semver, `updates` = auto/notify/off. Auto: download, verify SHA-256 against `SHA256SUMS.txt`, install at a quiet moment (`SkerryApp._quiet_moment`) or on "Update now" via a hidden PowerShell that waits for Skerry to exit, runs the installer silently and restarts the old version if it fails. |
 | `ui/i18n.js` | UI dictionaries (en reference, it), `t()` / `tx()` (escaped, for `innerHTML`), plurals, locale date/time/number formatting, `I18N.apply()` for `data-i18n*` attributes. Loaded before `skerry.js` and the settings script. |
 | `ui/index.html`, `skerry.js`, `skerry.css` | The pill. Polls `get_state()` every 250 ms (which carries `lang`), picks a view, calls `resize(w,h,r)`. |
 | `ui/settings.html` | Settings window (inline script, same `js_api`). |
-| `build/` | `skerry.spec` (two exes: `Skerry.exe` windowed, `skerry-cli.exe` console), `installer.iss`, `version_info.txt`. |
+| `build/` | `skerry.spec` (two exes: `Skerry.exe` windowed, `skerry-cli.exe` console), `installer.iss` (per user, AppMutex, silent updates), `version_info.txt` (template). |
+| `tools/release.py` | Version, tag check, CHANGELOG release notes, SHA256SUMS. Used by `build.bat` and `release.yml`. |
 | `demo.py` | Simulates Claude Code and Codex against a running Skerry (includes a permission request). |
 | `tools/screenshots.py` | Regenerates `docs/img/` (en) and `docs/img/it/` from invented data with headless Edge. |
 
 ## Data flow
 
 ```
-Claude Code ─ http hooks ───────────────────────────▶ POST /hook/<Event>?agent=claude ┐
-Claude Code ─ command hook SessionStart (skerry-cli) ▶ (adds terminal_hwnd)           │
+Claude Code ─ command hooks (skerry-cli hook claude) ▶ POST /hook/<Event>?agent=claude ┐
+             (async, except PermissionRequest; SessionStart adds terminal_hwnd)        │
 Claude Code ─ statusLine command (skerry-cli) ──────▶ POST /statusline                ├▶ Store
 Codex ─────── command hooks (skerry-cli hook codex) ▶ POST /hook/<Event>?agent=codex  ┘    │
 Windows (media, audio, registry, power, Bluetooth), M365, local usage ─▶ modules ──────────┤
@@ -52,7 +54,9 @@ Windows (media, audio, registry, power, Bluetooth), M365, local usage ─▶ mod
 `PermissionRequest` blocks the HTTP request inside `Store.request_permission()` until the UI decides, the timeout
 (`permission_wait`, default 300 s) expires, or the session moves on (`PostToolUse`, `Stop`, `UserPromptSubmit`,
 `SessionEnd` cancel it). Timeout/cancel/"terminal" return `{}` so the agent falls back to its own prompt.
-If Skerry is not running, `skerry-cli` exits 0 silently so agents are never blocked.
+If Skerry is not running, `skerry-cli` exits 0 silently so agents are never blocked and show no error. That is why
+Claude Code hooks are command hooks, not `http` hooks: an unreachable `http` hook shows "hook failed: ECONNREFUSED"
+in Claude Code on every event and cannot be silenced.
 
 ## Commands (Windows, PowerShell, from the repo root)
 
@@ -79,8 +83,13 @@ CI (`.github/workflows/ci.yml`, windows-latest) runs ruff, py_compile, `node --c
 
 Runtime files: settings `%APPDATA%\Skerry\settings.json`, shelf `%APPDATA%\Skerry\shelf.json`, secrets
 `%APPDATA%\Skerry\secrets\`, logs `%LOCALAPPDATA%\Skerry\logs\` (plus `.\logs\` in dev), agent config backups
-`%LOCALAPPDATA%\Skerry\backup\`. Version lives in three places: `skerry/__init__.py`, `build/installer.iss`,
-`build/version_info.txt`.
+`%LOCALAPPDATA%\Skerry\backup\`, update ETag cache `%LOCALAPPDATA%\Skerry\update-cache.json`, downloaded installers
+`%TEMP%\Skerry-update\`.
+
+Version lives **only** in `skerry/__init__.py` (`VERSION`). `tools/release.py version` reads it for `build.bat` and
+the release workflow (`ISCC /DAppVersion=…`); `build/skerry.spec` renders `build/version_info.txt` (a template) into
+`build/work/`. Releases: push a `vX.Y.Z` tag → `.github/workflows/release.yml` (see CONTRIBUTING.md). Never create
+tags or releases unless the user asks.
 
 ## Known delicate points — do not regress
 
@@ -114,7 +123,11 @@ Runtime files: settings `%APPDATA%\Skerry\settings.json`, shelf `%APPDATA%\Skerr
 - UI escapes every dynamic string with `esc()` before `innerHTML`, and translated text with `tx()`. Keep it that way.
 - **No hard-coded user-facing text.** Add the key to both languages (`ui/i18n.js` or `skerry/i18n.py`);
   `tests/test_i18n.py` checks keys and greps for visible literals. Log messages stay in English.
-- `join_meeting` opens only `https://` URLs. Keep that check.
+- `join_meeting` and `open_release_notes` open only `https://` URLs. Keep that check.
+- **Updates are installed only after the SHA-256 matches `SHA256SUMS.txt`** of the same release, and the file is
+  re-hashed right before running it. Never skip the check, never install pre-releases, never show error dialogs
+  from the updater (log + status only). The installer's `AppMutex=SkerrySingleInstance` must match
+  `win32.single_instance()`.
 
 ## Working rules
 
