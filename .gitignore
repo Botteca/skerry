@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual environments (the dev venv lives outside the repo, but just in case)
+.venv/
+venv/
+env/
+ENV/
+
+# Build output (build/ itself holds sources: skerry.spec, installer.iss, version_info.txt)
+build/work/
+dist/
+*.spec
+!build/skerry.spec
+
+# Runtime data, logs and secrets
+logs/
+*.log
+settings.json
+shelf.json
+secrets/
+*.bin
+.env
+.env.*
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Claude Code local settings
+.claude/settings.local.json

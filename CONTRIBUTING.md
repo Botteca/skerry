@@ -1,0 +1,72 @@
+# Contributing to Skerry
+
+Thanks for your interest! Bug reports, ideas and pull requests are all welcome.
+By taking part you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+- **Bugs and ideas**: open an [issue](https://github.com/fabrisimo/skerry/issues/new/choose) using the templates.
+  For bugs, attach the relevant lines of the log (Tray → Logs) after removing anything private.
+- **Security vulnerabilities**: never in a public issue. See [SECURITY.md](SECURITY.md).
+- **Bigger changes** (new modules, new connectors, new dependencies): open an issue first so we can agree on the design.
+
+## Development setup
+
+Requirements: Windows 10/11, Python 3.11+ (development uses 3.13), Node.js (only for `node --check`).
+
+```powershell
+git clone https://github.com/fabrisimo/skerry.git
+cd skerry
+.\setup_dev.bat                      # creates the venv in %LOCALAPPDATA%\venvs\skerry (outside the repo)
+$py = "$env:LOCALAPPDATA\venvs\skerry\Scripts\python.exe"
+& $py -m pip install -r requirements-dev.txt   # pytest and ruff
+.\run_dev.bat                        # run without the supervisor; log in .\logs\skerry.log
+$env:SKERRY_DEBUG=1; .\run_dev.bat   # same, with WebView2 devtools
+& $py demo.py                        # fake Claude Code / Codex traffic against a running Skerry
+```
+
+The venv lives outside the repository on purpose: some endpoint-protection tools corrupt pip operations inside
+project folders. Please don't add a `.venv` to the repo.
+
+[`CLAUDE.md`](CLAUDE.md) has the module map, the data flow and the list of delicate points (window shape, permissions,
+screen-capture exclusion…). Read it before touching `skerry/win32.py`, `skerry/store.py` or `skerry/integrations.py`.
+
+## Checks
+
+CI runs these on `windows-latest`; run them locally before opening a pull request:
+
+```powershell
+& $py -m ruff check .
+& $py -m pytest
+Get-ChildItem -Recurse -Filter *.py | Where-Object FullName -notmatch '\\(dist|build\\work)\\' | ForEach-Object { & $py -m py_compile $_.FullName }
+Get-ChildItem ui\*.js | ForEach-Object { node --check $_.FullName }
+```
+
+`ui/settings.html` has an inline `<script>`: if you change it, extract it to a temporary `.js` file and `node --check` it.
+
+Tests must not touch the network, the real registry or your real user folders: `tests/conftest.py` redirects
+`APPDATA`/`LOCALAPPDATA`/`CLAUDE_CONFIG_DIR` to a temp folder and blocks outbound sockets and `winreg`.
+
+Finally, launch the app with `.\run_dev.bat` and check `logs\skerry.log` for errors or tracebacks.
+
+## Guidelines
+
+- **Small, focused changes** in the existing style. Prefer the standard library and `ctypes`; no new dependency for a
+  few lines of code.
+- **English** for code, comments, commit messages and docs. User-facing UI strings are currently Italian.
+- Every background loop catches and logs its own exceptions.
+- The UI escapes every dynamic string with `esc()` before using `innerHTML`.
+- **Permission decisions go only through `js_api`** (`Api.decide`), never through HTTP. Don't add HTTP endpoints that
+  list, resolve or change pending permissions.
+- **No secrets in `settings.json`**: use `skerry/secrets.py` (DPAPI).
+- **No telemetry.** Data stays on the PC; optional connectors talk only to the service the user signed in to.
+- **No real companies, servers or people** in code, tests, demo data or screenshots. Use invented names
+  (`Contoso`-style, `C:/rep/ExampleApp`, `example.invalid`).
+- If you change the list of hooks, bump `HOOKS_VERSION` in `skerry/integrations.py`.
+- Add an entry to `CHANGELOG.md` under *Unreleased* for user-visible changes.
+
+## Pull requests
+
+1. Fork, create a branch from `main`, commit with clear messages.
+2. Fill in the pull request template, including how you tested it (and a screenshot for UI changes).
+3. CI must be green.
+
+By contributing you agree that your contributions are licensed under the [MIT License](LICENSE).

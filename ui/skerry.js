@@ -1,0 +1,397 @@
+'use strict';
+const $c = document.getElementById('c');
+const A = () => window.pywebview.api;
+
+let S = null, expanded = false, lastKey = '', lastSize = '', uiSeq = null, view = null;
+let thumbId = 0, thumbSrc = null, dropping = false, dropTimer = null, collapseTimer = null;
+let drag = null, suppressClick = false, volFlash = 0, lastKind = '';
+const dismissedDone = new Set();
+
+// ---------------- utilities ----------------
+const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const mmss = s => { s = Math.max(0, Math.floor(s || 0)); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60;
+  return h ? `${h}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}` : `${m}:${String(x).padStart(2,'0')}`; };
+const pctColor = p => p >= 90 ? 'var(--red)' : p >= 70 ? 'var(--amber)' : 'var(--green)';
+const until = e => { const d = Math.max(0, e - S.now), h = Math.floor(d/3600), m = Math.floor(d%3600/60); return h ? `${h}h ${m}m` : `${m}m`; };
+const when = e => new Date(e*1000).toLocaleString('it-IT', {weekday:'short', hour:'2-digit', minute:'2-digit'});
+const AGENT = {claude:'Claude Code', codex:'Codex'};
+const glyph = (agent, spin) => `<span class="ag ${agent} ${spin ? 'spin' : ''}">${agent === 'codex' ? '◆' : '✦'}</span>`;
+const mod = m => !S.settings.modules || S.settings.modules[m] !== false;
+const vertical = () => ['left','right'].includes(S.settings.edge);
+
+function ring(p, size = 16, color, sw = 2.5){
+  const r = size/2 - sw/2 - 0.5, c = 2*Math.PI*r, off = c*(1 - Math.min(100, Math.max(0, p))/100), h = size/2;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="flex:none">
+    <circle cx="${h}" cy="${h}" r="${r}" fill="none" stroke="var(--chip2)" stroke-width="${sw}"/>
+    <circle cx="${h}" cy="${h}" r="${r}" fill="none" class="rc" style="--c:${c}" stroke="${color || pctColor(p)}" stroke-width="${sw}" stroke-linecap="round"
+      stroke-dasharray="${c}" stroke-dashoffset="${off}" transform="rotate(-90 ${h} ${h})"/></svg>`;
+}
+const art = cls => thumbSrc ? `<img class="${cls}" src="${thumbSrc}">` : `<div class="${cls}">♪</div>`;
+function mediaPos(m){ let p = m.position + (m.playing ? Math.max(0, S.now - m.updated) : 0); return m.duration ? Math.min(p, m.duration) : p; }
+
+function artColor(src){
+  if (!src){ document.documentElement.style.removeProperty('--art'); return; }
+  const img = new Image();
+  img.onload = () => {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 16;
+    const x = cv.getContext('2d'); x.drawImage(img, 0, 0, 16, 16);
+    const d = x.getImageData(0, 0, 16, 16).data; let r = 0, g = 0, b = 0, n = 0;
+    for (let i = 0; i < d.length; i += 4){
+      const R = d[i], G = d[i+1], B = d[i+2], mx = Math.max(R,G,B), mn = Math.min(R,G,B);
+      if (mx < 35) continue; const w = 1 + (mx - mn)/24; r += R*w; g += G*w; b += B*w; n += w;
+    }
+    if (!n) return;
+    [r, g, b] = [r/n, g/n, b/n]; const k = Math.max(1, 170/Math.max(r, g, b));
+    document.documentElement.style.setProperty('--art', `rgb(${Math.min(255,r*k)|0},${Math.min(255,g*k)|0},${Math.min(255,b*k)|0})`);
+  };
+  img.src = src;
+}
+
+// ---------------- derived data ----------------
+const active = () => S.sessions.filter(s => ['working','waiting','permission'].includes(s.status));
+function current(){ const a = active(); return a.find(s => s.sid === S.selected) || a[0]; }
+function badges(skipTimer){
+  const sy = S.system || {}; let h = '';
+  if ((sy.mic || []).length) h += `<span class="pd mic" title="Microfono: ${esc(sy.mic.join(', '))}"></span>`;
+  if ((sy.cam || []).length) h += `<span class="pd cam" title="Fotocamera: ${esc(sy.cam.join(', '))}"></span>`;
+  if (S.timer && !skipTimer) h += `<span class="chip on" data-live="tmc">${mmss(S.timer.left)}</span>`;
+  return h;
+}
+const badgeKey = () => { const sy = S.system || {}; return [(sy.mic||[]).length, (sy.cam||[]).length, !!S.timer].join(); };
+
+function compactMain(){
+  const s = current();
+  if (s) return {type:'agent', s};
+  if (S.media && S.media.playing) return {type:'media'};
+  if (S.timer) return {type:'timer'};
+  return {type:'idle'};
+}
+
+// ---------------- compact views ----------------
+function vCompact(){
+  const m = compactMain(), vert = vertical(), b = badges(m.type === 'timer'), f = S.limits && S.limits.five_hour;
+  const base = {r: vert ? 22 : 18, auto: !vert, w: vert ? 44 : null, type: m.type};
+  if (m.type === 'agent'){
+    const s = m.s, n = active().length, idx = active().indexOf(s), t = s.tasks;
+    const spin = s.status === 'working';
+    if (vert) return {...base, key:`va${s.sid}${s.status}${t&&t.done}${badgeKey()}`, html:`<div class="tab">${glyph(s.agent, spin)}
+      ${s.status === 'waiting' ? '<span class="dot waiting"></span>' : ''}
+      ${t ? `<div class="t">${t.done}/${t.total}</div>` : ''}${n > 1 ? `<div class="t">${idx+1}/${n}</div>` : ''}${b}</div>`};
+    return {...base, key:`a${s.sid}${s.status}${s.action}${n}${idx}${t&&[t.done,t.total]}${badgeKey()}`, html:`<div class="bar">
+      ${glyph(s.agent, spin)}<span>${esc(s.icon)}</span><span class="txt">${esc(s.action)}</span>
+      ${t ? `<span class="chip on">☑ ${t.done}/${t.total}</span>` : ''}
+      <span class="chip">${esc(s.project || AGENT[s.agent])}</span>${n > 1 ? `<span class="chip">${idx+1}/${n}</span>` : ''}
+      ${s.status === 'waiting' ? '<span class="dot waiting"></span>' : ''}${b}</div>`};
+  }
+  if (m.type === 'media'){
+    const md = S.media, vf = Date.now() - volFlash < 1300 && S.audio;
+    const right = vf ? `<span class="vmini"><i data-live="vmini" style="width:${(S.audio.volume||0)*100}%"></i></span>`
+                     : `<span class="eq"><i></i><i></i><i></i><i></i></span>`;
+    if (vert) return {...base, key:`vm${thumbId}${badgeKey()}`, html:`<div class="tab">${art('art-s')}<span class="eq"><i></i><i></i><i></i></span>${b}</div>`};
+    return {...base, key:`m${md.title}${thumbId}${vf}${badgeKey()}`, html:`<div class="bar">${art('art-s')}
+      <span class="txt">${esc(md.title)}<span class="muted"> · ${esc(md.artist)}</span></span>${right}${b}</div>`};
+  }
+  if (m.type === 'timer'){
+    const t = S.timer, p = 100 * (1 - t.left / t.duration), col = t.phase === 'focus' || t.mode === 'timer' ? 'var(--accent)' : 'var(--green)';
+    if (vert) return {...base, key:`vt${t.label}${t.paused}${badgeKey()}`, html:`<div class="tab">${ring(p, 20, col)}<div class="t" data-live="tmb">${mmss(t.left)}</div>${b}</div>`};
+    return {...base, key:`t${t.label}${t.paused}${badgeKey()}`, html:`<div class="bar">${ring(p, 18, col)}
+      <span class="muted sm">${esc(t.label)}${t.paused ? ' · in pausa' : ''}</span><span class="big" data-live="tmb">${mmss(t.left)}</span>${b}</div>`};
+  }
+  const lim = f && mod('claude') ? `${ring(f.used_percentage)}<span class="sm">${Math.round(f.used_percentage)}%</span><span class="muted xs">5h</span>` : '';
+  if (vert) return {...base, key:`vi${f&&Math.round(f.used_percentage)}${badgeKey()}`, html:`<div class="tab">${glyph('claude')}${f ? ring(f.used_percentage) : ''}${b}</div>`};
+  return {...base, key:`i${f&&Math.round(f.used_percentage)}${badgeKey()}`,
+    html:`<div class="bar">${glyph('claude')}${lim || '<span class="muted sm">Skerry</span>'}${b}</div>`};
+}
+
+// ---------------- cards ----------------
+function vPermission(){
+  const p = S.pending[0], more = S.pending.length - 1;
+  return {w:480, r:26, key:'p'+p.id+more, pid:p.id, html:`<div class="card">
+    <div class="hd">${glyph(p.agent)}<b>${esc(p.project || AGENT[p.agent])}</b><span class="muted">· ${AGENT[p.agent]} chiede il permesso</span>
+      <span class="sp"></span>${more ? `<span class="chip">+${more}</span>` : ''}</div>
+    <div class="title">${esc(p.icon)} ${esc(p.text)}</div>
+    ${p.detail && p.detail !== p.text ? `<div class="detail mono">${esc(p.detail)}</div>` : ''}
+    <div class="btns">
+      <button class="b-allow" data-act="decide" data-arg="allow">Consenti</button>
+      ${p.can_always ? '<button class="b-always" data-act="decide" data-arg="always" title="Consenti e ricorda la regola">Sempre</button>' : ''}
+      <button class="b-deny" data-act="decide" data-arg="deny">Nega</button>
+      <button data-act="decide" data-arg="terminal" title="Rispondi nel terminale">Terminale</button>
+    </div></div>`};
+}
+function vAlert(a){
+  return {w:420, r:24, key:'al'+a.id, aid:a.id, html:`<div class="alert ${a.level}" data-act="dismiss" data-arg="${a.id}">
+    <span class="aico">${esc(a.icon)}</span><span>${esc(a.text)}</span></div>`};
+}
+function vDone(s){
+  const ok = s.status === 'done';
+  return {w:440, r:24, key:'d'+s.sid+s.done_at, done:s.sid+s.done_at, html:`<div class="card" ${s.has_window ? `data-act="focus" data-arg="${esc(s.sid)}"` : ''}>
+    <div class="hd"><span class="dot ${s.status}"></span><b>${esc(s.project || AGENT[s.agent])}</b>
+      <span class="muted">· ${AGENT[s.agent]} ${ok ? 'ha finito' : 'si è interrotto'}</span></div>
+    <div class="clamp2 ${ok ? '' : 'muted'}">${esc(ok ? (s.done_msg || 'Fatto.') : s.action)}</div></div>`};
+}
+const vDrop = () => ({w:340, r:28, key:'drop', html:`<div class="drop"><b>Rilascia qui</b><span class="muted sm">I file restano sulla mensola dell'isola</span></div>`});
+
+const BT_ICON = {mouse:'🖱️', keyboard:'⌨️', headset:'🎧', speaker:'🔊', pen:'✒️', gamepad:'🎮', phone:'📱', device:'🔹'};
+const fmtTok = n => n >= 1e6 ? (n/1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M' : n >= 1e3 ? Math.round(n/1e3) + 'k' : String(n);
+function claudeBlock(){
+  if (!mod('claude')) return '';
+  const L = S.limits, sl = S.statusline || {}, u = mod('usage') && S.usage;
+  const g = (label, w, sub) => `<div class="gauge">${ring(w.used_percentage, 46, undefined, 4.5)}
+    <div class="gv"><b>${Math.floor(w.used_percentage)}%</b><span>${label}</span><span class="muted">${sub}</span></div></div>`;
+  const age = L && L.received_at ? Math.max(0, S.now - L.received_at) : 0;
+  const ago = age > 120 ? ' · dato di ' + (age >= 3600 ? Math.floor(age/3600) + 'h' : Math.floor(age/60) + 'm') + ' fa' : '';
+  const hasPct = !!(L && (L.five_hour || L.seven_day || L.spend_limit));
+  let body = '';
+  if (hasPct){
+    if (L.five_hour) body += g('Sessione 5 ore', L.five_hour, 'reset tra ' + until(L.five_hour.resets_at) + ago);
+    if (L.seven_day) body += g('Settimana', L.seven_day, 'reset ' + when(L.seven_day.resets_at));
+    const sp = L.spend_limit;
+    if (sp) body += g('Spesa' + (sp.period ? ' · ' + esc(sp.period) : ''), sp,
+      sp.used_usd != null && sp.limit_usd != null ? `$${(+sp.used_usd).toFixed(0)} / $${(+sp.limit_usd).toFixed(0)}` : (sp.resets_at ? 'reset tra ' + until(sp.resets_at) : ''));
+    body = `<div class="gauges">${body}</div>`;
+  }
+  if (u){
+    const card = (label, w) => `<div class="ucard" title="input ${fmtTok(w.input)} · output ${fmtTok(w.output)} · cache scritta ${fmtTok(w.cache_write)} · cache letta ${fmtTok(w.cache_read)}">
+      <span class="muted">${label}</span><div class="n"><b>${fmtTok(w.tokens)}</b><em>token</em></div><span class="muted">${w.requests} risposte</span></div>`;
+    const max = Math.max(1, ...u.days);
+    const bars = u.days.map((v, i) => `<div class="bc" title="${fmtTok(v)} token"><i class="${i === 6 ? 'now' : ''}" style="height:${Math.max(4, Math.round(86 * v / max))}%"></i>
+      <span>${new Date((S.now - (6 - i) * 86400) * 1000).toLocaleDateString('it-IT', {weekday: 'narrow'})}</span></div>`).join('');
+    body += `<div class="usage">${card('Ultime 5 ore', u.h5)}${card('Ultimi 7 giorni', u.d7)}<div class="bars">${bars}</div></div>`;
+  }
+  if (!hasPct){
+    body += `<div class="fn-note">${!sl.seen ? 'Apri una nuova sessione di Claude Code per iniziare a ricevere i dati.'
+      : 'Con il tuo piano Claude Code non invia la percentuale dei limiti: per il dato ufficiale usa <span class="mono">/usage</span>.'}</div>`;
+  }
+  return `<div class="sec"><div class="sec-h"><b>Utilizzo di Claude</b><span class="sp"></span>${u ? '<span class="xs">token su questo PC</span>' : ''}</div>${body}</div>`;
+}
+
+function vExpanded(){
+  const md = mod('media') && S.media, L = S.limits, sy = S.system || {}, au = S.audio;
+  const sess = S.sessions.slice(0, 4);
+  let h = '<div class="card">';
+  // media
+  if (md){
+    h += `<div class="sec" data-wheel="vol"><div class="media">${art('art')}<div class="mi">
+      <div class="title">${esc(md.title || 'In riproduzione')}</div>
+      <div class="muted sm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(md.artist)}${md.app ? ' · ' + esc(md.app) : ''}</div>
+      ${md.duration ? `<div class="prog" data-act="seek"><i data-live="pg"></i></div>
+        <div class="times"><span data-live="pt"></span><span>${mmss(md.duration)}</span></div>` : ''}
+      </div></div>
+      <div class="ctl"><span class="k" data-act="media" data-arg="prev">⏮</span>
+        <span class="k" data-act="media" data-arg="toggle">${md.playing ? '⏸' : '▶'}</span>
+        <span class="k" data-act="media" data-arg="next">⏭</span><span class="sp"></span>
+        ${au ? `<div class="vol"><span class="k" data-act="mute" style="font-size:14px">${au.muted ? '🔇' : '🔊'}</span>
+          <input type="range" min="0" max="100" data-live="vol" value="${Math.round((au.volume||0)*100)}"></div>` : ''}
+      </div></div>`;
+  }
+  // meeting (Microsoft 365)
+  if (mod('calendar') && S.meeting){
+    const m = S.meeting, hm = t => new Date(t * 1000).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'});
+    const left = m.start - S.now;
+    const when = m.in_progress ? 'in corso · finisce alle ' + hm(m.end)
+      : left < 3600 ? 'tra ' + Math.max(1, Math.round(left / 60)) + ' min' : 'alle ' + hm(m.start);
+    const sub = [when, m.provider, m.location].filter(Boolean).map(esc).join(' · ');
+    h += `<div class="sec"><div class="sec-h"><b>Riunione</b></div><div class="meet ${m.in_progress ? 'live' : (left < 300 ? 'soon' : '')}">
+      <div class="mt"><b>${hm(m.start)}</b><span>${hm(m.end)}</span></div>
+      <div class="mi2"><div class="mn">${esc(m.title)}</div><div class="muted sm">${sub}</div></div>
+      ${m.join_url ? '<button class="b-join" data-act="join">Entra</button>' : ''}</div></div>`;
+  }
+  // agents
+  if (mod('claude') || mod('codex')){
+    h += `<div class="sec"><div class="sec-h"><b>Agenti</b><span class="sp"></span>${sess.length ? '' : '<span>nessuna sessione</span>'}</div>`;
+    for (const s of sess){
+      const t = s.tasks;
+      h += `<div class="sess ${s.has_window ? 'click' : ''}" ${s.has_window ? `data-act="focus" data-arg="${esc(s.sid)}" title="Porta in primo piano il terminale"` : ''}>
+        <span class="dot ${s.status}"></span>${glyph(s.agent)}<span class="p">${esc(s.project || AGENT[s.agent])}</span>
+        <span class="a">${esc(t && t.current && s.status === 'working' ? t.current : (s.action || s.model || ''))}</span>
+        ${t ? `<span class="chip on">☑ ${t.done}/${t.total}</span>` : ''}
+        ${s.context_pct != null ? `<span class="chip" style="color:${s.context_pct >= 80 ? 'var(--amber)' : ''}">ctx ${Math.round(s.context_pct)}%</span>` : ''}</div>`;
+    }
+    h += '</div>';
+  }
+  h += claudeBlock();
+  // system
+  const chips = [];
+  (sy.mic || []).forEach(a => chips.push(`<span class="chip on"><span class="pd mic"></span> 🎙 ${esc(a)}</span>`));
+  (sy.cam || []).forEach(a => chips.push(`<span class="chip on"><span class="pd cam"></span> 📷 ${esc(a)}</span>`));
+  if (sy.battery) chips.push(`<span class="chip on">${sy.battery.plugged ? '⚡' : '🔋'} ${sy.battery.percent}%</span>`);
+  const devs = [];
+  (sy.bluetooth || []).forEach(d => devs.push(`<span title="${esc(d.name)}" class="chip on dev ${d.battery <= 15 ? 'low' : ''}"><span class="di">${BT_ICON[d.kind] || '🔹'}</span><span class="dn">${esc(d.name.replace(/\s*Bluetooth\s*/i,' ').trim())}</span>
+    <span class="bt"><i style="width:${d.battery}%;background:${d.battery <= 15 ? 'var(--red)' : d.battery <= 30 ? 'var(--amber)' : 'var(--green)'}"></i></span><b>${d.battery}%</b></span>`));
+  if (chips.length || devs.length) h += `<div class="sec"><div class="sec-h"><b>Sistema</b></div>${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}${devs.length ? `<div class="devs">${devs.join('')}</div>` : ''}</div>`;
+  // timer
+  if (mod('timer')){
+    const t = S.timer;
+    h += `<div class="sec"><div class="sec-h"><b>Timer</b>${t ? `<span class="muted">· ${esc(t.label)}${t.mode === 'pomodoro' ? ' #' + t.cycle : ''}</span>` : ''}</div>`;
+    h += t ? `<div class="timer">${ring(100*(1 - t.left/t.duration), 26, t.phase === 'focus' || t.mode === 'timer' ? 'var(--accent)' : 'var(--green)')}
+          <span class="big" data-live="tm">${mmss(t.left)}</span><span class="sp"></span>
+          <span class="chip act" data-act="tpause">${t.paused ? '▶ Riprendi' : '⏸ Pausa'}</span><span class="chip act" data-act="tstop">✕ Stop</span></div>`
+       : `<div class="chips">${[5, 15, 25, 45].map(m => `<span class="chip act" data-act="timer" data-arg="${m}">${m} min</span>`).join('')}
+          <span class="chip act" data-act="pomo">🍅 Pomodoro</span></div>`;
+    h += '</div>';
+  }
+  // shelf
+  if (mod('shelf')){
+    const it = S.shelf || [];
+    h += `<div class="sec"><div class="sec-h"><b>Mensola</b><span class="sp"></span>
+      ${it.length ? '<span class="link" data-act="shelf-copyall">Copia tutto</span><span class="link" data-act="shelf-clear">Svuota</span>' : ''}</div>`;
+    if (!it.length) h += `<div class="muted xs">Trascina dei file sull'isola per tenerli a portata di mano. Poi “Copia” e Ctrl+V dove vuoi.</div>`;
+    it.forEach((f, i) => {
+      h += `<div class="file" title="${esc(f.path)}"><span class="fi">${f.ext === 'dir' ? '📁' : esc((f.ext || '?').slice(0, 4))}</span>
+        <span class="fn ${f.exists ? '' : 'gone'}">${esc(f.name)}</span><span class="fa">
+        ${f.exists ? `<span data-act="shelf-copy" data-arg="${i}">Copia</span><span data-act="shelf-open" data-arg="${i}">Apri</span><span data-act="shelf-reveal" data-arg="${i}">Cartella</span>` : ''}
+        <span data-act="shelf-remove" data-arg="${i}">✕</span></span></div>`;
+    });
+    h += '</div>';
+  }
+  h += `<div class="foot"><span>Skerry ${esc(S.version)}</span>${S.update ? `<span class="upd" data-act="update">· aggiorna a ${esc(S.update.version)}</span>` : ''}
+    <span class="sp"></span><span class="link" data-act="settings">⚙ Impostazioni</span></div></div>`;
+  const key = 'x' + JSON.stringify([md && [md.title, md.artist, md.playing, md.duration, thumbId, !!au, au && au.muted],
+    sess.map(s => [s.sid, s.status, s.action, s.tasks, s.context_pct, s.has_window]), L, S.statusline && S.statusline.seen, S.usage && [S.usage.h5, S.usage.d7, S.usage.days],
+    Math.floor(S.now/30), sy, S.timer && [S.timer.label, S.timer.paused, S.timer.cycle], S.shelf, S.update]);
+  return {w:480, r:28, key, html:h};
+}
+
+// ---------------- view choice and rendering ----------------
+const K = (kind, v) => (v.kind = kind, v);
+function pick(){
+  if (S.pending.length) return K('perm', vPermission());
+  if (S.alerts.length){ const a = S.alerts[S.alerts.length - 1]; return K('al' + a.id, vAlert(a)); }
+  if (dropping && mod('shelf')) return K('drop', vDrop());
+  if (expanded) return K('exp', vExpanded());
+  const done = S.sessions.find(s => (s.status === 'done' || s.status === 'error') && S.now - s.done_at < 7 && !dismissedDone.has(s.sid + s.done_at));
+  if (done) return K('done' + done.sid + done.done_at, vDone(done));
+  const c = vCompact();
+  return K('c-' + c.type + (vertical() ? 'v' : ''), c);
+}
+
+function live(){
+  const set = (k, fn) => document.querySelectorAll(`[data-live="${k}"]`).forEach(fn);
+  if (S.media){
+    const p = mediaPos(S.media);
+    set('pg', el => el.style.width = (S.media.duration ? 100*p/S.media.duration : 0) + '%');
+    set('pt', el => el.textContent = mmss(p));
+  }
+  if (S.timer){ ['tm','tmb','tmc'].forEach(k => set(k, el => el.textContent = mmss(S.timer.left))); }
+  if (S.audio){
+    set('vol', el => { if (document.activeElement !== el) el.value = Math.round((S.audio.volume || 0)*100); });
+    set('vmini', el => el.style.width = (S.audio.volume || 0)*100 + '%');
+  }
+}
+
+function render(){
+  if (!S) return;
+  document.documentElement.dataset.theme = S.settings.theme || 'dark';
+  document.documentElement.style.setProperty('--accent', S.settings.accent || '#d97757');
+  view = pick();
+  const key = `${S.settings.edge}|${S.settings.theme}|${view.key}`;
+  const root = document.documentElement;
+  root.dataset.edge = S.settings.edge || 'top';
+  root.dataset.state = S.pending.length ? 'perm' : (S.alerts.length ? 'alert' : '');
+  if (key !== lastKey){
+    const fresh = view.kind !== lastKind;      // entry animations only when the view really changes
+    lastKey = key; lastKind = view.kind;
+    $c.className = (view.auto ? 'auto ' : '') + (fresh ? 'fresh' : '');
+    $c.style.width = view.auto ? '' : view.w + 'px';
+    $c.innerHTML = `<div class="${fresh ? 'enter' : ''}">${view.html}</div>`;
+  }
+  live();
+  const rect = $c.getBoundingClientRect();
+  const w = view.auto ? Math.min(460, Math.max(96, Math.ceil(rect.width))) : view.w, h = Math.ceil(rect.height);
+  const r = Math.min(view.r, h/2, w/2), size = `${w}x${h}x${r}`;
+  document.documentElement.style.setProperty('--r', r + 'px');
+  if (size !== lastSize){ lastSize = size; A().resize(w, h, r); }
+}
+
+async function tick(){
+  let st;
+  try { st = await A().get_state(); } catch (e) { return; }
+  S = st;
+  if (uiSeq === null) uiSeq = S.ui_seq;
+  if (S.ui_seq !== uiSeq){ uiSeq = S.ui_seq; expanded = !expanded; }
+  const m = S.media;
+  if (m && m.thumb_id && m.thumb_id !== thumbId){
+    thumbId = m.thumb_id; thumbSrc = await A().get_thumb(); artColor(thumbSrc); lastKey = '';
+  } else if ((!m || !m.thumb_id) && thumbSrc){ thumbSrc = null; thumbId = 0; artColor(null); lastKey = ''; }
+  render();
+}
+
+// ---------------- interactions ----------------
+function act(name, arg, ev, el){
+  const api = A();
+  switch (name){
+    case 'decide': return api.decide(view.pid, arg);
+    case 'dismiss': api.dismiss_alert(+arg); return tick();
+    case 'focus': if (view.done){ dismissedDone.add(view.done); setTimeout(tick, 50); } return api.focus_session(arg);
+    case 'media': return api.media(arg);
+    case 'mute': return api.toggle_mute();
+    case 'seek': { const r = el.getBoundingClientRect(); return api.media_seek(S.media.duration * (ev.clientX - r.left) / r.width); }
+    case 'timer': return api.timer_start(+arg);
+    case 'pomo': return api.pomodoro_start();
+    case 'tstop': return api.timer_stop();
+    case 'tpause': return api.timer_toggle_pause();
+    case 'shelf-copy': return api.shelf_copy(+arg).then(ok => ok && flash(el, 'Copiato'));
+    case 'shelf-copyall': return api.shelf_copy_all().then(ok => ok && flash(el, 'Copiati'));
+    case 'shelf-open': return api.shelf_open(+arg);
+    case 'shelf-reveal': return api.shelf_reveal(+arg);
+    case 'shelf-remove': return api.shelf_remove(+arg);
+    case 'shelf-clear': return api.shelf_clear();
+    case 'join': return api.join_meeting();
+    case 'settings': return api.open_settings();
+    case 'update': return api.install_update();
+  }
+}
+function flash(el, text){ const old = el.textContent; el.textContent = text; setTimeout(() => el.textContent = old, 1200); }
+
+document.addEventListener('click', e => {
+  if (suppressClick || !S) return;
+  const t = e.target.closest('[data-act]');
+  if (t){ e.stopPropagation(); act(t.dataset.act, t.dataset.arg, e, t); return; }
+  if (e.target.closest('input')) return;
+  if (S.pending.length) return;
+  if (view && view.done){ dismissedDone.add(view.done); tick(); return; }
+  expanded = !expanded; tick();
+});
+document.addEventListener('input', e => { if (e.target.dataset.live === 'vol') A().set_volume(e.target.value/100); });
+
+document.addEventListener('wheel', e => {
+  e.preventDefault();
+  if (!S) return;
+  const d = e.deltaY < 0 ? 1 : -1;
+  const onMedia = e.target.closest('[data-wheel="vol"]') || (view && view.type === 'media');
+  if (onMedia && S.audio){ A().volume_step(d*0.04); volFlash = Date.now(); setTimeout(tick, 60); }
+  else if (view && view.type === 'agent') A().cycle_session(d);
+}, {passive:false});
+
+// drag to move the pill to another edge
+document.addEventListener('mousedown', e => {
+  if (e.button !== 0 || e.target.closest('button,input,[data-act]')) return;
+  drag = {x: e.screenX, y: e.screenY, started: false};
+});
+document.addEventListener('mousemove', e => {
+  if (!drag || drag.started) return;
+  if (e.buttons !== 1){ drag = null; return; }
+  if (Math.hypot(e.screenX - drag.x, e.screenY - drag.y) > 6){
+    drag.started = true; suppressClick = true; clearTimeout(collapseTimer); A().drag_start();
+  }
+});
+document.addEventListener('mouseup', () => { drag = null; setTimeout(() => { suppressClick = false; lastSize = ''; }, 80); });
+
+// auto-collapse of the expanded view
+document.addEventListener('mouseleave', () => {
+  clearTimeout(collapseTimer);
+  collapseTimer = setTimeout(() => { if (expanded && !drag){ expanded = false; tick(); } }, 1500);
+});
+document.addEventListener('mouseenter', () => clearTimeout(collapseTimer));
+
+// files dropped on the pill
+document.addEventListener('dragenter', e => {
+  if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')){ dropping = true; render(); }
+});
+document.addEventListener('dragover', e => {
+  e.preventDefault(); clearTimeout(dropTimer);
+  dropTimer = setTimeout(() => { dropping = false; render(); }, 450);
+});
+document.addEventListener('drop', e => { e.preventDefault(); dropping = false; expanded = true; setTimeout(tick, 250); });
+
+window.addEventListener('pywebviewready', () => { tick(); setInterval(tick, 250); });

@@ -1,0 +1,22 @@
+# Tool configuration only: Skerry is not distributed as a Python package (see build/ for the installer).
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+extend-exclude = ["build/work", "dist"]
+
+[tool.ruff.lint]
+# pyflakes, pycodestyle errors/warnings and bugbear: real bugs, not style churn.
+select = ["E", "F", "W", "B"]
+ignore = [
+    "E501",  # long lines: the codebase uses dense one-liners; no formatter is enforced
+    "E702",  # several statements on one line (accumulators in usage.py)
+    "E731",  # small lambda helpers assigned to names
+    "B904",  # `raise SystemExit(...)` inside except is intentional
+    "B905",  # zip() without strict=: Python 3.11 compatible code, inputs have equal length
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
