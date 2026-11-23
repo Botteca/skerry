@@ -13,7 +13,7 @@ import threading
 import time
 import urllib.request
 
-from skerry import APP_ID, APP_NAME, VERSION, autostart, displays, i18n, log as logsetup, paths, win32
+from skerry import APP_ID, APP_NAME, VERSION, autostart, displays, i18n, layout, log as logsetup, paths, profiles, win32
 from skerry.i18n import Msg
 
 TITLE = "Skerry overlay"   # internal title: deliberately not just "Skerry" (an Explorer folder could match FindWindow)
@@ -81,6 +81,8 @@ class SkerryApp:
         self.window = None
         self.settings_window = None
         self.hotkey = None
+        self.profile_hotkey = None
+        self.auto_profile = profiles.AutoProfile()
         self._quitting = False
         self.settings.on_change(self._on_setting)
 
@@ -147,6 +149,7 @@ class SkerryApp:
         self._start_hotkey()
         threading.Thread(target=self._guard_loop, daemon=True, name="guard").start()
         threading.Thread(target=self._display_loop, daemon=True, name="displays").start()
+        threading.Thread(target=self._profile_loop, daemon=True, name="profiles").start()
         self.updater.start()
 
     def _on_shown(self):
@@ -183,7 +186,7 @@ class SkerryApp:
             def on_drop(e):
                 files = ((e or {}).get("dataTransfer") or {}).get("files") or []
                 found = [f.get("pywebviewFullPath") for f in files if f.get("pywebviewFullPath")]
-                if found and self.settings.get("modules.shelf", True):
+                if found and layout.visible(self.settings, "shelf"):
                     self.shelf.add(found)
                     self.log.info("Shelf: added %s file(s)", len(found))
 
@@ -195,12 +198,42 @@ class SkerryApp:
             self.log.exception("File drag & drop not available")
 
     def _start_hotkey(self):
-        if self.hotkey:
-            self.hotkey.stop()
+        for hk in (self.hotkey, self.profile_hotkey):
+            if hk:
+                hk.stop()
         self.hotkey = win32.Hotkey(self.settings.get("hotkey"), self.toggle_expand)
         self.hotkey.start()
+        if self.profile_hotkey:
+            self.profile_hotkey.stop()
+        self.profile_hotkey = win32.Hotkey(self.settings.get("profile_hotkey"), self.next_profile)
+        self.profile_hotkey.start()
+
+    def set_profile(self, name):
+        if profiles.switch(self.settings, name):
+            self.tray.refresh()
+
+    def next_profile(self):
+        profiles.cycle(self.settings)
+        self.tray.refresh()
+        self.store.alert("info", "🎛️", Msg("alert.profile", name=Msg(profiles.LABELS[profiles.current(self.settings)])),
+                         sound=False)
 
     # ---------- service loops ----------
+    def _profile_loop(self):
+        """Automatic profile: while the screen is shared or a meeting is in progress (if the rule is on)."""
+        while not self._quitting:
+            try:
+                cfg = self.settings.get("profile_auto") or {}
+                active = False
+                if cfg.get("enabled"):
+                    m = self.connectors.meeting() if cfg.get("on_meeting") else None
+                    active = bool(m and m.get("in_progress")) or bool(cfg.get("on_share") and win32.screen_sharing())
+                if self.auto_profile.step(self.settings, active):
+                    self.tray.refresh()
+            except Exception:
+                self.log.exception("profile loop")
+            time.sleep(3)
+
     def _guard_loop(self):
         """Visibility (pause / fullscreen) and always-on-top."""
         tick = 0
@@ -339,7 +372,7 @@ class SkerryApp:
         if key == "autostart":
             autostart.set_enabled(bool(value))
             self.tray.refresh()
-        elif key == "hotkey":
+        elif key in ("hotkey", "profile_hotkey"):
             self._start_hotkey()
         elif key in ("edge", "offset", "monitor", "monitor_id"):
             if key == "monitor":

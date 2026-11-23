@@ -44,7 +44,8 @@ class LocalUsage:
             return self._state
 
     def _enabled(self):
-        return self._settings is None or self._settings.get("modules.usage", True)
+        from .layout import visible
+        return self._settings is None or visible(self._settings, "usage")
 
     def _loop(self):
         time.sleep(3)

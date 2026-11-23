@@ -4,7 +4,7 @@ import json
 import os
 import threading
 
-from . import paths
+from . import layout, paths
 
 DEFAULTS = {
     "edge": "top",            # top | bottom | left | right
@@ -22,10 +22,20 @@ DEFAULTS = {
     "port": 47800,
     "permission_wait": 300,
     "focus_terminal_after_decision": True,
+    # agent integrations and system sources; the island sections are in "layout" (older modules.* are migrated)
     "modules": {
-        "claude": True, "codex": True, "gemini": True, "copilot": True, "media": True, "privacy": True,
-        "battery": True, "bluetooth": True, "timer": True, "shelf": True, "usage": True, "calendar": True, "adf": True, "sql": True,
+        "claude": True, "codex": True, "gemini": True, "copilot": True, "privacy": True, "battery": True,
+        "bluetooth": True,
     },
+    "layout": dict(layout.DEFAULT),
+    "profile": "work",        # work | present | focus (see profiles.py)
+    "profiles": {             # partial values applied over the current ones the first time a profile is entered
+        "work": {},
+        "present": {"layout": {"minimal": True}, "sounds": {"done": False, "alert": False, "timer": False}},
+        "focus": {"layout": {"pill_hidden": ["media"]}, "sounds": {"done": False, "timer": False}},
+    },
+    "profile_auto": {"enabled": False, "profile": "present", "on_share": True, "on_meeting": True},
+    "profile_hotkey": "win+alt+p",
     "sounds": {"permission": True, "done": True, "alert": True, "timer": True},
     "alerts": {"context": 80, "limits": [80, 90], "battery_low": 20, "bluetooth_low": 15},
     "pomodoro": {"focus": 25, "short_break": 5, "long_break": 15, "cycles": 4},
@@ -64,7 +74,7 @@ def _migrate(data):
         if "updates" not in data and data["check_updates"] is False:
             data["updates"] = "off"
         del data["check_updates"]
-    return data
+    return layout.migrate(data)
 
 
 def load_raw(path=None):

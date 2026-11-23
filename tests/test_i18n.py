@@ -250,7 +250,7 @@ def js_literals(src):
 
 
 WORD = r"[A-Za-zÀ-ÖØ-öø-ÿ]{2,}"
-JS_ALLOWED = BRANDS | {"Files", "use strict"}   # "Files": DataTransfer type name
+JS_ALLOWED = BRANDS | {"Files", "use strict", "ArrowUp", "ArrowDown"}   # DataTransfer type, KeyboardEvent.key names
 
 
 def visible_js_text(kind, text):

@@ -38,7 +38,7 @@ Microsoft 365. Tutto gira in locale.
 | ![Agente al lavoro](docs/img/it/01-agent.png) | ![Richiesta di permesso](docs/img/it/04-permission.png) |
 | ![Musica](docs/img/it/02-music.png) | ![Timer](docs/img/it/03-timer.png) |
 | ![Attività finita](docs/img/it/05-done.png) | ![Impostazioni: aspetto](docs/img/it/07-settings-appearance.png) |
-| ![Impostazioni: moduli](docs/img/it/07-settings-modules.png) | ![Impostazioni: connessioni](docs/img/it/07-settings-connections.png) |
+| ![Impostazioni: layout](docs/img/it/07-settings-layout.png) | ![Impostazioni: connessioni](docs/img/it/07-settings-connections.png) |
 
 </details>
 
@@ -125,6 +125,33 @@ Per creare l'installer installa [Inno Setup 6](https://jrsoftware.org/isinfo.php
 Produce `dist\Skerry\` (`Skerry.exe` e `skerry-cli.exe`), `dist\Skerry-Setup-x.y.z.exe` e `dist\SHA256SUMS.txt`.
 Le release ufficiali le costruisce GitHub Actions quando viene pubblicato un tag di versione (vedi
 [CONTRIBUTING.md](CONTRIBUTING.md#making-a-release), in inglese).
+
+## Personalizzare l'isola
+
+**Impostazioni → Layout** (sostituisce la vecchia pagina *Moduli*; le scelte fatte lì con le versioni precedenti
+vengono mantenute):
+
+- **Isola aperta**: ogni sezione (musica, riunione, Data Factory, SQL, agenti, consumo, sistema, timer, mensola) si può
+  mostrare o nascondere e riordinare: trascina la maniglia ⠿, oppure usa ▲ ▼ (anche i tasti freccia sulla maniglia).
+  *Ripristina ordine predefinito* le rimette a posto. Le sezioni aggiunte dalle versioni future compaiono in fondo
+  senza cambiare il tuo ordine.
+- **Opzioni** dentro una sezione: quali agenti mostrare; microfono/fotocamera, batteria e **dispositivi Bluetooth**
+  (rinominali o nascondili direttamente lì, senza più modificare `bluetooth_names` a mano); **consumo** come tutto,
+  solo token, solo percentuali o solo oggi; **riunioni** da quanti minuti prima.
+- **Priorità della pillola chiusa**: quando succedono più cose insieme, la pillola mostra la prima di questa lista
+  (agente al lavoro, riunione in arrivo, musica, timer, batteria scarica); ognuna si può escludere dalla pillola. Le
+  richieste di permesso vengono sempre per prime e non si possono nascondere.
+- **Modalità minima**: solo agenti, richieste di permesso e avvisi importanti (avvertimenti ed errori).
+- **Profili** *Lavoro*, *Presentazione* e *Concentrazione*: ognuno ricorda layout, moduli, suoni e posizione. Si
+  cambiano dal menu del tray (**Profilo**) o con la scorciatoia (`Win+Alt+P` di default, li fa ruotare). La prima
+  volta *Presentazione* parte in modalità minima con i suoni ridotti e *Concentrazione* toglie la musica dalla
+  pillola. Regola automatica facoltativa: mentre condividi lo schermo o c'è una riunione in corso passa al profilo
+  scelto, e poi torna indietro. La condivisione è riconosciuta dalle barre "stai condividendo" di browser, Teams e
+  Zoom (un elenco di titoli di finestra, al meglio: Windows non ha un'API per saperlo).
+- **Impostazioni → Generale → Backup**: esporta tutte le impostazioni e i profili in un file JSON, o importane uno.
+  Non contiene mai segreti (non sono in `settings.json`); all'importazione Skerry ignora la fonte degli
+  aggiornamenti, il comando della status line concatenata e i valori legati al PC, e scarta i widget SQL la cui
+  query non è in sola lettura.
 
 ## Configurare Claude Code e Codex
 

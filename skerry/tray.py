@@ -2,7 +2,7 @@
 import logging
 import os
 
-from . import APP_NAME, VERSION, autostart, paths
+from . import APP_NAME, VERSION, autostart, paths, profiles
 from .i18n import t
 
 log = logging.getLogger("skerry")
@@ -35,6 +35,10 @@ class Tray:
             return
         app = self.app
         item, menu = pystray.MenuItem, pystray.Menu
+
+        def profile_item(name):     # a factory, so each item keeps its own profile name
+            return item(lambda i: t(profiles.LABELS[name]), lambda: app.set_profile(name),
+                        checked=lambda i: profiles.current(app.settings) == name, radio=True)
         self.icon = pystray.Icon(
             "skerry", tray_image(), APP_NAME,
             menu(
@@ -42,6 +46,7 @@ class Tray:
                 # texts are callables: refresh() re-reads them after a language change
                 item(lambda i: t("tray.expand"), lambda: app.toggle_expand(), default=True),
                 item(lambda i: t("tray.settings"), lambda: app.open_settings()),
+                item(lambda i: t("tray.profile"), menu(*[profile_item(p) for p in profiles.PROFILES])),
                 item(lambda i: t("tray.pause"), lambda: app.toggle_pause(), checked=lambda i: app.paused),
                 item(lambda i: t("tray.reconnect"), lambda: app.reconnect()),
                 item(lambda i: t("tray.autostart"), lambda: app.toggle_autostart(), checked=lambda i: autostart.is_enabled()),

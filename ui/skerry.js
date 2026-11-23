@@ -69,13 +69,25 @@ function badges(skipTimer){
 }
 const badgeKey = () => { const sy = S.system || {}; return [(sy.mic||[]).length, (sy.cam||[]).length, !!S.timer, (S.grants||[]).map(g => g.id)].join(); };
 
+const sec = id => S.layout.sections.includes(id);
+// Is a closed-pill event happening now? (ids of skerry/layout.py PILL; permissions are handled before, in pick())
+function pillEvent(ev){
+  if (ev === 'agent'){ const s = current(); return s && {type:'agent', s}; }
+  if (ev === 'meeting'){ const m = S.meeting; return m && (m.in_progress || m.start - S.now <= 15 * 60) && {type:'meeting', m}; }
+  if (ev === 'media') return S.media && S.media.playing && {type:'media'};
+  if (ev === 'timer') return S.timer && {type:'timer'};
+  if (ev === 'battery'){
+    const b = (S.system || {}).battery, low = ((S.settings.alerts || {}).battery_low) ?? 20;
+    return b && !b.plugged && b.percent <= low && {type:'battery', b};
+  }
+  return null;
+}
+// What takes the closed pill: the first event in the user's priority order that is happening now.
 function compactMain(){
-  const s = current();
-  if (s) return {type:'agent', s};
-  if (S.media && S.media.playing) return {type:'media'};
-  if (S.timer) return {type:'timer'};
+  for (const ev of S.layout.active_pill){ const m = ev !== 'permission' && pillEvent(ev); if (m) return m; }
   return {type:'idle'};
 }
+const shownAlerts = () => S.layout.minimal ? S.alerts.filter(a => a.level !== 'info') : S.alerts;   // minimal: important only
 
 // ---------------- compact views ----------------
 function vCompact(){
@@ -106,6 +118,20 @@ function vCompact(){
     if (vert) return {...base, key:`vt${tm.label}${tm.paused}${badgeKey()}`, html:`<div class="tab">${ring(p, 20, col)}<div class="t" data-live="tmb">${mmss(tm.left)}</div>${b}</div>`};
     return {...base, key:`t${tm.label}${tm.paused}${badgeKey()}`, html:`<div class="bar">${ring(p, 18, col)}
       <span class="muted sm">${esc(tm.label)}${tm.paused ? ' · ' + tx('timer.paused') : ''}</span><span class="big" data-live="tmb">${mmss(tm.left)}</span>${b}</div>`};
+  }
+  if (m.type === 'meeting'){
+    const mt = m.m, mins = Math.max(1, Math.round((mt.start - S.now) / 60));
+    const txt = mt.in_progress ? t('meeting.now') : t('meeting.inMinutes', {n: mins});
+    if (vert) return {...base, key:`vmt${mt.id}${mt.in_progress || mins}${badgeKey()}`, html:`<div class="tab"><span>📅</span><div class="t">${mt.in_progress ? '●' : mins + "'"}</div>${b}</div>`};
+    return {...base, key:`mt${mt.id}${mt.in_progress || mins}${badgeKey()}`, html:`<div class="bar"><span>📅</span>
+      <span class="txt">${mt.title ? esc(mt.title) : tx('meeting.untitled')}</span><span class="chip on">${esc(txt)}</span>
+      ${mt.join_url ? `<span class="chip act" data-act="join">${tx('meeting.join')}</span>` : ''}${b}</div>`};
+  }
+  if (m.type === 'battery'){
+    const bt = m.b;
+    if (vert) return {...base, key:`vb${bt.percent}${badgeKey()}`, html:`<div class="tab"><span>🪫</span><div class="t">${bt.percent}%</div>${b}</div>`};
+    return {...base, key:`b${bt.percent}${badgeKey()}`, html:`<div class="bar"><span>🪫</span>
+      <span class="sm" style="color:var(--red)">${bt.percent}%</span><span class="muted sm">${tx('pill.battery')}</span>${b}</div>`};
   }
   const lim = f && mod('claude') ? `${ring(f.used_percentage)}<span class="sm">${Math.round(f.used_percentage)}%</span><span class="muted xs">${tx('usage.fiveHourShort')}</span>` : '';
   if (vert) return {...base, key:`vi${f&&Math.round(f.used_percentage)}${badgeKey()}`, html:`<div class="tab">${glyph('claude')}${f ? ring(f.used_percentage) : ''}${b}</div>`};
@@ -148,14 +174,15 @@ const BT_ICON = {mouse:'🖱️', keyboard:'⌨️', headset:'🎧', speaker:'�
 const fmtTok = n => n >= 1e6 ? I18N.number(n/1e6, n >= 1e7 ? 0 : 1) + 'M' : n >= 1e3 ? Math.round(n/1e3) + 'k' : String(n);
 function claudeBlock(){
   if (!mod('claude')) return '';
-  const L = S.limits, sl = S.statusline || {}, u = mod('usage') && S.usage;
+  const L = S.limits, sl = S.statusline || {}, u = S.usage, view = S.layout.usage_view;
+  const showPct = view === 'all' || view === 'percent', showTok = view !== 'percent';
   const g = (label, w, sub) => `<div class="gauge">${ring(w.used_percentage, 46, undefined, 4.5)}
     <div class="gv"><b>${Math.floor(w.used_percentage)}%</b><span>${label}</span><span class="muted">${sub}</span></div></div>`;
   const age = L && L.received_at ? Math.max(0, S.now - L.received_at) : 0;
   const ago = age > 120 ? ' · ' + t('usage.dataAge', {age: age >= 3600 ? Math.floor(age/3600) + 'h' : Math.floor(age/60) + 'm'}) : '';
   const hasPct = !!(L && (L.five_hour || L.seven_day || L.spend_limit));
   let body = '';
-  if (hasPct){
+  if (hasPct && showPct){
     if (L.five_hour) body += g(tx('usage.session5h'), L.five_hour, esc(t('usage.resetsIn', {time: until(L.five_hour.resets_at)}) + ago));
     if (L.seven_day) body += g(tx('usage.week'), L.seven_day, tx('usage.resetsAt', {when: when(L.seven_day.resets_at)}));
     const sp = L.spend_limit;
@@ -163,7 +190,10 @@ function claudeBlock(){
       sp.used_usd != null && sp.limit_usd != null ? `$${(+sp.used_usd).toFixed(0)} / $${(+sp.limit_usd).toFixed(0)}` : (sp.resets_at ? tx('usage.resetsIn', {time: until(sp.resets_at)}) : ''));
     body = `<div class="gauges">${body}</div>`;
   }
-  if (u){
+  if (u && view === 'today'){
+    body += `<div class="usage"><div class="ucard"><span class="muted">${tx('usage.today')}</span>
+      <div class="n"><b>${fmtTok(u.days[6])}</b><em>${tx('usage.tokens')}</em></div></div></div>`;
+  } else if (u && showTok){
     const card = (label, w) => `<div class="ucard" title="${tx('usage.breakdown', {input: fmtTok(w.input), output: fmtTok(w.output), cacheWrite: fmtTok(w.cache_write), cacheRead: fmtTok(w.cache_read)})}">
       <span class="muted">${label}</span><div class="n"><b>${fmtTok(w.tokens)}</b><em>${tx('usage.tokens')}</em></div><span class="muted">${tx('usage.responses', {n: w.requests})}</span></div>`;
     const max = Math.max(1, ...u.days);
@@ -171,7 +201,8 @@ function claudeBlock(){
       <span>${esc(I18N.weekdayNarrow(S.now - (6 - i) * 86400))}</span></div>`).join('');
     body += `<div class="usage">${card(tx('usage.last5h'), u.h5)}${card(tx('usage.last7d'), u.d7)}<div class="bars">${bars}</div></div>`;
   }
-  if (!hasPct){
+  if (!body && !showPct) return '';
+  if (!hasPct && showPct){
     body += `<div class="fn-note">${!sl.seen ? tx('usage.noData')
       : tx('usage.noPlan', {cmd: I18N.html('<span class="mono">/usage</span>')})}</div>`;
   }
@@ -189,13 +220,12 @@ function updateBar(){
   return `<div class="updbar"><span class="ui">⬆</span><span class="ut">${text}</span>${btn}</div>`;
 }
 
-function vExpanded(){
-  const md = mod('media') && S.media, L = S.limits, sy = S.system || {}, au = S.audio;
-  const sess = S.sessions.slice(0, 4);
-  let h = '<div class="card">';
-  // media
-  if (md){
-    h += `<div class="sec" data-wheel="vol"><div class="media">${art('art')}<div class="mi">
+// Sections of the expanded island by stable id (skerry/layout.py SECTIONS); S.layout.sections gives order and visibility.
+const SECTION = {
+  media(){
+    const md = S.media, au = S.audio;
+    if (!md) return '';
+    return `<div class="sec" data-wheel="vol"><div class="media">${art('art')}<div class="mi">
       <div class="title">${md.title ? esc(md.title) : tx('media.nowPlaying')}</div>
       <div class="muted sm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(md.artist)}${md.app ? ' · ' + esc(md.app) : ''}</div>
       ${md.duration ? `<div class="prog" data-act="seek"><i data-live="pg"></i></div>
@@ -207,43 +237,47 @@ function vExpanded(){
         ${au ? `<div class="vol"><span class="k" data-act="mute" style="font-size:14px">${au.muted ? '🔇' : '🔊'}</span>
           <input type="range" min="0" max="100" data-live="vol" value="${Math.round((au.volume||0)*100)}"></div>` : ''}
       </div></div>`;
-  }
-  // meeting (Microsoft 365)
-  if (mod('calendar') && S.meeting){
-    const m = S.meeting, hm = ts => I18N.time(ts);
-    const left = m.start - S.now;
+  },
+  meeting(){
+    const m = S.meeting;
+    if (!m) return '';
+    const left = m.start - S.now, hm = ts => I18N.time(ts);
+    if (!m.in_progress && left > S.layout.meeting_ahead * 60) return '';    // "show it from N minutes before"
     const whenTxt = m.in_progress ? t('meeting.inProgress', {time: hm(m.end)})
       : left < 3600 ? t('meeting.inMinutes', {n: Math.max(1, Math.round(left / 60))}) : t('meeting.at', {time: hm(m.start)});
     const sub = [whenTxt, m.provider, m.location].filter(Boolean).map(esc).join(' · ');
-    h += `<div class="sec"><div class="sec-h"><b>${tx('meeting.title')}</b></div><div class="meet ${m.in_progress ? 'live' : (left < 300 ? 'soon' : '')}">
+    return `<div class="sec"><div class="sec-h"><b>${tx('meeting.title')}</b></div><div class="meet ${m.in_progress ? 'live' : (left < 300 ? 'soon' : '')}">
       <div class="mt"><b>${hm(m.start)}</b><span>${hm(m.end)}</span></div>
       <div class="mi2"><div class="mn">${m.title ? esc(m.title) : tx('meeting.untitled')}</div><div class="muted sm">${sub}</div></div>
       ${m.join_url ? `<button class="b-join" data-act="join">${tx('meeting.join')}</button>` : ''}</div></div>`;
-  }
+  },
   // Azure Data Factory: latest run of the chosen pipelines
-  if (mod('adf') && S.adf){
-    h += `<div class="sec"><div class="sec-h"><b>${tx('adf.title')}</b></div>`;
+  adf(){
+    if (!S.adf) return '';
+    let h = `<div class="sec"><div class="sec-h"><b>${tx('adf.title')}</b></div>`;
     for (const r of S.adf){
       const [dot, label] = ADF_STATUS[r.status] || ['idle', 'adf.none'];
       const at = r.end || r.start;
       h += `<div class="sess" title="${esc(r.message)}"><span class="dot ${dot}"></span><span class="p">${esc(r.pipeline)}</span>
         <span class="a">${tx(label)}${at ? ' · ' + esc(when(at)) : ''}</span></div>`;
     }
-    h += '</div>';
-  }
+    return h + '</div>';
+  },
   // SQL Server / Azure SQL widgets: first value of a read-only query, green/amber/red
-  if (mod('sql') && S.sql){
-    h += `<div class="sec"><div class="sec-h"><b>${tx('sql.title')}</b></div>`;
+  sql(){
+    if (!S.sql) return '';
+    let h = `<div class="sec"><div class="sec-h"><b>${tx('sql.title')}</b></div>`;
     for (const w of S.sql){
       const v = w.value === null ? '—' : typeof w.value === 'number' ? I18N.number(w.value, 2) : String(w.value);
       h += `<div class="sess" title="${esc(w.error)}"><span class="dot ${SQL_DOT[w.level] || 'idle'}"></span><span class="p">${esc(w.name)}</span>
         <span class="a">${w.error ? tx('sql.error') : esc(v)}</span></div>`;
     }
-    h += '</div>';
-  }
-  // agents
-  if (['claude', 'codex', 'gemini', 'copilot'].some(mod)){
-    h += `<div class="sec"><div class="sec-h"><b>${tx('agents.title')}</b><span class="sp"></span>${sess.length ? '' : `<span>${tx('agents.none')}</span>`}</div>`;
+    return h + '</div>';
+  },
+  agents(){
+    if (!['claude', 'codex', 'gemini', 'copilot'].some(mod)) return '';
+    const sess = S.sessions.slice(0, 4);
+    let h = `<div class="sec"><div class="sec-h"><b>${tx('agents.title')}</b><span class="sp"></span>${sess.length ? '' : `<span>${tx('agents.none')}</span>`}</div>`;
     for (const s of sess){
       const tk = s.tasks;
       h += `<div class="sess ${s.has_window ? 'click' : ''}" ${s.has_window ? `data-act="focus" data-arg="${esc(s.sid)}" title="${tx('agents.focusTip')}"` : ''}>
@@ -252,33 +286,32 @@ function vExpanded(){
         ${tk ? `<span class="chip on">☑ ${tk.done}/${tk.total}</span>` : ''}
         ${s.context_pct != null ? `<span class="chip" style="color:${s.context_pct >= 80 ? 'var(--amber)' : ''}">${tx('agents.context', {pct: Math.round(s.context_pct)})}</span>` : ''}</div>`;
     }
-    h += '</div>';
-  }
-  h += claudeBlock();
-  // system
-  const chips = [];
-  (sy.mic || []).forEach(a => chips.push(`<span class="chip on"><span class="pd mic"></span> 🎙 ${esc(a)}</span>`));
-  (sy.cam || []).forEach(a => chips.push(`<span class="chip on"><span class="pd cam"></span> 📷 ${esc(a)}</span>`));
-  if (sy.battery) chips.push(`<span class="chip on">${sy.battery.plugged ? '⚡' : '🔋'} ${sy.battery.percent}%</span>`);
-  const devs = [];
-  (sy.bluetooth || []).forEach(d => devs.push(`<span title="${esc(d.name)}" class="chip on dev ${d.battery <= 15 ? 'low' : ''}"><span class="di">${BT_ICON[d.kind] || '🔹'}</span><span class="dn">${esc(d.name.replace(/\s*Bluetooth\s*/i,' ').trim())}</span>
-    <span class="bt"><i style="width:${d.battery}%;background:${d.battery <= 15 ? 'var(--red)' : d.battery <= 30 ? 'var(--amber)' : 'var(--green)'}"></i></span><b>${d.battery}%</b></span>`));
-  if (chips.length || devs.length) h += `<div class="sec"><div class="sec-h"><b>${tx('system.title')}</b></div>${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}${devs.length ? `<div class="devs">${devs.join('')}</div>` : ''}</div>`;
-  // timer
-  if (mod('timer')){
+    return h + '</div>';
+  },
+  usage(){ return claudeBlock(); },
+  system(){
+    const sy = S.system || {}, chips = [], devs = [];
+    (sy.mic || []).forEach(a => chips.push(`<span class="chip on"><span class="pd mic"></span> 🎙 ${esc(a)}</span>`));
+    (sy.cam || []).forEach(a => chips.push(`<span class="chip on"><span class="pd cam"></span> 📷 ${esc(a)}</span>`));
+    if (sy.battery) chips.push(`<span class="chip on">${sy.battery.plugged ? '⚡' : '🔋'} ${sy.battery.percent}%</span>`);
+    (sy.bluetooth || []).forEach(d => devs.push(`<span title="${esc(d.name)}" class="chip on dev ${d.battery <= 15 ? 'low' : ''}"><span class="di">${BT_ICON[d.kind] || '🔹'}</span><span class="dn">${esc(d.name.replace(/\s*Bluetooth\s*/i,' ').trim())}</span>
+      <span class="bt"><i style="width:${d.battery}%;background:${d.battery <= 15 ? 'var(--red)' : d.battery <= 30 ? 'var(--amber)' : 'var(--green)'}"></i></span><b>${d.battery}%</b></span>`));
+    if (!chips.length && !devs.length) return '';
+    return `<div class="sec"><div class="sec-h"><b>${tx('system.title')}</b></div>${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}${devs.length ? `<div class="devs">${devs.join('')}</div>` : ''}</div>`;
+  },
+  timer(){
     const tm = S.timer;
-    h += `<div class="sec"><div class="sec-h"><b>${tx('timer.title')}</b>${tm ? `<span class="muted">· ${esc(tm.label)}${tm.mode === 'pomodoro' ? ' #' + tm.cycle : ''}</span>` : ''}</div>`;
+    let h = `<div class="sec"><div class="sec-h"><b>${tx('timer.title')}</b>${tm ? `<span class="muted">· ${esc(tm.label)}${tm.mode === 'pomodoro' ? ' #' + tm.cycle : ''}</span>` : ''}</div>`;
     h += tm ? `<div class="timer">${ring(100*(1 - tm.left/tm.duration), 26, tm.phase === 'focus' || tm.mode === 'timer' ? 'var(--accent)' : 'var(--green)')}
           <span class="big" data-live="tm">${mmss(tm.left)}</span><span class="sp"></span>
           <span class="chip act" data-act="tpause">${tm.paused ? '▶ ' + tx('timer.resume') : '⏸ ' + tx('timer.pause')}</span><span class="chip act" data-act="tstop">✕ ${tx('timer.stop')}</span></div>`
        : `<div class="chips">${[5, 15, 25, 45].map(m => `<span class="chip act" data-act="timer" data-arg="${m}">${tx('timer.minutes', {n: m})}</span>`).join('')}
           <span class="chip act" data-act="pomo">🍅 ${tx('timer.pomodoro')}</span></div>`;
-    h += '</div>';
-  }
-  // shelf
-  if (mod('shelf')){
+    return h + '</div>';
+  },
+  shelf(){
     const it = S.shelf || [];
-    h += `<div class="sec"><div class="sec-h"><b>${tx('shelf.title')}</b><span class="sp"></span>
+    let h = `<div class="sec"><div class="sec-h"><b>${tx('shelf.title')}</b><span class="sp"></span>
       ${it.length ? `<span class="link" data-act="shelf-copyall">${tx('shelf.copyAll')}</span><span class="link" data-act="shelf-clear">${tx('shelf.clear')}</span>` : ''}</div>`;
     if (!it.length) h += `<div class="muted xs">${tx('shelf.empty')}</div>`;
     it.forEach((f, i) => {
@@ -287,13 +320,19 @@ function vExpanded(){
         ${f.exists ? `<span data-act="shelf-copy" data-arg="${i}">${tx('shelf.copy')}</span><span data-act="shelf-open" data-arg="${i}">${tx('shelf.open')}</span><span data-act="shelf-reveal" data-arg="${i}">${tx('shelf.folder')}</span>` : ''}
         <span data-act="shelf-remove" data-arg="${i}">✕</span></span></div>`;
     });
-    h += '</div>';
-  }
+    return h + '</div>';
+  },
+};
+
+function vExpanded(){
+  const md = S.media, L = S.limits, sy = S.system || {}, au = S.audio, sess = S.sessions.slice(0, 4);
+  let h = '<div class="card">';
+  for (const id of S.layout.sections) if (SECTION[id]) h += SECTION[id]();
   h += updateBar();
   h += `<div class="foot"><span>Skerry ${esc(S.version)}</span>
     <span class="sp"></span><span class="link" data-act="settings">⚙ ${tx('foot.settings')}</span></div></div>`;
   const u = S.update;
-  const key = 'x' + JSON.stringify([md && [md.title, md.artist, md.playing, md.duration, thumbId, !!au, au && au.muted],
+  const key = 'x' + JSON.stringify([S.layout, md && [md.title, md.artist, md.playing, md.duration, thumbId, !!au, au && au.muted],
     sess.map(s => [s.sid, s.status, s.action, s.tasks, s.context_pct, s.has_window]), L, S.statusline && S.statusline.seen, S.usage && [S.usage.h5, S.usage.d7, S.usage.days],
     Math.floor(S.now/30), sy, S.adf, S.sql, S.timer && [S.timer.label, S.timer.paused, S.timer.cycle], S.shelf, u && [u.status, u.version]]);
   return {w:480, r:28, key, html:h};
@@ -340,9 +379,10 @@ function vOnboarding(){
 const K = (kind, v) => (v.kind = kind, v);
 function pick(){
   if (S.pending.length) return K('perm', vPermission());
-  if (S.alerts.length){ const a = S.alerts[S.alerts.length - 1]; return K('al' + a.id, vAlert(a)); }
+  const al = shownAlerts();
+  if (al.length){ const a = al[al.length - 1]; return K('al' + a.id, vAlert(a)); }
   if (S.onboarding) return K('onb', vOnboarding());
-  if (dropping && mod('shelf')) return K('drop', vDrop());
+  if (dropping && sec('shelf')) return K('drop', vDrop());
   if (expanded) return K('exp', vExpanded());
   const done = S.sessions.find(s => (s.status === 'done' || s.status === 'error') && S.now - s.done_at < 7 && !dismissedDone.has(s.sid + s.done_at));
   if (done) return K('done' + done.sid + done.done_at, vDone(done));
@@ -373,7 +413,7 @@ function render(){
   const key = `${S.settings.edge}|${S.settings.theme}|${I18N.lang}|${view.key}`;
   const root = document.documentElement;
   root.dataset.edge = S.settings.edge || 'top';
-  root.dataset.state = S.pending.length ? 'perm' : (S.alerts.length ? 'alert' : '');
+  root.dataset.state = S.pending.length ? 'perm' : (shownAlerts().length ? 'alert' : '');
   if (key !== lastKey){
     const fresh = view.kind !== lastKind;      // entry animations only when the view really changes
     lastKey = key; lastKind = view.kind;

@@ -37,7 +37,7 @@ your next Microsoft 365 meeting. Everything runs locally.
 | ![Agent at work](docs/img/01-agent.png) | ![Permission request](docs/img/04-permission.png) |
 | ![Music](docs/img/02-music.png) | ![Timer](docs/img/03-timer.png) |
 | ![Task finished](docs/img/05-done.png) | ![Settings: appearance](docs/img/07-settings-appearance.png) |
-| ![Settings: modules](docs/img/07-settings-modules.png) | ![Settings: connections](docs/img/07-settings-connections.png) |
+| ![Settings: layout](docs/img/07-settings-layout.png) | ![Settings: connections](docs/img/07-settings-connections.png) |
 
 </details>
 
@@ -124,6 +124,31 @@ To build the installer yourself, install [Inno Setup 6](https://jrsoftware.org/i
 It creates `dist\Skerry\` (`Skerry.exe` and `skerry-cli.exe`), `dist\Skerry-Setup-x.y.z.exe` and
 `dist\SHA256SUMS.txt`. Official releases are built by GitHub Actions when a version tag is pushed (see
 [CONTRIBUTING.md](CONTRIBUTING.md#making-a-release)).
+
+## Customising the island
+
+**Settings → Layout** (it replaces the old *Modules* page; switches set there by older versions are kept):
+
+- **Expanded island**: every section (music, meeting, Data Factory, SQL, agents, usage, system, timer, shelf) can be
+  shown or hidden and reordered: drag the ⠿ handle, or use ▲ ▼ (also the arrow keys on the focused handle).
+  *Restore default order* puts them back. Sections added by future versions appear at the end without changing your
+  order.
+- **Options** inside a section: which agents to show; microphone/camera, battery and **Bluetooth devices** (rename
+  them or hide them right there, no more editing `bluetooth_names` by hand); **usage** as everything, tokens only,
+  percentages only or today only; **meetings** from how many minutes before.
+- **Closed pill priority**: when several things happen at once, the first one in this list takes the pill
+  (agent at work, upcoming meeting, music, timer, low battery); each can be set to never take it. Permission
+  requests always come first and cannot be hidden.
+- **Minimal mode**: only agents, permission requests and important alerts (warnings and errors).
+- **Profiles** *Work*, *Presentation* and *Focus*: each remembers layout, modules, sounds and position. Switch from the
+  tray menu (**Profile**) or with the shortcut (`Win+Alt+P` by default, cycles through them). The first time,
+  *Presentation* starts in minimal mode with quiet sounds and *Focus* keeps music out of the pill. Optional automatic
+  rule: while the screen is shared or a meeting is in progress, switch to a chosen profile and back afterwards.
+  Screen sharing is recognised by the "you are sharing" bars of browsers, Teams and Zoom (a best-effort list of
+  window titles: Windows has no API for it).
+- **Settings → General → Backup**: export all settings and profiles to a JSON file, or import one. Secrets are never
+  in it (they are not in `settings.json`); on import Skerry ignores the update source, the chained status-line
+  command and per-PC values, and drops SQL widgets whose query is not read-only.
 
 ## Setting up Claude Code and Codex
 

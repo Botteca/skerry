@@ -217,7 +217,8 @@ class SystemMonitor:
     def __init__(self, settings, store):
         self._settings = settings
         self._store = store
-        self.state = {"mic": [], "cam": [], "battery": None, "bluetooth": []}
+        self.state = {"mic": [], "cam": [], "battery": None, "bluetooth": [], "bluetooth_all": []}
+        self._bt_wake = threading.Event()
         self._bt_low = set()
         self._batt_low = False
 
@@ -270,6 +271,7 @@ class SystemMonitor:
                 except Exception:
                     log.exception("Could not read Bluetooth batteries")
                     devs = []
+                self.state["bluetooth_all"] = devs                 # unfiltered, for the rename/hide list in settings
                 aliases = self._settings.get("bluetooth_names", {}) or {}
                 devs = [{**d, "name": aliases.get(d["name"], d["name"]), "kind": _bt_kind(aliases.get(d["name"], d["name"])) if d["name"] in aliases else d["kind"]}
                         for d in devs if aliases.get(d["name"], True) != ""]
@@ -287,4 +289,9 @@ class SystemMonitor:
                         self._bt_low.discard(d["name"])
             else:
                 self.state["bluetooth"] = []
-            time.sleep(120)
+            if self._bt_wake.wait(120):
+                self._bt_wake.clear()
+
+    def refresh_bluetooth(self):
+        """Apply a new name or visibility now instead of at the next 2-minute scan."""
+        self._bt_wake.set()

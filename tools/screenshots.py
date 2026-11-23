@@ -25,6 +25,7 @@ sys.path.insert(0, ROOT)
 from skerry import VERSION, i18n  # noqa: E402
 from skerry.connectors.m365 import pick_meeting  # noqa: E402
 from skerry.settings import DEFAULTS  # noqa: E402
+from skerry import layout as island_layout  # noqa: E402
 from skerry.store import Store  # noqa: E402
 from skerry.timer import Timer  # noqa: E402
 
@@ -143,7 +144,8 @@ def pill_state(settings, store=None, **extra):
     snap.update({"media": None, "audio": {"volume": 0.55, "muted": False},
                  "system": {"mic": [], "cam": [], "battery": None, "bluetooth": []}, "usage": None, "timer": None,
                  "meeting": None, "shelf": [], "update": None, "version": VERSION, "lang": settings["language"],
-                 "settings": {k: settings[k] for k in ("edge", "theme", "accent", "modules")}, "now": now})
+                 "settings": {k: settings[k] for k in ("edge", "theme", "accent", "modules", "alerts")}, "now": now,
+                 "layout": island_layout.resolve(settings.get("layout")), "profile": "work"})
     snap.update(extra)
     if snap["media"]:
         snap["media"] = {**snap["media"], "updated": now}
@@ -169,6 +171,9 @@ def scenes(settings):
                      "claude": {"installed": True, "available": True},
                      "codex": {"installed": True, "available": True},
                      "gemini": {"installed": False, "available": False},
+                     "layout": island_layout.resolve(settings.get("layout")), "profile": "work",
+                     "profiles": ["work", "present", "focus"], "bluetooth": [
+                         {"name": d["name"], "alias": "", "shown": True, "battery": d["battery"]} for d in BLUETOOTH],
                      "copilot": {"installed": False, "available": True},
                      "monitors": [], "log_dir": r"C:\Users\you\AppData\Local\Skerry\logs", "update": None,
                      "connectors": {"m365": {"status": "ok", "account": "ada@example.invalid", "error": ""},
@@ -186,7 +191,7 @@ def scenes(settings):
         "05-done": {"bg": "a", "size": (640, 220), "pills": [done]},
         "06-expanded": {"bg": "b", "size": (1080, 1000), "pills": [expanded]},
         "07-settings-appearance": {"bg": "b", "size": (950, 740), "settings": (settings_data, "look")},
-        "07-settings-modules": {"bg": "b", "size": (950, 740), "settings": (settings_data, "mods")},
+        "07-settings-layout": {"bg": "b", "size": (950, 740), "settings": (settings_data, "layout")},
         "07-settings-connections": {"bg": "b", "size": (950, 740), "settings": (settings_data, "conn")},
     }
 

@@ -4,7 +4,7 @@ import logging
 import os
 import time
 
-from . import VERSION, autostart, displays, i18n, integrations, paths, win32
+from . import VERSION, autostart, displays, i18n, integrations, layout, paths, profiles, win32
 from .store import GRANT_MINUTES
 
 log = logging.getLogger("skerry")
@@ -19,6 +19,9 @@ SETTABLE = {
     "connectors.adf.enabled", "connectors.adf.auth", "connectors.adf.tenant", "connectors.adf.client_id",
     "connectors.adf.subscription", "connectors.adf.resource_group", "connectors.adf.factory", "connectors.adf.pipelines",
     "connectors.sql.enabled",   # the widgets themselves only through sql_save(), which checks the queries
+    "layout.order", "layout.hidden", "layout.pill", "layout.pill_hidden", "layout.minimal", "layout.usage_view",
+    "layout.meeting_ahead", "profile_hotkey",
+    "profile_auto.enabled", "profile_auto.profile", "profile_auto.on_share", "profile_auto.on_meeting",
 }
 
 
@@ -30,17 +33,21 @@ class Api:
     def get_state(self):
         a = self._app
         snap = a.store.snapshot()
-        mods = a.settings.get("modules", {})
-        snap["media"] = a.media.public_state() if mods.get("media", True) else None
+        lay = layout.resolve(a.settings.get("layout"))
+        # data for a section is sent only when its section or its pill event can show it
+        shown = set(lay["sections"]) | set(lay["active_pill"])
+        snap["layout"] = lay
+        snap["profile"] = profiles.current(a.settings)
+        snap["media"] = a.media.public_state() if "media" in shown else None
         snap["audio"] = a.audio.state()
-        snap["system"] = a.system.state
-        snap["usage"] = a.usage.state() if mods.get("usage", True) else None
-        snap["timer"] = a.timer.state() if mods.get("timer", True) else None
-        snap["meeting"] = a.connectors.meeting() if mods.get("calendar", True) else None
-        snap["adf"] = a.connectors.adf.runs() if mods.get("adf", True) else None
-        snap["sql"] = a.connectors.sql.widgets() if mods.get("sql", True) else None
-        snap["shelf"] = a.shelf.items() if mods.get("shelf", True) else []
-        snap["settings"] = {k: a.settings.get(k) for k in ("edge", "monitor", "theme", "accent", "modules")}
+        snap["system"] = {k: v for k, v in a.system.state.items() if k != "bluetooth_all"}
+        snap["usage"] = a.usage.state() if "usage" in shown else None
+        snap["timer"] = a.timer.state() if "timer" in shown else None
+        snap["meeting"] = a.connectors.meeting() if "meeting" in shown else None
+        snap["adf"] = a.connectors.adf.runs() if "adf" in shown else None
+        snap["sql"] = a.connectors.sql.widgets() if "sql" in shown else None
+        snap["shelf"] = a.shelf.items() if "shelf" in shown else []
+        snap["settings"] = {k: a.settings.get(k) for k in ("edge", "monitor", "theme", "accent", "modules", "alerts")}
         snap["onboarding"] = None if a.settings.get("first_run_done", True) else self._onboarding()
         snap["update"] = a.updater.visible_state()
         snap["version"] = VERSION
@@ -169,7 +176,76 @@ class Api:
         return {"settings": a.settings.all(), "version": VERSION, "autostart": autostart.is_enabled(),
                 **integrations.statuses(),
                 "monitors": self._monitors(), "dpi_awareness": win32.dpi_awareness(), "log_dir": paths.log_dir(),
-                "update": a.updater.public_state(), "connectors": a.connectors.states(), "lang": i18n.current()}
+                "update": a.updater.public_state(), "connectors": a.connectors.states(), "lang": i18n.current(),
+                "layout": layout.resolve(a.settings.get("layout")), "profile": profiles.current(a.settings),
+                "profiles": list(profiles.PROFILES), "bluetooth": self._bluetooth()}
+
+    # ---------- layout, profiles, Bluetooth names ----------
+    def _bluetooth(self):
+        """Every device with a battery seen by Windows, with the name the user gave it and whether it is shown."""
+        names = self._app.settings.get("bluetooth_names", {}) or {}
+        return [{"name": d["name"], "alias": names.get(d["name"]) or "", "shown": names.get(d["name"]) != "",
+                 "battery": d["battery"]} for d in self._app.system.state.get("bluetooth_all", [])]
+
+    def bluetooth_set(self, name, alias, shown):
+        """Rename or hide a Bluetooth device (bluetooth_names: name -> alias, "" = hidden)."""
+        names = self._app.settings.get("bluetooth_names", {}) or {}
+        name, alias = str(name), str(alias or "").strip()[:60]
+        if not shown:
+            names[name] = ""
+        elif alias and alias != name:
+            names[name] = alias
+        else:
+            names.pop(name, None)
+        self._app.settings.set("bluetooth_names", names)
+        self._app.system.refresh_bluetooth()
+        return True
+
+    def set_profile(self, name):
+        changed = profiles.switch(self._app.settings, str(name))
+        self._app.tray.refresh()
+        return changed
+
+    def settings_export(self):
+        """Save all settings (no secrets: there are none in settings.json) to a JSON file the user picks."""
+        import json
+
+        import webview
+
+        from . import backup
+        win = self._app.settings_window
+        target = win and win.create_file_dialog(webview.SAVE_DIALOG, save_filename="skerry-settings.json",
+                                                file_types=("JSON (*.json)",))
+        if not target:
+            return None
+        path = target if isinstance(target, str) else target[0]
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(backup.export_data(self._app.settings), f, indent=2, ensure_ascii=False)
+        log.info("Settings exported (%s)", os.path.basename(path))
+        return path
+
+    def settings_import(self):
+        import json
+
+        import webview
+
+        from . import backup
+        win = self._app.settings_window
+        target = win and win.create_file_dialog(webview.OPEN_DIALOG, file_types=("JSON (*.json)",))
+        if not target:
+            return None
+        path = target[0] if isinstance(target, (list, tuple)) else target
+        try:
+            if os.path.getsize(path) > backup.MAX_BYTES:
+                raise ValueError("file too large")
+            with open(path, encoding="utf-8") as f:
+                n = backup.import_data(self._app.settings, json.load(f))
+        except (OSError, ValueError) as e:
+            log.warning("Settings import refused: %s", e)
+            return {"ok": False}
+        log.info("Settings imported: %s values", n)
+        self._app.tray.refresh()
+        return {"ok": True, "count": n}
 
     @staticmethod
     def _monitors():

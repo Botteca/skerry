@@ -430,6 +430,36 @@ def is_fullscreen(exclude=()):
     return rc.left <= m[0] and rc.top <= m[1] and rc.right >= m[2] and rc.bottom >= m[3]
 
 
+# shortcut: screen sharing has no Windows API, so this looks for the "you are sharing" bars of the browsers and
+# meeting apps by window title; add titles here when an app is not recognised.
+SHARE_TITLES = ("is sharing your screen", "is sharing a window", "is sharing this tab", "sta condividendo lo schermo",
+                "sta condividendo una finestra", "sta condividendo questa scheda", "sharing control bar",
+                "zoom share toolbar", "you are screen sharing", "stai condividendo lo schermo")
+
+
+def screen_sharing():
+    """True if a known "screen is being shared" bar is on screen (heuristic, see SHARE_TITLES)."""
+    if not IS_WIN:
+        return False
+    found = []
+
+    def cb(hwnd, _):
+        if user32.IsWindowVisible(hwnd):
+            n = user32.GetWindowTextLengthW(hwnd)
+            if 0 < n < 300:
+                buf = ctypes.create_unicode_buffer(n + 1)
+                user32.GetWindowTextW(hwnd, buf, n + 1)
+                title = buf.value.lower()
+                if any(s in title for s in SHARE_TITLES):
+                    found.append(hwnd)
+                    return False
+        return True
+
+    proc = ctypes.WINFUNCTYPE(wintypes.BOOL, HWND, wintypes.LPARAM)(cb)
+    user32.EnumWindows(proc, 0)
+    return bool(found)
+
+
 def focus_window(hwnd):
     if not IS_WIN or not hwnd or not user32.IsWindow(hwnd):
         return False

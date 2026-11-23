@@ -93,6 +93,21 @@
   .sqlw input[type=text],.sqlw input[type=password],.sqlw input[type=number]{width:100%;text-align:left}
   .sqlw .err{color:var(--red);font-size:12px} .sqlw .ok{color:var(--green);font-size:12px}
   .sqlw .chk{flex-direction:row;align-items:center;gap:8px}
+  .sortable{position:relative}
+  .sitem{position:relative;background:var(--panel);border-top:1px solid var(--line)} .sortable .sitem:first-child{border-top:0}
+  .sitem .row{border-top:0}
+  .sitem.dragging{z-index:5;box-shadow:0 10px 28px #0007;border-radius:10px;transition:none!important;opacity:.97}
+  .sitem.dragging .handle{cursor:grabbing}
+  .handle{border:0;background:transparent;color:var(--muted);cursor:grab;font-size:16px;padding:4px 6px;border-radius:6px;touch-action:none;line-height:1}
+  .handle:focus-visible,.mv:focus-visible{outline:2px solid var(--accent)}
+  .handle[disabled]{cursor:default;opacity:.35}
+  .mv{border:1px solid var(--line);background:var(--panel2);color:var(--fg);border-radius:7px;width:28px;height:26px;cursor:pointer;font-size:11px}
+  .mv:disabled{opacity:.3;cursor:default}
+  .sitem.off .l,.sitem.off .ico{opacity:.45}
+  .opts{padding:2px 16px 12px 62px;display:flex;flex-direction:column;gap:6px}
+  .opts .orow{display:flex;align-items:center;gap:10px;font-size:12.5px}
+  .opts .orow .l{flex:1} .opts .orow input[type=text]{width:200px}
+  .more{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:12px}
   .hproj{cursor:pointer} .hsess .row{gap:12px;padding:7px 16px 7px 58px;min-height:0;font-size:12px;color:var(--muted)}
   .hsess .row b{color:var(--fg);font-weight:500}
 </style>
@@ -105,7 +120,7 @@
     <button data-p="look"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 2 2 0 0 0 2-2c0-.6-.3-1-.5-1.4-.3-.4-.5-.8-.5-1.3a2 2 0 0 1 2-2h2.3A3.7 3.7 0 0 0 21 10.6C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r=".6"/><circle cx="10" cy="7" r=".6"/><circle cx="15" cy="7" r=".6"/></svg><span data-i18n="nav.look"></span></button>
     <button data-p="agents"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg><span data-i18n="nav.agents"></span></button>
     <button data-p="hist"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span data-i18n="nav.history"></span></button>
-    <button data-p="mods"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg><span data-i18n="nav.modules"></span></button>
+    <button data-p="layout"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg><span data-i18n="nav.layout"></span></button>
     <button data-p="conn"><svg viewBox="0 0 24 24"><path d="M9 7V3m6 4V3M7 7h10v4a5 5 0 0 1-10 0z"/><path d="M12 16v5"/></svg><span data-i18n="nav.connections"></span></button>
     <button data-p="alerts"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span data-i18n="nav.alerts"></span></button>
     <button data-p="timer"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg><span data-i18n="nav.pomodoro"></span></button>
@@ -123,6 +138,10 @@
     <div class="row"><div class="ico">🧭</div><div class="l"><span data-i18n="gen.onboarding"></span><div class="d" data-i18n="gen.onboardingDesc"></div></div><button class="btn" id="onb-btn" data-i18n="gen.onboardingBtn"></button></div>
     <div class="row"><div class="ico">🚀</div><div class="l"><span data-i18n="gen.autostart"></span><div class="d" data-i18n="gen.autostartDesc"></div></div><label class="sw"><input type="checkbox" data-k="autostart"><span></span></label></div>
     <div class="row"><div class="ico">⌨️</div><div class="l"><span data-i18n="gen.hotkey"></span><div class="d" data-i18n-html="gen.hotkeyDescHtml"></div></div><input type="text" data-k="hotkey" data-lazy></div>
+  </div>
+  <h2 data-i18n="gen.backup"></h2>
+  <div class="panel">
+    <div class="row"><div class="ico">💾</div><div class="l"><span data-i18n="gen.backupTitle"></span><div class="d" data-i18n="gen.backupDesc"></div><div class="d" id="backup-msg"></div></div><button class="btn" id="settings-import" data-i18n="gen.import"></button><button class="btn" id="settings-export" data-i18n="gen.export"></button></div>
   </div>
   <h2 data-i18n="gen.privacy"></h2>
   <div class="panel">
@@ -174,9 +193,22 @@
   <div class="panel" id="hist-list"></div>
 </section>
 
-<section class="page" id="p-mods">
-  <h1 data-i18n="mods.title"></h1><div class="sub" data-i18n="mods.sub"></div>
-  <div class="panel" id="modules"></div>
+<section class="page" id="p-layout">
+  <h1 data-i18n="lay.title"></h1><div class="sub" data-i18n="lay.sub"></div>
+  <div class="panel">
+    <div class="row"><div class="ico">🎛️</div><div class="l"><span data-i18n="lay.profile"></span><div class="d" data-i18n-html="lay.profileDescHtml"></div></div><div class="seg" id="profile-seg"></div></div>
+    <div class="row"><div class="ico">⌨️</div><div class="l"><span data-i18n="lay.profileHotkey"></span><div class="d" data-i18n="lay.profileHotkeyDesc"></div></div><input type="text" data-k="profile_hotkey" data-lazy style="width:130px"></div>
+    <div class="row"><div class="ico">🤖</div><div class="l"><span data-i18n="lay.auto"></span><div class="d" data-i18n="lay.autoDesc"></div></div><select data-k="profile_auto.profile" id="auto-profile"></select><label class="sw"><input type="checkbox" data-k="profile_auto.enabled"><span></span></label></div>
+    <div class="row"><div class="l"><span data-i18n="lay.autoShare"></span><div class="d" data-i18n="lay.autoShareDesc"></div></div><label class="sw"><input type="checkbox" data-k="profile_auto.on_share"><span></span></label></div>
+    <div class="row"><div class="l" data-i18n="lay.autoMeeting"></div><label class="sw"><input type="checkbox" data-k="profile_auto.on_meeting"><span></span></label></div>
+    <div class="row"><div class="ico">◽</div><div class="l"><span data-i18n="lay.minimal"></span><div class="d" data-i18n="lay.minimalDesc"></div></div><label class="sw"><input type="checkbox" data-k="layout.minimal"><span></span></label></div>
+  </div>
+  <h2 data-i18n="lay.sections"></h2>
+  <div class="panel"><div class="sortable" id="sec-list" role="list"></div>
+    <div class="row"><div class="l d" data-i18n="lay.sectionsHint"></div><button class="btn" id="sec-reset" data-i18n="lay.reset"></button></div></div>
+  <h2 data-i18n="lay.pill"></h2>
+  <div class="panel"><div class="sortable" id="pill-list" role="list"></div>
+    <div class="row"><div class="l d" data-i18n="lay.pillHint"></div><button class="btn" id="pill-reset" data-i18n="lay.reset"></button></div></div>
 </section>
 
 <section class="page" id="p-conn">
@@ -270,10 +302,11 @@
 
 <script src="i18n.js"></script>
 <script>
+// Sub-switches shown inside the Agents and System sections of the Layout page.
 // [key, icon, name (literal for product names, or a translation key), description key]
 const MODULES = [
-  ['claude', '✦', 'Claude Code'], ['codex', '◎', 'Codex'], ['gemini', '✧', 'Gemini CLI'], ['copilot', '⬢', 'Copilot CLI'], ['media', '🎵'], ['privacy', '🎙️'], ['battery', '🔋'],
-  ['bluetooth', '🎧'], ['usage', '📊'], ['timer', '⏱️'], ['calendar', '📅'], ['adf', '🏭', 'Azure Data Factory'], ['sql', '🗄️'], ['shelf', '📎'],
+  ['claude', '✦', 'Claude Code'], ['codex', '◎', 'Codex'], ['gemini', '✧', 'Gemini CLI'], ['copilot', '⬢', 'Copilot CLI'],
+  ['privacy', '🎙️'], ['battery', '🔋'], ['bluetooth', '🎧'],
 ];
 // [agent, icon, product name, description key]
 const AGENTS = [
@@ -297,17 +330,159 @@ function show(p){
   try { localStorage.setItem('skerry.page', p); } catch (e) {}
 }
 
-function renderModules(){
-  $('modules').innerHTML = MODULES.map(([k, i, name]) =>
-    `<div class="row"><div class="ico">${i}</div><div class="l">${name || tx('mod.' + k)}<div class="d">${tx('mod.' + k + '.desc')}</div></div><label class="sw"><input type="checkbox" data-k="modules.${k}"><span></span></label></div>`).join('');
-  document.querySelectorAll('#modules input[type=checkbox][data-k]').forEach(el => el.addEventListener('change', () => save(el.dataset.k, el.checked)));
+// ---------------- Layout page ----------------
+// [id, icon, name key, description key]; ids are the stable section ids of skerry/layout.py
+const SECTIONS = [
+  ['media', '🎵', 'mod.media', 'mod.media.desc'], ['meeting', '📅', 'mod.calendar', 'mod.calendar.desc'],
+  ['adf', '🏭', 'mod.adf', 'mod.adf.desc'], ['sql', '🗄️', 'mod.sql', 'mod.sql.desc'],
+  ['agents', '✦', 'sec.agents', 'sec.agents.desc'], ['usage', '📊', 'mod.usage', 'mod.usage.desc'],
+  ['system', '🔋', 'sec.system', 'sec.system.desc'], ['timer', '⏱️', 'mod.timer', 'mod.timer.desc'],
+  ['shelf', '📎', 'mod.shelf', 'mod.shelf.desc'],
+];
+// closed pill events, same ids as layout.PILL
+const PILL_EVENTS = [
+  ['permission', '🔐', 'pill.permission', 'pill.permission.desc'], ['agent', '✦', 'pill.agent', 'pill.agent.desc'],
+  ['meeting', '📅', 'pill.meeting', 'pill.meeting.desc'], ['media', '🎵', 'pill.media', 'pill.media.desc'],
+  ['timer', '⏱️', 'pill.timer', 'pill.timer.desc'], ['battery', '🪫', 'pill.battery', 'pill.battery.desc'],
+];
+const PROFILE_NAMES = {work: 'profile.work', present: 'profile.present', focus: 'profile.focus'};
+const USAGE_VIEWS = [['all', 'lay.usageAll'], ['tokens', 'lay.usageTokens'], ['percent', 'lay.usagePercent'], ['today', 'lay.usageToday']];
+let layoutKey = null, openOpts = new Set();
+
+function moduleRow(k){
+  const [, i, name] = MODULES.find(m => m[0] === k);
+  return `<div class="orow"><span>${i}</span><div class="l">${name ? esc(name) : tx('mod.' + k)} <span class="d">· ${tx('mod.' + k + '.desc')}</span></div>
+    <label class="sw"><input type="checkbox" data-mod="${k}" ${get(D.settings, 'modules.' + k) !== false ? 'checked' : ''}><span></span></label></div>`;
 }
+function sectionOptions(id){
+  const L = D.layout;
+  if (id === 'agents') return ['claude', 'codex', 'gemini', 'copilot'].map(moduleRow).join('');
+  if (id === 'usage') return `<div class="orow"><div class="l">${tx('lay.usageView')}</div><div class="seg" data-useg>${USAGE_VIEWS
+    .map(([v, k]) => `<button data-v="${v}" class="${L.usage_view === v ? 'on' : ''}">${tx(k)}</button>`).join('')}</div></div>`;
+  if (id === 'meeting') return `<div class="orow"><div class="l">${tx('lay.meetingAhead')}<div class="d">${tx('lay.meetingAheadDesc')}</div></div>
+    <input type="number" min="0" max="1440" data-ahead value="${L.meeting_ahead}"></div>`;
+  if (id === 'system'){
+    const bt = D.bluetooth || [];
+    return ['privacy', 'battery', 'bluetooth'].map(moduleRow).join('')
+      + (bt.length ? `<div class="orow"><div class="l"><b>${tx('lay.btDevices')}</b><div class="d">${tx('lay.btDevicesDesc')}</div></div></div>` : `<div class="d">${tx('lay.btNone')}</div>`)
+      + bt.map(d => `<div class="orow"><span>🔹</span><div class="l">${esc(d.name)} <span class="d">· ${d.battery}%</span></div>
+          <input type="text" data-bt="${esc(d.name)}" value="${esc(d.alias)}" placeholder="${esc(d.name)}" aria-label="${tx('lay.btRename', {name: d.name})}">
+          <label class="sw"><input type="checkbox" data-btshow="${esc(d.name)}" ${d.shown ? 'checked' : ''} aria-label="${tx('lay.btShow', {name: d.name})}"><span></span></label></div>`).join('');
+  }
+  return '';
+}
+function itemHtml(kind, id, icon, nameKey, descKey, i, n, on, fixed){
+  const name = t(nameKey), opts = kind === 'sec' ? sectionOptions(id) : '';
+  return `<div class="sitem ${on ? '' : 'off'}" data-id="${id}" ${fixed ? 'data-fixed="1"' : ''} role="listitem">
+    <div class="row">
+      <button class="handle" data-handle ${fixed ? 'disabled' : ''} aria-label="${tx('lay.drag', {name})}" title="${tx('lay.dragTip')}">⠿</button>
+      <div class="ico">${icon}</div><div class="l">${esc(name)}<div class="d">${tx(descKey)}</div></div>
+      ${opts ? `<button class="more" data-more="${id}" aria-expanded="${openOpts.has(id)}">${tx(openOpts.has(id) ? 'lay.less' : 'lay.options')}</button>` : ''}
+      <button class="mv" data-mv="-1" ${fixed || i === 0 || (kind === 'pill' && i === 1) ? 'disabled' : ''} aria-label="${tx('lay.up', {name})}">▲</button>
+      <button class="mv" data-mv="1" ${fixed || i === n - 1 ? 'disabled' : ''} aria-label="${tx('lay.down', {name})}">▼</button>
+      <label class="sw" ${fixed ? `title="${tx('lay.alwaysOn')}"` : ''}><input type="checkbox" data-vis ${on ? 'checked' : ''} ${fixed ? 'disabled' : ''} aria-label="${tx('lay.show', {name})}"><span></span></label>
+    </div>${opts && openOpts.has(id) ? `<div class="opts">${opts}</div>` : ''}</div>`;
+}
+function renderLayout(force){
+  const L = D.layout, key = JSON.stringify([L, D.settings.modules, D.bluetooth, [...openOpts], I18N.lang]);
+  if (!force && key === layoutKey) return;
+  layoutKey = key;
+  const sec = Object.fromEntries(SECTIONS.map(s => [s[0], s])), pil = Object.fromEntries(PILL_EVENTS.map(p => [p[0], p]));
+  $('sec-list').innerHTML = L.order.filter(id => sec[id]).map((id, i, a) => itemHtml('sec', ...sec[id], i, a.length, !L.hidden.includes(id))).join('');
+  $('pill-list').innerHTML = L.pill.filter(id => pil[id]).map((id, i, a) => itemHtml('pill', ...pil[id], i, a.length,
+    !L.pill_hidden.includes(id), id === 'permission')).join('');
+  $('profile-seg').innerHTML = D.profiles.map(p => `<button data-v="${p}" class="${D.profile === p ? 'on' : ''}">${tx(PROFILE_NAMES[p])}</button>`).join('');
+  $('auto-profile').innerHTML = D.profiles.map(p => `<option value="${p}">${tx(PROFILE_NAMES[p])}</option>`).join('');
+  $('auto-profile').value = get(D.settings, 'profile_auto.profile');
+}
+function listIds(list){ return [...list.querySelectorAll(':scope > .sitem')].map(el => el.dataset.id); }
+function saveOrder(list){
+  const ids = listIds(list);
+  save(list.id === 'sec-list' ? 'layout.order' : 'layout.pill', ids);
+}
+// Drag with the handle: the row follows the pointer, the others slide out of the way (FLIP animation).
+function sortable(list){
+  list.addEventListener('pointerdown', e => {
+    const h = e.target.closest('[data-handle]');
+    if (!h || h.disabled || e.button !== 0) return;
+    const row = h.closest('.sitem'), startY = e.clientY;
+    let shift = 0, lastY = e.clientY;
+    e.preventDefault(); h.setPointerCapture(e.pointerId); row.classList.add('dragging');
+    const place = () => { row.style.transform = `translateY(${lastY - startY - shift}px)`; };
+    const slide = (other, update) => {
+      const before = other.getBoundingClientRect().top, top0 = row.offsetTop;
+      update();
+      shift += row.offsetTop - top0;
+      const after = other.getBoundingClientRect().top;
+      other.style.transition = 'none'; other.style.transform = `translateY(${before - after}px)`;
+      requestAnimationFrame(() => { other.style.transition = 'transform .2s cubic-bezier(.2,.8,.2,1)'; other.style.transform = ''; });
+      place();
+    };
+    const move = ev => {
+      lastY = ev.clientY; place();
+      const r = row.getBoundingClientRect(), mid = r.top + r.height / 2;
+      const prev = row.previousElementSibling, next = row.nextElementSibling;
+      if (next && mid > next.getBoundingClientRect().top + next.offsetHeight / 2) slide(next, () => next.after(row));
+      else if (prev && !prev.dataset.fixed && mid < prev.getBoundingClientRect().top + prev.offsetHeight / 2) slide(prev, () => prev.before(row));
+    };
+    const up = () => {
+      h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', up); h.removeEventListener('pointercancel', up);
+      row.style.transition = 'transform .2s cubic-bezier(.2,.8,.2,1)'; row.style.transform = '';
+      setTimeout(() => { row.classList.remove('dragging'); row.style.transition = ''; saveOrder(list); h.focus(); }, 200);
+    };
+    h.addEventListener('pointermove', move); h.addEventListener('pointerup', up); h.addEventListener('pointercancel', up);
+  });
+  // keyboard: arrows on the handle, or the up/down buttons
+  const step = (row, d) => {
+    const other = d < 0 ? row.previousElementSibling : row.nextElementSibling;
+    if (!other || other.dataset.fixed) return false;
+    if (d < 0) other.before(row); else other.after(row);
+    saveOrder(list);
+    return true;
+  };
+  list.addEventListener('keydown', e => {
+    const h = e.target.closest('[data-handle]');
+    if (!h || !['ArrowUp', 'ArrowDown'].includes(e.key)) return;
+    e.preventDefault();
+    const id = h.closest('.sitem').dataset.id;
+    if (step(h.closest('.sitem'), e.key === 'ArrowUp' ? -1 : 1)) refocus(list, id, '[data-handle]');
+  });
+  list.addEventListener('click', e => {
+    const b = e.target.closest('[data-mv]'), more = e.target.closest('[data-more]');
+    if (more){ const id = more.dataset.more; openOpts.has(id) ? openOpts.delete(id) : openOpts.add(id); renderLayout(true); return; }
+    if (!b || b.disabled) return;
+    const id = b.closest('.sitem').dataset.id, sel = `[data-mv="${b.dataset.mv}"]`;
+    if (step(b.closest('.sitem'), +b.dataset.mv)) refocus(list, id, sel);
+  });
+  list.addEventListener('change', e => {
+    const el = e.target, item = el.closest('.sitem');
+    if (el.matches('[data-vis]')){
+      const key = list.id === 'sec-list' ? 'hidden' : 'pill_hidden', cur = new Set(D.layout[key]);
+      el.checked ? cur.delete(item.dataset.id) : cur.add(item.dataset.id);
+      save('layout.' + key, [...cur]);
+    } else if (el.matches('[data-mod]')) save('modules.' + el.dataset.mod, el.checked);
+    else if (el.matches('[data-ahead]')) save('layout.meeting_ahead', Math.max(0, Math.min(1440, +el.value || 0)));
+    else if (el.matches('[data-bt]') || el.matches('[data-btshow]')){
+      const name = el.dataset.bt || el.dataset.btshow, row = el.closest('.orow');
+      api().bluetooth_set(name, row.querySelector('[data-bt]').value, row.querySelector('[data-btshow]').checked).then(() => setTimeout(load, 400));
+    }
+  });
+  list.addEventListener('click', e => {
+    const b = e.target.closest('[data-useg] button');
+    if (b) save('layout.usage_view', b.dataset.v);
+  });
+}
+// after a keyboard move the list is rebuilt: put the focus back on the same control of the same row
+function refocus(list, id, sel){
+  setTimeout(() => { const el = list.querySelector(`.sitem[data-id="${id}"] ${sel}`); if (el && !el.disabled) el.focus(); }, 250);
+}
+function renderModules(){ layoutKey = null; if (D) renderLayout(true); }
 
 function bind(){
   renderModules();
   $('accents').innerHTML = ACCENTS.map(c => `<i data-c="${c}" style="background:${c}"></i>`).join('');
   $('nav').addEventListener('click', e => { const b = e.target.closest('button'); if (b) show(b.dataset.p); });
-  document.querySelectorAll('input[type=checkbox][data-k]:not(#modules input)').forEach(el => el.addEventListener('change', () => save(el.dataset.k, el.checked)));
+  document.querySelectorAll('input[type=checkbox][data-k]').forEach(el => el.addEventListener('change', () => save(el.dataset.k, el.checked)));
   document.querySelectorAll('input[data-lazy]').forEach(el => el.addEventListener('change', () => {
     let v = el.value.trim();
     if (el.dataset.num !== undefined) v = Number(v);
@@ -329,6 +504,22 @@ function bind(){
     if (path) $('hist-msg').textContent = t('hist.exported', {path});
   };
   $('logs').onclick = () => api().open_logs();
+  sortable($('sec-list')); sortable($('pill-list'));
+  $('sec-reset').onclick = () => save('layout.order', []);
+  $('pill-reset').onclick = () => save('layout.pill', []);
+  $('profile-seg').addEventListener('click', async e => { const b = e.target.closest('button'); if (b){ await api().set_profile(b.dataset.v); load(); } });
+  $('auto-profile').onchange = e => save('profile_auto.profile', e.target.value);
+  $('settings-export').onclick = async () => {
+    const p = await api().settings_export();
+    if (p){ $('backup-msg').textContent = t('gen.exported', {path: p}); $('backup-msg').style.color = 'var(--green)'; }
+  };
+  $('settings-import').onclick = async () => {
+    const r = await api().settings_import();
+    if (!r) return;
+    $('backup-msg').textContent = r.ok ? t('gen.imported', {n: r.count}) : t('gen.importFailed');
+    $('backup-msg').style.color = r.ok ? 'var(--green)' : 'var(--red)';
+    layoutKey = null; load();
+  };
   $('google-btn').onclick = async () => {
     const g = D.connectors.google || {};
     if (g.status === 'ok') await api().connector_logout('google'); else await api().connector_login('google');
@@ -538,6 +729,7 @@ async function load(){
   $('google-desc').textContent = gc.error ? gc.error : t('conn.google.desc');
   $('google-desc').style.color = gc.status === 'error' ? 'var(--red)' : '';
   $('google-secret-desc').textContent = t(gc.has_secret ? 'adf.secretSaved' : 'adf.secretDesc');
+  renderLayout();
   renderConnector('adf', s.connectors.adf.enabled, 'conn.adf.desc');
   renderConnector('sql', s.connectors.sql.enabled, 'conn.sql.desc');
   const saved = JSON.stringify(s.connectors.sql.widgets || []);

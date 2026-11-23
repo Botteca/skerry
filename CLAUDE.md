@@ -19,6 +19,9 @@ Stack: Python 3.11+ (dev venv runs 3.13), pywebview on WinForms/WebView2, a loca
 | `skerry/server.py` | Flask, 127.0.0.1 only: `POST /hook/<event>`, `POST /statusline`, `POST /ui/show`, `GET /health`. |
 | `skerry/agents.py` | Pure mapping of Gemini CLI and GitHub Copilot CLI hook events onto the Claude Code schema (`normalize`), and of permission answers back to Copilot's format (`reply`). `ACTIVITY_ONLY` = agents whose permission prompts Skerry cannot answer (Gemini). |
 | `skerry/history.py` | Settings > History: last 30 days from `%LOCALAPPDATA%\Skerry\history.jsonl` (a line per session event, written by the Store) + Claude Code session files for tokens; `to_csv()` escapes formula cells. Local files only. |
+| `skerry/layout.py` | Pure: section ids (`SECTIONS`), closed-pill events (`PILL`, "permission" fixed first), `resolve()` (saved order cleaned, unknown ids dropped, new ids appended), minimal mode, `visible()`, and `migrate()` of old `modules.*` section switches into `layout.hidden`. The UI gets `get_state()["layout"]`. |
+| `skerry/profiles.py` | Profiles work/present/focus: `switch()` saves the profile being left and applies the target (partial defaults merged), `cycle()` for the shortcut, `AutoProfile` for the screen-share/meeting rule (`SkerryApp._profile_loop`). |
+| `skerry/backup.py` | Settings export/import (JSON). `EXCLUDED` keys are never exported nor imported (chained status-line command, update URL, per-PC state); imported SQL widgets go through `sql.sanitize`. |
 | `skerry/store.py` | Thread-safe state: sessions, pending permissions (blocking `threading.Event`), tasks, alerts, rate limits. `snapshot()` is what the UI sees. |
 | `skerry/api.py` | `js_api` exposed to the UI as `window.pywebview.api.*`. `SETTABLE` whitelists settings the UI may write. |
 | `skerry/integrations.py` | Writes/removes our hooks in `~/.claude/settings.json`, `~/.codex/hooks.json`, `~/.gemini/settings.json` (backup first) and our own `~/.copilot/hooks/skerry.json`. Gemini/Copilot are opt-in only (never auto-connected). Bump `HOOKS_VERSION` when the hook list changes. |
@@ -131,6 +134,11 @@ tags or releases unless the user asks.
 - **No hard-coded user-facing text.** Add the key to both languages (`ui/i18n.js` or `skerry/i18n.py`);
   `tests/test_i18n.py` checks keys and greps for visible literals. Log messages stay in English.
 - `join_meeting` and `open_release_notes` open only `https://` URLs. Keep that check.
+- **Layout ids are stable.** Never rename an id in `layout.SECTIONS`/`PILL` (saved orders and profiles use them);
+  add new ones at the end. "permission" stays first in the pill and cannot be hidden. Section data is sent to the UI
+  only when its section or pill event is shown (`Api.get_state`).
+- **Settings import** must keep ignoring `backup.EXCLUDED` (a chained status line is a command that runs; the update
+  URL decides what gets installed).
 - **SQL widgets stay read-only**: keep `sql.check_query()` on save and before every run, autocommit off and rollback,
   and keep `connectors.sql.widgets` out of `SETTABLE`.
 - **Updates are installed only after the SHA-256 matches `SHA256SUMS.txt`** of the same release, and the file is

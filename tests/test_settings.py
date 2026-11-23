@@ -44,7 +44,8 @@ def test_missing_values_are_added_and_user_values_kept(path):
     assert not s.is_new
     assert s.get("theme") == "light"
     assert s.get("port") == 48000
-    assert s.get("modules.media") is False
+    assert s.get("layout.hidden") == ["media"]              # modules.media of older versions -> hidden section
+    assert s.get("modules.media") is None
     assert s.get("modules.claude") is True                   # added inside an existing dict
     assert s.get("alerts.limits") == [50]                    # lists are values, not merged
     assert s.get("alerts.context") == DEFAULTS["alerts"]["context"]
@@ -73,11 +74,13 @@ def test_corrupt_file_falls_back_to_defaults(path, content):
 def test_defaults_are_never_mutated(path):
     s = Settings(str(path))
     s.get("modules")["claude"] = False                       # get() returns a copy
-    s.set("modules.media", False)
+    s.set("modules.bluetooth", False)
     s.set("alerts.limits", [10])
-    assert DEFAULTS["modules"]["media"] is True
+    s.get("layout")["hidden"].append("media")
+    assert DEFAULTS["modules"]["bluetooth"] is True
     assert DEFAULTS["alerts"]["limits"] == [80, 90]
-    assert Settings(str(path.with_name("other.json"))).get("modules.media") is True
+    assert DEFAULTS["layout"]["hidden"] == []
+    assert Settings(str(path.with_name("other.json"))).get("modules.bluetooth") is True
 
 
 def test_dotted_get_set_and_defaults(path):
