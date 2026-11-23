@@ -171,7 +171,9 @@ def scenes(settings):
                      "gemini": {"installed": False, "available": False},
                      "copilot": {"installed": False, "available": True},
                      "monitors": [], "log_dir": r"C:\Users\you\AppData\Local\Skerry\logs", "update": None,
-                     "connectors": {"m365": {"status": "ok", "account": "ada@example.invalid", "error": ""}},
+                     "connectors": {"m365": {"status": "ok", "account": "ada@example.invalid", "error": ""},
+                                    "adf": {"configured": False, "status": "off", "error": "", "updated": 0,
+                                            "has_secret": False}},
                      "lang": lang}
     return {
         "00-compact-states": {"bg": "a", "size": (750, 720), "pills": [working, music, pomo, done, perm]},

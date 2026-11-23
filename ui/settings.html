@@ -43,7 +43,7 @@
   .sw:active span:before{width:25px} .sw input:checked+span{background:var(--accent)}
   .sw input:checked+span:before{transform:translateX(17px)} .sw input:checked:active+span:before{transform:translateX(13px)}
   .sw input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
-  select,input[type=text],input[type=number]{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:9px;padding:7px 10px;font:inherit;outline:0;transition:border-color .15s,box-shadow .15s}
+  select,input[type=text],input[type=number],input[type=password]{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:9px;padding:7px 10px;font:inherit;outline:0;transition:border-color .15s,box-shadow .15s}
   input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
   input[type=number]{width:84px;text-align:right} input[type=text]{width:190px} input.wide{width:100%}
   .seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
@@ -181,12 +181,25 @@
     <div class="row"><div class="l"><span data-i18n="conn.alert"></span><div class="d" data-i18n="conn.alertDesc"></div></div><input type="number" min="0" max="60" data-k="connectors.m365.alert_minutes" data-num data-lazy></div>
     <div class="note guide" data-i18n-html="conn.guideHtml"></div>
   </div>
+  <h2>Azure Data Factory</h2>
+  <div class="panel">
+    <div class="row"><div class="ico">🏭</div><div class="l"><span data-i18n="adf.watch"></span><div class="d" id="adf-desc"></div></div><span class="badge" id="adf-badge"></span><button class="btn" id="adf-refresh" data-i18n="conn.refresh"></button><label class="sw"><input type="checkbox" data-k="connectors.adf.enabled"><span></span></label></div>
+    <div class="row"><div class="l"><span data-i18n="adf.auth"></span><div class="d" data-i18n="adf.authDesc"></div></div><div class="seg" data-seg="connectors.adf.auth"><button data-v="az" data-i18n="adf.authAz"></button><button data-v="sp" data-i18n="adf.authSp"></button></div></div>
+    <div class="row adf-sp"><div class="l"><span data-i18n="adf.tenant"></span><div class="d" data-i18n="adf.tenantDesc"></div></div><input type="text" data-k="connectors.adf.tenant" data-lazy style="width:270px"></div>
+    <div class="row adf-sp"><div class="l"><span data-i18n="conn.clientId"></span><div class="d" data-i18n="adf.clientIdDesc"></div></div><input type="text" data-k="connectors.adf.client_id" data-lazy style="width:270px"></div>
+    <div class="row adf-sp"><div class="l"><span data-i18n="adf.secret"></span><div class="d" id="adf-secret-desc"></div></div><input type="password" id="adf-secret" autocomplete="off" style="width:270px"></div>
+    <div class="row"><div class="l" data-i18n="adf.subscription"></div><input type="text" data-k="connectors.adf.subscription" data-lazy data-i18n-placeholder="adf.subscriptionPh" style="width:270px"></div>
+    <div class="row"><div class="l" data-i18n="adf.resourceGroup"></div><input type="text" data-k="connectors.adf.resource_group" data-lazy data-i18n-placeholder="adf.resourceGroupPh" style="width:270px"></div>
+    <div class="row"><div class="l" data-i18n="adf.factory"></div><input type="text" data-k="connectors.adf.factory" data-lazy data-i18n-placeholder="adf.factoryPh" style="width:270px"></div>
+    <div class="row"><div class="l"><span data-i18n="adf.pipelines"></span><div class="d" data-i18n="adf.pipelinesDesc"></div></div><input type="text" data-k="connectors.adf.pipelines" data-lazy data-i18n-placeholder="adf.pipelinesPh" style="width:270px"></div>
+    <div class="note guide" data-i18n-html="adf.guideHtml"></div>
+  </div>
+
   <h2 data-i18n="conn.soon"></h2>
   <div class="panel soon">
     <div class="row"><div class="ico">🔵</div><div class="l">Google Workspace<div class="d" data-i18n="conn.google.desc"></div></div><span class="badge" data-i18n="conn.soonBadge"></span></div>
     <div class="row"><div class="ico">🗄️</div><div class="l">SQL Server<div class="d" data-i18n="conn.sql.desc"></div></div><span class="badge" data-i18n="conn.soonBadge"></span></div>
     <div class="row"><div class="ico">☁️</div><div class="l">Azure SQL<div class="d" data-i18n="conn.azsql.desc"></div></div><span class="badge" data-i18n="conn.soonBadge"></span></div>
-    <div class="row"><div class="ico">🏭</div><div class="l">Azure Data Factory<div class="d" data-i18n="conn.adf.desc"></div></div><span class="badge" data-i18n="conn.soonBadge"></span></div>
   </div>
 </section>
 
@@ -242,7 +255,7 @@
 // [key, icon, name (literal for product names, or a translation key), description key]
 const MODULES = [
   ['claude', '✦', 'Claude Code'], ['codex', '◎', 'Codex'], ['gemini', '✧', 'Gemini CLI'], ['copilot', '⬢', 'Copilot CLI'], ['media', '🎵'], ['privacy', '🎙️'], ['battery', '🔋'],
-  ['bluetooth', '🎧'], ['usage', '📊'], ['timer', '⏱️'], ['calendar', '📅'], ['shelf', '📎'],
+  ['bluetooth', '🎧'], ['usage', '📊'], ['timer', '⏱️'], ['calendar', '📅'], ['adf', '🏭', 'Azure Data Factory'], ['shelf', '📎'],
 ];
 // [agent, icon, product name, description key]
 const AGENTS = [
@@ -298,6 +311,10 @@ function bind(){
     if (path) $('hist-msg').textContent = t('hist.exported', {path});
   };
   $('logs').onclick = () => api().open_logs();
+  $('adf-refresh').onclick = async () => { await api().connector_refresh('adf'); setTimeout(load, 1500); };
+  $('adf-secret').addEventListener('change', async e => {
+    await api().connector_secret('adf', e.target.value); e.target.value = ''; load();
+  });
   $('onb-btn').onclick = () => api().onboarding_restart();
   $('diag-btn').onclick = async () => {
     const b = $('diag-btn'), m = $('diag-msg');
@@ -385,6 +402,16 @@ async function loadHistory(){
   document.querySelectorAll('.hproj').forEach(el => el.onclick = () => { const d = $('hs-' + el.dataset.g); d.hidden = !d.hidden; });
 }
 
+// Status row of a polled connector (Data Factory, SQL): badge + last update or error
+function renderConnector(cid, enabled, descKey){
+  const c = D.connectors[cid] || {}, b = $(cid + '-badge'), d = $(cid + '-desc');
+  const st = !enabled ? 'off' : !c.configured ? 'incomplete' : c.status;
+  b.className = 'badge ' + (st === 'ok' ? 'ok' : st === 'error' ? 'err' : 'no');
+  b.textContent = t({off: 'status.off', incomplete: 'status.incomplete', ok: 'status.connected', error: 'status.error'}[st] || 'status.checking');
+  d.textContent = st === 'error' ? c.error : st === 'ok' && c.updated ? t('conn.updated', {time: I18N.time(c.updated)}) : t(descKey);
+  d.style.color = st === 'error' ? 'var(--red)' : '';
+}
+
 async function load(){
   D = await api().get_settings();
   const s = D.settings;
@@ -400,7 +427,7 @@ async function load(){
     if (el.type === 'checkbox') el.checked = !!v;
     else if (document.activeElement !== el) el.value = Array.isArray(v) ? v.join(', ') : (v ?? '');
   });
-  document.querySelectorAll('[data-seg]').forEach(seg => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', (s[seg.dataset.seg] ?? 'auto') === b.dataset.v)));
+  document.querySelectorAll('[data-seg]').forEach(seg => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', (get(s, seg.dataset.seg) ?? 'auto') === b.dataset.v)));
   document.querySelectorAll('#accents i').forEach(i => i.classList.toggle('on', i.dataset.c.toLowerCase() === String(s.accent).toLowerCase()));
   const badge = (id, st, avail) => { const b = $(id);
     b.className = 'badge ' + (st.installed ? 'ok' : 'no'); b.textContent = t(st.installed ? 'status.connected' : (avail === false ? 'status.notFound' : 'status.notConnected')); };
@@ -422,6 +449,9 @@ async function load(){
   mbt.disabled = mc.status === 'signing_in';
   $('m365-desc').textContent = mc.status === 'error' && mc.error ? mc.error : t('conn.m365Desc');
   $('m365-desc').style.color = mc.status === 'error' ? 'var(--red)' : '';
+  renderConnector('adf', s.connectors.adf.enabled, 'conn.adf.desc');
+  document.querySelectorAll('.adf-sp').forEach(el => el.style.display = s.connectors.adf.auth === 'sp' ? '' : 'none');
+  $('adf-secret-desc').textContent = t(D.connectors.adf.has_secret ? 'adf.secretSaved' : 'adf.secretDesc');
   renderUpdate();
   renderMonitors();
   // refresh while something is in progress (Microsoft sign-in, update check or download)

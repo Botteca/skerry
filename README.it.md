@@ -62,6 +62,7 @@ Microsoft 365. Tutto gira in locale.
 | **Mensola** | Trascina dei file sulla pillola, poi *Copia* e Ctrl+V dove vuoi |
 | **Utilizzo di Claude** | Token usati nelle ultime 5 ore / 7 giorni, letti dai file di sessione locali di Claude Code |
 | **Riunioni** | Prossima riunione di Microsoft 365 (Outlook/Teams) con il pulsante *Entra* e un avviso prima dell'inizio (facoltativo) |
+| **Azure Data Factory** | Ultima esecuzione delle pipeline scelte (riuscita, non riuscita, in corso) nell'isola espansa e un avviso quando una non riesce (facoltativo) |
 
 **Uso**
 
@@ -208,6 +209,24 @@ amministratore IT.
 
 Non serve un segreto client: Skerry è un client pubblico. *Disconnetti* cancella la cache locale dei token.
 
+## Collegare Azure Data Factory (facoltativo)
+
+Skerry mostra l'ultima esecuzione delle pipeline che scegli e ti avvisa quando una non riesce. È in **sola lettura**:
+chiama `queryPipelineRuns` di Azure Resource Manager ogni 5 minuti (ultimi 7 giorni). La guida passo passo è anche in
+**Impostazioni → Connessioni → Azure Data Factory**.
+
+1. Scegli l'accesso:
+   - **Azure CLI**: installa la Azure CLI ed esegui una volta `az login`. Skerry esegue `az account get-access-token`
+     (Skerry non salva password né token).
+   - **Service principal**: in **Microsoft Entra ID → Registrazioni app** crea un'app (es. `skerry-adf-reader`), copia
+     l'ID applicazione (client) e l'ID directory (tenant), crea un segreto client e incolla il suo valore in Skerry. Il
+     segreto è cifrato con DPAPI in `%APPDATA%\Skerry\secrets\`, mai scritto in `settings.json`, mai più mostrato.
+2. Sulla data factory, **Controllo di accesso (IAM) → Aggiungi assegnazione di ruolo → Lettore** per il tuo account o l'app.
+3. Inserisci ID sottoscrizione, gruppo di risorse e nome della factory (es. `rg-contoso-data`, `adf-contoso-prod`) e le
+   pipeline da controllare separate da virgole (es. `PL_Nightly_Load, PL_Sales_Export`). Accendi l'interruttore.
+
+Gli errori (`az login` scaduto, ruolo mancante, rete) compaiono accanto all'interruttore; l'isola non si blocca mai.
+
 ## Privacy
 
 **Nessuna telemetria; i dati restano sul PC.**
@@ -222,9 +241,9 @@ Non serve un segreto client: Skerry è un client pubblico. *Disconnetti* cancell
   vengono cancellate. *Esporta CSV* scrive solo dove scegli tu. I token di Codex, Copilot CLI e Gemini CLI non sono
   mostrati: i loro log locali non hanno un formato documentato.
 - L'accesso alla rete avviene solo per: il controllo degli aggiornamenti (API delle release di GitHub ogni 6 ore, più
-  il download dell'installer quando c'è una nuova versione; disattivabile nelle impostazioni) e, se lo colleghi,
-  Microsoft Graph per leggere il calendario.
-- I segreti (la cache dei token di Microsoft 365) sono cifrati con DPAPI e leggibili solo dal tuo utente Windows.
+  il download dell'installer quando c'è una nuova versione; disattivabile nelle impostazioni) e, se li colleghi,
+  Microsoft Graph per leggere il calendario e Azure Resource Manager per leggere le esecuzioni delle pipeline di Data Factory.
+- I segreti (la cache dei token di Microsoft 365, il segreto client di Data Factory) sono cifrati con DPAPI e leggibili solo dal tuo utente Windows.
 
 | Percorso | Contenuto |
 |---|---|

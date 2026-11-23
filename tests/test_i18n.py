@@ -292,7 +292,8 @@ def test_js_lexer_finds_text():
 # ---------------------------------------------------------------- hard-coded strings: Python
 
 PY_MODULES = ["app.py", "skerry/store.py", "skerry/timer.py", "skerry/system.py", "skerry/tray.py",
-              "skerry/api.py", "skerry/connectors/m365.py", "skerry/shelf.py", "skerry/usage.py", "skerry/media.py"]
+              "skerry/api.py", "skerry/connectors/m365.py", "skerry/connectors/adf.py",
+              "skerry/connectors/azure.py", "skerry/shelf.py", "skerry/usage.py", "skerry/media.py"]
 # Strings that look like prose but are data, not UI text.
 PY_ALLOWED = {
     "Skerry overlay",                      # internal window title used by FindWindowW (app.py), never shown

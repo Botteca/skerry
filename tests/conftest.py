@@ -68,3 +68,63 @@ def no_registry(monkeypatch):
                  "SetValue", "SetValueEx", "DeleteKey", "DeleteKeyEx", "DeleteValue"):
         if hasattr(winreg, name):
             monkeypatch.setattr(winreg, name, blocked)
+
+
+class FakeHTTP:
+    """A local HTTP server standing in for a cloud API. `routes` maps (method, path) to a handler
+    `fn(request) -> (status, json_body)`; `requests` records what the client sent."""
+
+    def __init__(self):
+        import http.server
+        import json
+        import threading
+
+        fake = self
+        self.routes, self.requests, self.delay = {}, [], 0
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def _do(self, method):
+                import time
+                from urllib.parse import parse_qs, urlparse
+                url = urlparse(self.path)
+                raw = self.rfile.read(int(self.headers.get("Content-Length") or 0))
+                try:
+                    body = json.loads(raw) if self.headers.get("Content-Type", "").startswith("application/json") \
+                        else {k: v[0] for k, v in parse_qs(raw.decode()).items()}
+                except ValueError:
+                    body = raw
+                req = {"method": method, "path": url.path, "query": {k: v[0] for k, v in parse_qs(url.query).items()},
+                       "headers": dict(self.headers), "body": body}
+                fake.requests.append(req)
+                time.sleep(fake.delay)
+                fn = fake.routes.get((method, url.path))
+                status, out = fn(req) if fn else (404, {"error": {"message": "no route"}})
+                data = json.dumps(out).encode()
+                try:
+                    self.send_response(status)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(data)))
+                    self.end_headers()
+                    self.wfile.write(data)
+                except OSError:
+                    pass   # the client gave up (timeout tests)
+
+            def do_GET(self):
+                self._do("GET")
+
+            def do_POST(self):
+                self._do("POST")
+
+            def log_message(self, *args):
+                pass
+
+        self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+
+@pytest.fixture
+def fake_http():
+    srv = FakeHTTP()
+    yield srv
+    srv.server.shutdown()

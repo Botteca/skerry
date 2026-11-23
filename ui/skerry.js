@@ -17,6 +17,9 @@ const pctColor = p => p >= 90 ? 'var(--red)' : p >= 70 ? 'var(--amber)' : 'var(-
 const until = e => { const d = Math.max(0, e - S.now), h = Math.floor(d/3600), m = Math.floor(d%3600/60); return h ? `${h}h ${m}m` : `${m}m`; };
 const when = e => I18N.weekdayTime(e);
 const AGENT = {claude:'Claude Code', codex:'Codex', gemini:'Gemini CLI', copilot:'Copilot CLI'};
+// Data Factory run status -> [dot class, translation key]
+const ADF_STATUS = {Succeeded: ['done', 'adf.succeeded'], Failed: ['error', 'adf.failed'], InProgress: ['working', 'adf.running'],
+  Queued: ['working', 'adf.queued'], Cancelled: ['idle', 'adf.cancelled'], Canceling: ['idle', 'adf.cancelled'], none: ['idle', 'adf.none']};
 const GLYPH = {claude:'✦', codex:'◆', gemini:'✧', copilot:'⬢'};
 const GRANT_MINUTES = [5, 15, 60];   // same as skerry/store.py GRANT_MINUTES
 const glyph = (agent, spin) => `<span class="ag ${agent} ${spin ? 'spin' : ''}">${GLYPH[agent] || '✦'}</span>`;
@@ -216,6 +219,17 @@ function vExpanded(){
       <div class="mi2"><div class="mn">${m.title ? esc(m.title) : tx('meeting.untitled')}</div><div class="muted sm">${sub}</div></div>
       ${m.join_url ? `<button class="b-join" data-act="join">${tx('meeting.join')}</button>` : ''}</div></div>`;
   }
+  // Azure Data Factory: latest run of the chosen pipelines
+  if (mod('adf') && S.adf){
+    h += `<div class="sec"><div class="sec-h"><b>${tx('adf.title')}</b></div>`;
+    for (const r of S.adf){
+      const [dot, label] = ADF_STATUS[r.status] || ['idle', 'adf.none'];
+      const at = r.end || r.start;
+      h += `<div class="sess" title="${esc(r.message)}"><span class="dot ${dot}"></span><span class="p">${esc(r.pipeline)}</span>
+        <span class="a">${tx(label)}${at ? ' · ' + esc(when(at)) : ''}</span></div>`;
+    }
+    h += '</div>';
+  }
   // agents
   if (['claude', 'codex', 'gemini', 'copilot'].some(mod)){
     h += `<div class="sec"><div class="sec-h"><b>${tx('agents.title')}</b><span class="sp"></span>${sess.length ? '' : `<span>${tx('agents.none')}</span>`}</div>`;
@@ -270,7 +284,7 @@ function vExpanded(){
   const u = S.update;
   const key = 'x' + JSON.stringify([md && [md.title, md.artist, md.playing, md.duration, thumbId, !!au, au && au.muted],
     sess.map(s => [s.sid, s.status, s.action, s.tasks, s.context_pct, s.has_window]), L, S.statusline && S.statusline.seen, S.usage && [S.usage.h5, S.usage.d7, S.usage.days],
-    Math.floor(S.now/30), sy, S.timer && [S.timer.label, S.timer.paused, S.timer.cycle], S.shelf, u && [u.status, u.version]]);
+    Math.floor(S.now/30), sy, S.adf, S.timer && [S.timer.label, S.timer.paused, S.timer.cycle], S.shelf, u && [u.status, u.version]]);
   return {w:480, r:28, key, html:h};
 }
 

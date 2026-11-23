@@ -15,6 +15,8 @@ SETTABLE = {
     "alerts.context", "alerts.limits", "alerts.battery_low", "alerts.bluetooth_low",
     "pomodoro.focus", "pomodoro.short_break", "pomodoro.long_break", "pomodoro.cycles",
     "connectors.m365.client_id", "connectors.m365.tenant", "connectors.m365.alert_minutes",
+    "connectors.adf.enabled", "connectors.adf.auth", "connectors.adf.tenant", "connectors.adf.client_id",
+    "connectors.adf.subscription", "connectors.adf.resource_group", "connectors.adf.factory", "connectors.adf.pipelines",
 }
 
 
@@ -33,6 +35,7 @@ class Api:
         snap["usage"] = a.usage.state() if mods.get("usage", True) else None
         snap["timer"] = a.timer.state() if mods.get("timer", True) else None
         snap["meeting"] = a.connectors.meeting() if mods.get("calendar", True) else None
+        snap["adf"] = a.connectors.adf.runs() if mods.get("adf", True) else None
         snap["shelf"] = a.shelf.items() if mods.get("shelf", True) else []
         snap["settings"] = {k: a.settings.get(k) for k in ("edge", "monitor", "theme", "accent", "modules")}
         snap["onboarding"] = None if a.settings.get("first_run_done", True) else self._onboarding()
@@ -269,6 +272,14 @@ class Api:
         if c:
             c.logout()
         return bool(c)
+
+    def connector_secret(self, cid, value):
+        """Store a connector secret encrypted (DPAPI). It never goes to settings.json and is never read back."""
+        c = self._app.connectors.get(cid)
+        if not c or not hasattr(c, "set_secret"):
+            return False
+        c.set_secret(str(value or "").strip())
+        return True
 
     def connector_refresh(self, cid):
         c = self._app.connectors.get(cid)

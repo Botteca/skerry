@@ -24,7 +24,7 @@ DEFAULTS = {
     "focus_terminal_after_decision": True,
     "modules": {
         "claude": True, "codex": True, "gemini": True, "copilot": True, "media": True, "privacy": True,
-        "battery": True, "bluetooth": True, "timer": True, "shelf": True, "usage": True, "calendar": True,
+        "battery": True, "bluetooth": True, "timer": True, "shelf": True, "usage": True, "calendar": True, "adf": True,
     },
     "sounds": {"permission": True, "done": True, "alert": True, "timer": True},
     "alerts": {"context": 80, "limits": [80, 90], "battery_low": 20, "bluetooth_low": 15},
@@ -38,6 +38,9 @@ DEFAULTS = {
     "hooks_version": 0,
     "connectors": {
         "m365": {"client_id": "", "tenant": "organizations", "alert_minutes": 5},
+        # Azure Data Factory: no secret here (the service principal secret is in secrets/adf-client-secret.bin)
+        "adf": {"enabled": False, "auth": "az", "tenant": "", "client_id": "", "subscription": "",
+                "resource_group": "", "factory": "", "pipelines": ""},
     },
 }
 
