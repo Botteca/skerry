@@ -188,6 +188,15 @@
     <div class="row"><div class="l"><span data-i18n="conn.alert"></span><div class="d" data-i18n="conn.alertDesc"></div></div><input type="number" min="0" max="60" data-k="connectors.m365.alert_minutes" data-num data-lazy></div>
     <div class="note guide" data-i18n-html="conn.guideHtml"></div>
   </div>
+  <h2>Google Calendar</h2>
+  <div class="panel">
+    <div class="row"><div class="ico">🗓️</div><div class="l">Google Calendar<div class="d" id="google-desc"></div></div><span class="badge" id="google-badge"></span><button class="btn" id="google-btn"></button></div>
+    <div class="row"><div class="l"><span data-i18n="google.clientId"></span><div class="d" data-i18n="google.clientIdDesc"></div></div><input type="text" data-k="connectors.google.client_id" data-lazy data-i18n-placeholder="google.clientIdPh" style="width:270px"></div>
+    <div class="row"><div class="l"><span data-i18n="adf.secret"></span><div class="d" id="google-secret-desc"></div></div><input type="password" id="google-secret" autocomplete="off" style="width:270px"></div>
+    <div class="row"><div class="l"><span data-i18n="conn.alert"></span><div class="d" data-i18n="conn.alertDesc"></div></div><input type="number" min="0" max="60" data-k="connectors.google.alert_minutes" data-num data-lazy></div>
+    <div class="note guide" data-i18n-html="google.guideHtml"></div>
+  </div>
+
   <h2>Azure Data Factory</h2>
   <div class="panel">
     <div class="row"><div class="ico">🏭</div><div class="l"><span data-i18n="adf.watch"></span><div class="d" id="adf-desc"></div></div><span class="badge" id="adf-badge"></span><button class="btn" id="adf-refresh" data-i18n="conn.refresh"></button><label class="sw"><input type="checkbox" data-k="connectors.adf.enabled"><span></span></label></div>
@@ -210,10 +219,6 @@
     <div class="note guide" data-i18n-html="sql.guideHtml"></div>
   </div>
 
-  <h2 data-i18n="conn.soon"></h2>
-  <div class="panel soon">
-    <div class="row"><div class="ico">🔵</div><div class="l">Google Workspace<div class="d" data-i18n="conn.google.desc"></div></div><span class="badge" data-i18n="conn.soonBadge"></span></div>
-  </div>
 </section>
 
 <section class="page" id="p-alerts">
@@ -324,6 +329,14 @@ function bind(){
     if (path) $('hist-msg').textContent = t('hist.exported', {path});
   };
   $('logs').onclick = () => api().open_logs();
+  $('google-btn').onclick = async () => {
+    const g = D.connectors.google || {};
+    if (g.status === 'ok') await api().connector_logout('google'); else await api().connector_login('google');
+    load();
+  };
+  $('google-secret').addEventListener('change', async e => {
+    await api().connector_secret('google', e.target.value); e.target.value = ''; load();
+  });
   $('sql-refresh').onclick = async () => { await api().connector_refresh('sql'); setTimeout(load, 2500); };
   $('sql-add').onclick = () => { sqlWidgets.push({id: 'w' + Date.now().toString(36), auth: 'windows', interval: 60}); drawSql(); };
   $('sql-list').addEventListener('change', sqlChanged);
@@ -516,6 +529,15 @@ async function load(){
   mbt.disabled = mc.status === 'signing_in';
   $('m365-desc').textContent = mc.status === 'error' && mc.error ? mc.error : t('conn.m365Desc');
   $('m365-desc').style.color = mc.status === 'error' ? 'var(--red)' : '';
+  const gc = D.connectors.google || {}, gb = $('google-badge'), gbt = $('google-btn');
+  gb.className = 'badge ' + (gc.status === 'ok' ? 'ok' : gc.status === 'error' ? 'err' : 'no');
+  gb.textContent = gc.status === 'ok' && gc.account ? gc.account : t({signing_in: 'status.signingIn', ok: 'status.connected', error: 'status.error'}[gc.status] || 'status.notConnected');
+  gbt.textContent = t(gc.status === 'ok' ? 'btn.signOut' : (gc.status === 'signing_in' ? 'btn.wait' : 'btn.signIn'));
+  gbt.className = 'btn' + (gc.status === 'ok' || gc.status === 'signing_in' ? '' : ' primary');
+  gbt.disabled = gc.status === 'signing_in';
+  $('google-desc').textContent = gc.error ? gc.error : t('conn.google.desc');
+  $('google-desc').style.color = gc.status === 'error' ? 'var(--red)' : '';
+  $('google-secret-desc').textContent = t(gc.has_secret ? 'adf.secretSaved' : 'adf.secretDesc');
   renderConnector('adf', s.connectors.adf.enabled, 'conn.adf.desc');
   renderConnector('sql', s.connectors.sql.enabled, 'conn.sql.desc');
   const saved = JSON.stringify(s.connectors.sql.widgets || []);
@@ -526,7 +548,7 @@ async function load(){
   renderUpdate();
   renderMonitors();
   // refresh while something is in progress (Microsoft sign-in, update check or download)
-  const busy = mc.status === 'signing_in' || UPD_BUSY.includes((D.update || {}).status);
+  const busy = mc.status === 'signing_in' || (D.connectors.google || {}).status === 'signing_in' || UPD_BUSY.includes((D.update || {}).status);
   if (busy && !window.__poll) window.__poll = setInterval(load, 1500);
   else if (!busy && window.__poll){ clearInterval(window.__poll); window.__poll = null; }
 }

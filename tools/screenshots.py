@@ -172,6 +172,8 @@ def scenes(settings):
                      "copilot": {"installed": False, "available": True},
                      "monitors": [], "log_dir": r"C:\Users\you\AppData\Local\Skerry\logs", "update": None,
                      "connectors": {"m365": {"status": "ok", "account": "ada@example.invalid", "error": ""},
+                                    "google": {"configured": False, "status": "signed_out", "account": "", "error": "",
+                                               "updated": 0, "has_secret": False},
                                     "adf": {"configured": False, "status": "off", "error": "", "updated": 0,
                                             "has_secret": False}},
                      "lang": lang}

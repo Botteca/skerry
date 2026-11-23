@@ -61,7 +61,7 @@ Microsoft 365. Tutto gira in locale.
 | **Timer e Pomodoro** | Conto alla rovescia nella pillola, cicli Pomodoro configurabili |
 | **Mensola** | Trascina dei file sulla pillola, poi *Copia* e Ctrl+V dove vuoi |
 | **Utilizzo di Claude** | Token usati nelle ultime 5 ore / 7 giorni, letti dai file di sessione locali di Claude Code |
-| **Riunioni** | Prossima riunione di Microsoft 365 (Outlook/Teams) con il pulsante *Entra* e un avviso prima dell'inizio (facoltativo) |
+| **Riunioni** | Prossima riunione di Microsoft 365 (Outlook/Teams) o Google Calendar (Meet) con il pulsante *Entra* e un avviso prima dell'inizio (facoltativo) |
 | **SQL Server · Azure SQL** | Widget con una query in sola lettura: il primo valore, verde/ambra/rosso secondo le tue soglie, e un avviso quando uno diventa rosso (facoltativo) |
 | **Azure Data Factory** | Ultima esecuzione delle pipeline scelte (riuscita, non riuscita, in corso) nell'isola espansa e un avviso quando una non riesce (facoltativo) |
 
@@ -210,6 +210,24 @@ amministratore IT.
 
 Non serve un segreto client: Skerry è un client pubblico. *Disconnetti* cancella la cache locale dei token.
 
+## Collegare Google Calendar (facoltativo)
+
+Skerry può mostrare il prossimo evento di Google Calendar con il link **Google Meet** e il pulsante *Entra* (se è
+collegato anche Microsoft 365, l'isola mostra la riunione che arriva prima). Legge il calendario principale in **sola
+lettura** (ambito `calendar.events.readonly`) ogni 2 minuti. La guida è anche in **Impostazioni → Connessioni → Google
+Calendar**.
+
+1. Nella **console Google Cloud** crea un progetto (es. `skerry-calendar`) e abilita la **Google Calendar API**.
+2. In **Google Auth Platform** (schermata di consenso OAuth) scegli il pubblico (*Interno* per un'organizzazione
+   Workspace, altrimenti *Esterno* e aggiungiti come utente di test) e aggiungi l'ambito `calendar.events.readonly`.
+3. **Client → Crea client → App desktop**; copia in Skerry client ID e client secret. Google chiede un segreto anche
+   per le app desktop: Skerry lo cifra con DPAPI, come il refresh token, mai in `settings.json`.
+4. **Accedi**: si apre il browser, Skerry riceve la risposta su un indirizzo `http://127.0.0.1:<porta>` usato una
+   volta sola (PKCE).
+
+Finché l'app è in *Test*, Google chiude l'accesso dopo 7 giorni: accedi di nuovo o pubblica l'app. *Disconnetti*
+cancella il refresh token locale.
+
 ## Collegare Azure Data Factory (facoltativo)
 
 Skerry mostra l'ultima esecuzione delle pipeline che scegli e ti avvisa quando una non riesce. È in **sola lettura**:
@@ -262,9 +280,10 @@ configurano in **Impostazioni → Connessioni → SQL Server · Azure SQL**, che
   mostrati: i loro log locali non hanno un formato documentato.
 - L'accesso alla rete avviene solo per: il controllo degli aggiornamenti (API delle release di GitHub ogni 6 ore, più
   il download dell'installer quando c'è una nuova versione; disattivabile nelle impostazioni) e, se li colleghi,
-  Microsoft Graph per leggere il calendario e Azure Resource Manager per leggere le esecuzioni delle pipeline di Data Factory;
+  Microsoft Graph e la Google Calendar API per leggere il calendario e Azure Resource Manager per leggere le esecuzioni delle pipeline di Data Factory;
   i widget SQL si collegano solo ai server che inserisci tu.
-- I segreti (la cache dei token di Microsoft 365, il segreto client di Data Factory, le password SQL) sono cifrati con DPAPI e leggibili solo dal tuo utente Windows.
+- I segreti (la cache dei token di Microsoft 365, client secret e refresh token di Google, il segreto client di
+  Data Factory, le password SQL) sono cifrati con DPAPI e leggibili solo dal tuo utente Windows.
 
 | Percorso | Contenuto |
 |---|---|

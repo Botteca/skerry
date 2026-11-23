@@ -38,6 +38,8 @@ DEFAULTS = {
     "hooks_version": 0,
     "connectors": {
         "m365": {"client_id": "", "tenant": "organizations", "alert_minutes": 5},
+        # Google Calendar: client secret and refresh token are in secrets/, never here
+        "google": {"client_id": "", "alert_minutes": 5},
         # Azure Data Factory: no secret here (the service principal secret is in secrets/adf-client-secret.bin)
         "adf": {"enabled": False, "auth": "az", "tenant": "", "client_id": "", "subscription": "",
                 "resource_group": "", "factory": "", "pipelines": ""},

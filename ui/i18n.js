@@ -231,6 +231,15 @@ const I18N_STRINGS = {
       + '<li>Open the data factory in the Azure portal, <b>Access control (IAM) → Add role assignment</b>, and give your account or the app the <b>Reader</b> role. Skerry only reads the run history.</li>'
       + '<li>From the factory <b>Overview</b> copy the subscription ID, the resource group and the factory name (e.g. <code>rg-contoso-data</code>, <code>adf-contoso-prod</code>).</li>'
       + '<li>Write the pipelines to watch, e.g. <code>PL_Nightly_Load, PL_Sales_Export</code>, and turn the switch on. Skerry checks every 5 minutes, shows the last run in the expanded island and alerts you when one fails.</li></ol>',
+    'google.clientId': 'Client ID',
+    'google.clientIdDesc': 'From the OAuth client (Desktop app) in Google Cloud',
+    'google.clientIdPh': '1234567890-abc.apps.googleusercontent.com',
+    'google.guideHtml': '<b>Step by step (once, 5 minutes)</b><ol>'
+      + '<li>In the <b>Google Cloud console</b> create a project (e.g. <i>skerry-calendar</i>) and in <b>APIs &amp; Services → Library</b> enable the <b>Google Calendar API</b>.</li>'
+      + '<li>In <b>Google Auth Platform</b> (OAuth consent screen) set the app name, choose the audience (<b>Internal</b> for a Workspace organization, otherwise <b>External</b> and add yourself as a <b>test user</b>) and add the scope <code>calendar.events.readonly</code> (read-only).</li>'
+      + '<li>In <b>Clients → Create client</b> choose <b>Desktop app</b>, then copy the <b>client ID</b> and the <b>client secret</b> here. The secret is encrypted on this PC.</li>'
+      + '<li>Press <b>Sign in</b>: the browser opens, choose your account and allow read-only access to events. Skerry shows the next event and its <b>Meet</b> link, with a Join button.</li></ol>'
+      + 'While the app is in <i>Testing</i>, Google ends the access after 7 days: sign in again, or publish the app.',
     'conn.refresh': 'Check now',
     'conn.updated': 'Updated at {time}',
     'status.off': 'Off',
@@ -303,8 +312,6 @@ const I18N_STRINGS = {
       + '<li>In <b>Authentication → Add a platform → Mobile and desktop applications</b> add the URI <code>http://localhost</code> and turn on “Allow public client flows”.</li>'
       + '<li>In <b>API permissions</b> add the Microsoft Graph delegated permissions <code>User.Read</code> and <code>Calendars.Read</code> (read-only).</li>'
       + '<li>Copy the “Application (client) ID” above and press <b>Sign in</b>.</li></ol>',
-    'conn.soon': 'Coming soon',
-    'conn.soonBadge': 'Soon',
     'conn.google.desc': 'Next Google Calendar event and Meet link',
     'conn.sql.desc': 'Read-only query widgets with thresholds',
     'conn.adf.desc': 'Pipeline results and an alert when they fail',
@@ -586,6 +593,15 @@ const I18N_STRINGS = {
       + "<li>Apri la data factory nel portale Azure, <b>Controllo di accesso (IAM) → Aggiungi assegnazione di ruolo</b>, e dai al tuo account o all'app il ruolo <b>Lettore</b>. Skerry legge solo la cronologia delle esecuzioni.</li>"
       + "<li>Dalla <b>Panoramica</b> della factory copia ID sottoscrizione, gruppo di risorse e nome della factory (es. <code>rg-contoso-data</code>, <code>adf-contoso-prod</code>).</li>"
       + "<li>Scrivi le pipeline da controllare, es. <code>PL_Nightly_Load, PL_Sales_Export</code>, e accendi l'interruttore. Skerry controlla ogni 5 minuti, mostra l'ultima esecuzione nell'isola espansa e ti avvisa quando una non riesce.</li></ol>",
+    'google.clientId': 'Client ID',
+    'google.clientIdDesc': 'Dal client OAuth (App desktop) in Google Cloud',
+    'google.clientIdPh': '1234567890-abc.apps.googleusercontent.com',
+    'google.guideHtml': '<b>Passo per passo (una volta sola, 5 minuti)</b><ol>'
+      + "<li>Nella <b>console Google Cloud</b> crea un progetto (es. <i>skerry-calendar</i>) e in <b>API e servizi → Libreria</b> abilita la <b>Google Calendar API</b>.</li>"
+      + "<li>In <b>Google Auth Platform</b> (schermata di consenso OAuth) imposta il nome dell'app, scegli il pubblico (<b>Interno</b> per un'organizzazione Workspace, altrimenti <b>Esterno</b> e aggiungiti come <b>utente di test</b>) e aggiungi l'ambito <code>calendar.events.readonly</code> (sola lettura).</li>"
+      + "<li>In <b>Client → Crea client</b> scegli <b>App desktop</b>, poi copia qui il <b>client ID</b> e il <b>client secret</b>. Il segreto è cifrato su questo PC.</li>"
+      + "<li>Premi <b>Accedi</b>: si apre il browser, scegli il tuo account e consenti l'accesso in sola lettura agli eventi. Skerry mostra il prossimo evento e il suo link <b>Meet</b>, con il pulsante Entra.</li></ol>"
+      + "Finché l'app è in <i>Test</i>, Google chiude l'accesso dopo 7 giorni: accedi di nuovo, oppure pubblica l'app.",
     'conn.refresh': 'Controlla ora',
     'conn.updated': 'Aggiornato alle {time}',
     'status.off': 'Spento',
@@ -656,8 +672,6 @@ const I18N_STRINGS = {
       + '<li>In <b>Autenticazione → Aggiungi piattaforma → App per dispositivi mobili e desktop</b> aggiungi l\'URI <code>http://localhost</code> e abilita “Consenti flussi client pubblici”.</li>'
       + '<li>In <b>Autorizzazioni API</b> aggiungi, tra quelle delegate di Microsoft Graph, <code>User.Read</code> e <code>Calendars.Read</code> (sola lettura).</li>'
       + '<li>Copia “ID applicazione (client)” qui sopra e premi <b>Accedi</b>.</li></ol>',
-    'conn.soon': 'In arrivo',
-    'conn.soonBadge': 'Presto',
     'conn.google.desc': 'Prossimo evento di Google Calendar e link Meet',
     'conn.sql.desc': 'Widget con query in sola lettura e soglie',
     'conn.adf.desc': 'Esito delle pipeline e avviso quando falliscono',

@@ -60,7 +60,7 @@ your next Microsoft 365 meeting. Everything runs locally.
 | **Timer and Pomodoro** | Countdown in the pill, configurable Pomodoro cycles |
 | **File shelf** | Drop files on the pill, then *Copy* and Ctrl+V anywhere |
 | **Claude usage** | Tokens used in the last 5 hours / 7 days, read from local Claude Code session files |
-| **Meetings** | Next Microsoft 365 (Outlook/Teams) meeting with a *Join* button and an alert before it starts (optional) |
+| **Meetings** | Next Microsoft 365 (Outlook/Teams) or Google Calendar (Meet) meeting with a *Join* button and an alert before it starts (optional) |
 | **SQL Server · Azure SQL** | Widgets with a read-only query: the first value, green/amber/red by your thresholds, and an alert when one turns red (optional) |
 | **Azure Data Factory** | Latest run of the pipelines you choose (succeeded, failed, running) in the expanded island, and an alert when one fails (optional) |
 
@@ -207,6 +207,22 @@ IT administrator.
 
 No client secret is needed: Skerry is a public client. *Disconnetti* (sign out) deletes the local token cache.
 
+## Connecting Google Calendar (optional)
+
+Skerry can show your next Google Calendar event with its **Google Meet** link and a *Join* button (with Microsoft 365
+connected too, the island shows whichever meeting comes first). It reads the primary calendar, **read-only**
+(scope `calendar.events.readonly`), every 2 minutes. The guide is also in **Settings → Connections → Google Calendar**.
+
+1. In the **Google Cloud console** create a project (e.g. `skerry-calendar`) and enable the **Google Calendar API**.
+2. In **Google Auth Platform** (OAuth consent screen) choose the audience (*Internal* for a Workspace organization,
+   otherwise *External* and add yourself as a test user) and add the scope `calendar.events.readonly`.
+3. **Clients → Create client → Desktop app**; copy the client ID and the client secret into Skerry. Google requires a
+   secret even for desktop apps: Skerry encrypts it with DPAPI, like the refresh token, never in `settings.json`.
+4. **Sign in**: the browser opens, Skerry receives the answer on a one-shot `http://127.0.0.1:<port>` address (PKCE).
+
+While the app is in *Testing*, Google ends the access after 7 days: sign in again or publish the app. *Sign out*
+deletes the local refresh token.
+
 ## Connecting Azure Data Factory (optional)
 
 Skerry shows the latest run of the pipelines you choose and alerts you when one fails. It is **read-only**: it calls
@@ -257,9 +273,10 @@ Each widget runs one query and shows its first value in the expanded island, gre
   only where you choose. Codex, Copilot CLI and Gemini CLI tokens are not shown: their local logs have no documented
   format.
 - Network access happens only for: the update check (GitHub releases API every 6 hours, plus the installer download
-  when an update exists; can be turned off in settings) and, if you connect them, Microsoft Graph to read your calendar
-  and Azure Resource Manager to read Data Factory pipeline runs; SQL widgets connect only to the servers you enter.
-- Secrets (the Microsoft 365 token cache, the Data Factory client secret, SQL passwords) are encrypted with DPAPI and readable only by your Windows user.
+  when an update exists; can be turned off in settings) and, if you connect them, Microsoft Graph and the Google
+  Calendar API to read your calendar and Azure Resource Manager to read Data Factory pipeline runs; SQL widgets connect only to the servers you enter.
+- Secrets (the Microsoft 365 token cache, the Google client secret and refresh token, the Data Factory client
+  secret, SQL passwords) are encrypted with DPAPI and readable only by your Windows user.
 
 | Path | Content |
 |---|---|

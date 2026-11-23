@@ -62,6 +62,20 @@ def pick_meeting(events, now):
     return best
 
 
+def alert_before(store, m, minutes, alerted):
+    """Alert once, `minutes` before meeting `m` starts (shared by the calendar connectors)."""
+    if not m or not minutes or m["in_progress"]:
+        return
+    left = m["start"] - time.time()
+    key = (m["id"], m["start"])
+    if 0 < left <= minutes * 60 and key not in alerted:
+        if len(alerted) > 50:
+            alerted.clear()
+        alerted.add(key)
+        store.alert("info", "📅", Msg("alert.meeting_soon", title=m["title"] or Msg("meeting.untitled"),
+                                     n=max(1, round(left / 60))), sound=True)
+
+
 class M365:
     def __init__(self, settings, store):
         self._settings = settings
@@ -246,20 +260,6 @@ class M365:
             if self._status != "signing_in":
                 self._status, self._error = "ok", ""
 
-    def _check_alert(self):
-        m = self.meeting()
-        n = self.cfg()["alert_minutes"]
-        if not m or not n or m["in_progress"]:
-            return
-        left = m["start"] - time.time()
-        key = (m["id"], m["start"])
-        if 0 < left <= n * 60 and key not in self._alerted:
-            self._alerted.add(key)
-            self._alerted = set(list(self._alerted)[-20:])
-            mins = max(1, round(left / 60))
-            self._store.alert("info", "📅", Msg("alert.meeting_soon", title=m["title"] or Msg("meeting.untitled"), n=mins),
-                              sound=True)
-
     def _loop(self):
         time.sleep(4)
         nxt = 0
@@ -269,7 +269,7 @@ class M365:
                 if c["client_id"] and (self._status != "signing_in") and time.time() >= nxt:
                     self._poll()
                     nxt = time.time() + POLL
-                self._check_alert()
+                alert_before(self._store, self.meeting(), self.cfg()["alert_minutes"], self._alerted)
             except Exception:
                 log.exception("m365 loop")
             if self._wake.wait(15):
