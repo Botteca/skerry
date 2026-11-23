@@ -210,7 +210,7 @@ function claudeBlock(){
     body += `<div class="fn-note">${!sl.seen ? tx('usage.noData')
       : tx('usage.noPlan', {cmd: I18N.html('<span class="mono">/usage</span>')})}</div>`;
   }
-  return `<div class="sec"><div class="sec-h"><b>${tx('usage.title')}</b><span class="sp"></span>${u ? `<span class="xs">${tx('usage.local')}</span>` : ''}</div>${body}</div>`;
+  return `<div class="sec"><div class="sec-h"><i class="se">📊</i><b>${tx('usage.title')}</b><span class="sp"></span>${u ? `<span class="xs">${tx('usage.local')}</span>` : ''}</div>${body}</div>`;
 }
 
 // Update offer above the footer: "Update to vX ready" + "Update now" (auto) or "vX available" + "Update" (notify).
@@ -250,7 +250,7 @@ const SECTION = {
     const whenTxt = m.in_progress ? t('meeting.inProgress', {time: hm(m.end)})
       : left < 3600 ? t('meeting.inMinutes', {n: Math.max(1, Math.round(left / 60))}) : t('meeting.at', {time: hm(m.start)});
     const sub = [whenTxt, m.provider, m.location].filter(Boolean).map(esc).join(' · ');
-    return `<div class="sec"><div class="sec-h"><b>${tx('meeting.title')}</b></div><div class="meet ${m.in_progress ? 'live' : (left < 300 ? 'soon' : '')}">
+    return `<div class="sec"><div class="sec-h"><i class="se">📅</i><b>${tx('meeting.title')}</b></div><div class="meet ${m.in_progress ? 'live' : (left < 300 ? 'soon' : '')}">
       <div class="mt"><b>${hm(m.start)}</b><span>${hm(m.end)}</span></div>
       <div class="mi2"><div class="mn">${m.title ? esc(m.title) : tx('meeting.untitled')}</div><div class="muted sm">${sub}</div></div>
       ${m.join_url ? `<button class="b-join" data-act="join">${tx('meeting.join')}</button>` : ''}</div></div>`;
@@ -258,7 +258,7 @@ const SECTION = {
   // Azure Data Factory: latest run of the chosen pipelines
   adf(){
     if (!S.adf) return '';
-    let h = `<div class="sec"><div class="sec-h"><b>${tx('adf.title')}</b></div>`;
+    let h = `<div class="sec"><div class="sec-h"><i class="se">🏭</i><b>${tx('adf.title')}</b></div>`;
     for (const r of S.adf){
       const [dot, label] = ADF_STATUS[r.status] || ['idle', 'adf.none'];
       const at = r.end || r.start;
@@ -270,7 +270,7 @@ const SECTION = {
   // SQL Server / Azure SQL widgets: first value of a read-only query, green/amber/red
   sql(){
     if (!S.sql) return '';
-    let h = `<div class="sec"><div class="sec-h"><b>${tx('sql.title')}</b></div>`;
+    let h = `<div class="sec"><div class="sec-h"><i class="se">🗄️</i><b>${tx('sql.title')}</b></div>`;
     for (const w of S.sql){
       const v = w.value === null ? '—' : typeof w.value === 'number' ? I18N.number(w.value, 2) : String(w.value);
       h += `<div class="sess" title="${esc(w.error)}"><span class="dot ${SQL_DOT[w.level] || 'idle'}"></span><span class="p">${esc(w.name)}</span>
@@ -281,7 +281,7 @@ const SECTION = {
   agents(){
     if (!['claude', 'codex', 'gemini', 'copilot'].some(mod)) return '';
     const sess = S.sessions.slice(0, 4);
-    let h = `<div class="sec"><div class="sec-h"><b>${tx('agents.title')}</b><span class="sp"></span>${sess.length ? '' : `<span>${tx('agents.none')}</span>`}</div>`;
+    let h = `<div class="sec"><div class="sec-h"><i class="se">🤖</i><b>${tx('agents.title')}</b><span class="sp"></span>${sess.length ? '' : `<span>${tx('agents.none')}</span>`}</div>`;
     for (const s of sess){
       const tk = s.tasks;
       h += `<div class="sess ${s.has_window ? 'click' : ''}" ${s.has_window ? `data-act="focus" data-arg="${esc(s.sid)}" title="${tx('agents.focusTip')}"` : ''}>
@@ -301,11 +301,11 @@ const SECTION = {
     (sy.bluetooth || []).forEach(d => devs.push(`<span title="${esc(d.name)}" class="chip on dev ${d.battery <= 15 ? 'low' : ''}"><span class="di">${BT_ICON[d.kind] || '🔹'}</span><span class="dn">${esc(d.name.replace(/\s*Bluetooth\s*/i,' ').trim())}</span>
       <span class="bt"><i style="width:${d.battery}%;background:${d.battery <= 15 ? 'var(--red)' : d.battery <= 30 ? 'var(--amber)' : 'var(--green)'}"></i></span><b>${d.battery}%</b></span>`));
     if (!chips.length && !devs.length) return '';
-    return `<div class="sec"><div class="sec-h"><b>${tx('system.title')}</b></div>${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}${devs.length ? `<div class="devs">${devs.join('')}</div>` : ''}</div>`;
+    return `<div class="sec"><div class="sec-h"><i class="se">💻</i><b>${tx('system.title')}</b></div>${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}${devs.length ? `<div class="devs">${devs.join('')}</div>` : ''}</div>`;
   },
   timer(){
     const tm = S.timer;
-    let h = `<div class="sec"><div class="sec-h"><b>${tx('timer.title')}</b>${tm ? `<span class="muted">· ${esc(tm.label)}${tm.mode === 'pomodoro' ? ' #' + tm.cycle : ''}</span>` : ''}</div>`;
+    let h = `<div class="sec"><div class="sec-h"><i class="se">⏱️</i><b>${tx('timer.title')}</b>${tm ? `<span class="muted">· ${esc(tm.label)}${tm.mode === 'pomodoro' ? ' #' + tm.cycle : ''}</span>` : ''}</div>`;
     h += tm ? `<div class="timer">${ring(100*(1 - tm.left/tm.duration), 26, tm.phase === 'focus' || tm.mode === 'timer' ? 'var(--accent)' : 'var(--green)')}
           <span class="big" data-live="tm">${mmss(tm.left)}</span><span class="sp"></span>
           <span class="chip act" data-act="tpause">${tm.paused ? '▶ ' + tx('timer.resume') : '⏸ ' + tx('timer.pause')}</span><span class="chip act" data-act="tstop">✕ ${tx('timer.stop')}</span></div>`
@@ -315,7 +315,7 @@ const SECTION = {
   },
   shelf(){
     const it = S.shelf || [];
-    let h = `<div class="sec"><div class="sec-h"><b>${tx('shelf.title')}</b><span class="sp"></span>
+    let h = `<div class="sec"><div class="sec-h"><i class="se">🗂️</i><b>${tx('shelf.title')}</b><span class="sp"></span>
       ${it.length ? `<span class="link" data-act="shelf-copyall">${tx('shelf.copyAll')}</span><span class="link" data-act="shelf-clear">${tx('shelf.clear')}</span>` : ''}</div>`;
     if (!it.length) h += `<div class="muted xs">${tx('shelf.empty')}</div>`;
     it.forEach((f, i) => {

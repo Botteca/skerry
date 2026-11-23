@@ -36,6 +36,9 @@ class Tray:
         app = self.app
         item, menu = pystray.MenuItem, pystray.Menu
 
+        def label(icon, key, **kw):     # emoji + translated text, re-read on every menu refresh
+            return lambda i: f"{icon}  {t(key, **kw)}"
+
         def profile_item(name):     # a factory, so each item keeps its own profile name
             return item(lambda i: t(profiles.LABELS[name]), lambda: app.set_profile(name),
                         checked=lambda i: profiles.current(app.settings) == name, radio=True)
@@ -44,18 +47,18 @@ class Tray:
             menu(
                 item(f"{APP_NAME} {VERSION}", None, enabled=False),
                 # texts are callables: refresh() re-reads them after a language change
-                item(lambda i: t("tray.expand"), lambda: app.toggle_expand(), default=True),
-                item(lambda i: t("tray.settings"), lambda: app.open_settings()),
-                item(lambda i: t("tray.profile"), menu(*[profile_item(p) for p in profiles.PROFILES])),
-                item(lambda i: t("tray.pause"), lambda: app.toggle_pause(), checked=lambda i: app.paused),
-                item(lambda i: t("tray.reconnect"), lambda: app.reconnect()),
-                item(lambda i: t("tray.autostart"), lambda: app.toggle_autostart(), checked=lambda i: autostart.is_enabled()),
+                item(label("🏝️", "tray.expand"), lambda: app.toggle_expand(), default=True),
+                item(label("⚙️", "tray.settings"), lambda: app.open_settings()),
+                item(label("👤", "tray.profile"), menu(*[profile_item(p) for p in profiles.PROFILES])),
+                item(label("⏸️", "tray.pause"), lambda: app.toggle_pause(), checked=lambda i: app.paused),
+                item(label("🔗", "tray.reconnect"), lambda: app.reconnect()),
+                item(label("🚀", "tray.autostart"), lambda: app.toggle_autostart(), checked=lambda i: autostart.is_enabled()),
                 menu.SEPARATOR,
-                item(lambda i: t("tray.install_update", version=app.updater.visible_state()["version"])
-                     if app.updater.visible_state() else t("tray.check_updates"), lambda: app.updater.install_now()),
-                item(lambda i: t("tray.logs"), lambda: os.startfile(paths.log_dir())),
+                item(lambda i: "⬆️  " + (t("tray.install_update", version=app.updater.visible_state()["version"])
+                     if app.updater.visible_state() else t("tray.check_updates")), lambda: app.updater.install_now()),
+                item(label("📄", "tray.logs"), lambda: os.startfile(paths.log_dir())),
                 menu.SEPARATOR,
-                item(lambda i: t("tray.quit"), lambda: app.quit()),
+                item(label("👋", "tray.quit"), lambda: app.quit()),
             ))
         self.icon.run_detached()
 

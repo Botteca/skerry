@@ -104,7 +104,7 @@ button:hover{filter:brightness(1.18)} button:active{transform:scale(.96)}
 /* ---------- expanded ---------- */
 .sec{padding:12px 0;border-top:1px solid var(--line)} .sec:first-child{border-top:0;padding-top:0}
 .sec-h{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;color:var(--muted)}
-.sec-h b{color:var(--fg)} .sec-h .sp{flex:1}
+.sec-h b{color:var(--fg)} .sec-h .se{font-style:normal;font-size:13px;line-height:1;margin-right:-2px} .sec-h .sp{flex:1}
 .link{color:var(--muted);cursor:pointer;font-size:11px} .link:hover{color:var(--fg)}
 .media{display:flex;gap:12px;align-items:center}
 .art{width:60px;height:60px;border-radius:12px;object-fit:cover;flex:none;background:var(--chip);
@@ -145,10 +145,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
 .bc i{display:block;width:100%;border-radius:4px;background:var(--chip2);flex:none}
 .bc i.now{background:var(--accent)} .bc span{font-size:9px;color:var(--muted);line-height:1}
 .fn-note{margin-top:9px;font-size:11px;color:var(--muted);line-height:1.45}
-.devs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
-.devs .chip.dev{display:flex;border-radius:12px;align-items:center;gap:7px;padding:4px 11px 4px 8px;font-size:12px}
-.chip.dev .di{font-size:13px;line-height:1} .chip.dev .dn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.chip.dev b{font-weight:600;font-variant-numeric:tabular-nums;min-width:30px;text-align:right}
+.devs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:6px}
+.devs .chip.dev{display:flex;min-width:0;border-radius:12px;align-items:center;gap:7px;padding:4px 11px 4px 8px;font-size:12px}
+.chip.dev .di{font-size:13px;line-height:1;flex:none} .chip.dev .dn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip.dev b{flex:none;font-weight:600;font-variant-numeric:tabular-nums;min-width:30px;text-align:right}
 .chip.dev.low b{color:var(--red)}
 .bt{width:22px;height:9px;border-radius:3px;border:1.2px solid var(--muted);padding:1px;position:relative;flex:none}
 .bt::after{content:"";position:absolute;right:-3.5px;top:2px;width:2px;height:3px;border-radius:0 1px 1px 0;background:var(--muted)}

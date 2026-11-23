@@ -14,7 +14,7 @@ if not exist assets\brand\skerry.ico (
 for /f "usebackq delims=" %%v in (`"%PY%" tools\release.py version`) do set "VER=%%v"
 if "%VER%"=="" goto :err
 echo Version %VER%
-"%PY%" -m pip install -r requirements.txt pyinstaller || goto :err
+"%PY%" -m pip install -r requirements-dev.txt || goto :err
 "%PY%" -m PyInstaller build\skerry.spec --noconfirm --distpath dist --workpath build\work || goto :err
 set ISCC="%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
 if not exist %ISCC% set ISCC="%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"

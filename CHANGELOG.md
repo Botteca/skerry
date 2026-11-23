@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.1
+
+- Dependencies pinned to exact, tested versions (pywebview 6.2.1, Flask 3.1.3, Pillow 13.0.0, psutil 7.2.2,
+  pycaw 20260927, comtypes 1.5.0, winrt 4.x, MSAL 1.39.0, pyodbc 5.5.0), so every build ships exactly what was tested.
+- Build tools pinned too (PyInstaller 6.22.3, pytest 9.2.0, Ruff 0.17.6).
+- Emoji in the settings sidebar, the section titles of the expanded island and the tray menu.
+- Fixed: a long Bluetooth device name widened its column and cut off the battery percentages; names now end
+  with "…" (full name on hover).
+- GitHub Actions updated to checkout v7.0.1 and setup-python v7.1.0 (Node.js 24).
+
 ## 1.0.0
 
 First public release.
