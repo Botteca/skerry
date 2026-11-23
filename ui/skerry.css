@@ -171,6 +171,22 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
 .foot{display:flex;align-items:center;gap:8px;padding-top:10px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
 .foot .sp{flex:1}
 .upd{color:var(--blue);cursor:pointer}
+/* guided setup */
+.onb .otitle{font-size:16px;font-weight:650;margin:2px 0 3px}
+.onb .opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.onb .olabel{font-size:11px;color:var(--muted);margin-top:12px}
+.onb .opt{flex:none;white-space:nowrap;border:0;border-radius:10px;padding:6px 12px;font:500 12.5px inherit;font-family:inherit;cursor:pointer;
+  background:var(--chip);color:var(--fg);transition:background .15s}
+.onb .opt:hover{background:var(--chip2)} .onb .opt.on{background:var(--accent);color:#fff}
+.onb .oagent{display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 10px;border-radius:12px;background:var(--chip)}
+.onb .otips{margin:8px 0 0 18px;display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.onb kbd{background:var(--chip2);border-radius:5px;padding:0 6px;font:12px Consolas,monospace}
+.onb .ofoot{display:flex;align-items:center;gap:8px;margin-top:14px}
+.onb .ofoot .sp,.onb .oagent .sp{flex:1} .onb .ofoot button{flex:none;padding:7px 16px}
+.onb .odots{display:flex;gap:4px} .onb .odots i{width:6px;height:6px;border-radius:50%;background:var(--chip2)}
+.onb .odots i.on{background:var(--accent)}
+.b-ghost{flex:none;border:0;border-radius:11px;padding:7px 14px;font:600 12.5px inherit;font-family:inherit;color:var(--fg);
+  background:var(--chip);cursor:pointer}
 .updbar{display:flex;align-items:center;gap:10px;margin:2px 0 12px;padding:9px 10px 9px 14px;border-radius:14px;background:var(--chip)}
 .updbar .ui{color:var(--blue);font-weight:700}
 .updbar .ut{flex:1;min-width:0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

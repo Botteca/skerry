@@ -32,6 +32,7 @@ DEFAULTS = {
     "update_url": "https://api.github.com/repos/fabrisimo/skerry/releases/latest",
     "chained_statusline": None,
     "auto_connect_done": False,
+    "first_run_done": True,   # False only for a brand-new settings file: the island shows the guided setup
     "bluetooth_names": {},   # e.g. {"BLE ·9418": "Mouse", "BLE ·a5f0": ""}  ("" = hide)
     "hooks_version": 0,
     "connectors": {
@@ -77,6 +78,7 @@ class Settings:
         self._listeners = []
         self.is_new = not os.path.exists(self._path)
         if self.is_new:
+            self._data["first_run_done"] = False      # first launch ever: show the guided setup
             self.save()
 
     def get(self, key, default=None):

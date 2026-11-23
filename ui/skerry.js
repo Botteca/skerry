@@ -5,6 +5,7 @@ const A = () => window.pywebview.api;
 let S = null, expanded = false, lastKey = '', lastSize = '', uiSeq = null, view = null;
 let thumbId = 0, thumbSrc = null, dropping = false, dropTimer = null, collapseTimer = null;
 let drag = null, suppressClick = false, volFlash = 0, lastKind = '';
+let onbStep = 0, onbActive = false;   // guided setup: current step, shown while S.onboarding is set
 const dismissedDone = new Set();
 
 // ---------------- utilities ----------------
@@ -265,11 +266,48 @@ function vExpanded(){
   return {w:480, r:28, key, html:h};
 }
 
+// ---------------- guided setup (first run) ----------------
+const EDGE_KEYS = {top: 'look.top', bottom: 'look.bottom', left: 'look.left', right: 'look.right'};
+const hotkeyLabel = hk => String(hk || '').split('+').map(p => p.length > 1 ? p[0].toUpperCase() + p.slice(1) : p.toUpperCase()).join('+');
+function vOnboarding(){
+  const o = S.onboarding, step = onbStep;
+  const opt = (on, act, arg, label) => `<button class="opt ${on ? 'on' : ''}" data-act="${act}" data-arg="${esc(arg)}">${label}</button>`;
+  let body = '';
+  if (step === 0){
+    const edges = Object.entries(EDGE_KEYS).map(([e, k]) => opt(S.settings.edge === e, 'onb-edge', e, tx(k))).join('');
+    const mon = S.settings.monitor || '';
+    const screens = o.monitors.length > 1 ? `<div class="olabel">${tx('onb.screen')}</div><div class="opts">${o.monitors.map(m =>
+      opt(mon === m.value, 'onb-mon', m.value, tx('onb.screenN', {n: m.index, w: m.width, h: m.height}) + (m.primary ? ` · ${tx('onb.primary')}` : ''))).join('')}</div>` : '';
+    body = `<div class="otitle">${tx('onb.s1.title')}</div><div class="muted sm">${tx('onb.s1.text')}</div><div class="opts">${edges}</div>${screens}`;
+  } else if (step === 1){
+    const row = (agent, name, st) => `<div class="oagent">${glyph(agent)}<b>${name}</b><span class="sp"></span>${
+      st.installed ? `<span class="chip on">✓ ${tx('status.connected')}</span>`
+      : st.available === false ? `<span class="muted sm">${tx('onb.notFound')}</span>`
+      : `<button class="b-join" data-act="onb-connect" data-arg="${agent}">${tx('btn.connect')}</button>`}</div>`;
+    body = `<div class="otitle">${tx('onb.s2.title')}</div><div class="muted sm">${tx('onb.s2.text')}</div>
+      ${row('claude', 'Claude Code', o.claude)}${o.codex.available ? row('codex', 'Codex', o.codex) : ''}
+      ${o.codex.available && o.codex.installed ? `<div class="muted xs">${tx('onb.codexHint')}</div>` : ''}`;
+  } else {
+    body = `<div class="otitle">${tx('onb.s3.title')}</div><ul class="otips">
+      ${o.hotkey ? `<li>${tx('onb.tip.hotkey', {hotkey: I18N.html(`<kbd>${esc(hotkeyLabel(o.hotkey))}</kbd>`)})}</li>` : ''}
+      <li>${tx('onb.tip.click')}</li><li>${tx('onb.tip.settings')}</li></ul>`;
+  }
+  const dots = [0, 1, 2].map(i => `<i class="${i === step ? 'on' : ''}"></i>`).join('');
+  const left = step < 2 ? `<span class="link" data-act="onb-skip">${tx('onb.skip')}</span>` : '';
+  const back = step > 0 ? `<button class="b-ghost" data-act="onb-back">${tx('onb.back')}</button>` : '';
+  const next = step < 2 ? `<button class="b-join" data-act="onb-next">${tx('onb.next')}</button>`
+                        : `<button class="b-join" data-act="onb-done">${tx('onb.start')}</button>`;
+  return {w: 460, r: 26, key: 'onb' + step + JSON.stringify([o, S.settings.edge, S.settings.monitor]), html: `<div class="card onb">
+    <div class="hd">${glyph('claude')}<b>Skerry</b><span class="muted">· ${tx('onb.step', {n: step + 1})}</span><span class="sp"></span><span class="odots">${dots}</span></div>
+    ${body}<div class="ofoot">${left}<span class="sp"></span>${back}${next}</div></div>`};
+}
+
 // ---------------- view choice and rendering ----------------
 const K = (kind, v) => (v.kind = kind, v);
 function pick(){
   if (S.pending.length) return K('perm', vPermission());
   if (S.alerts.length){ const a = S.alerts[S.alerts.length - 1]; return K('al' + a.id, vAlert(a)); }
+  if (S.onboarding) return K('onb', vOnboarding());
   if (dropping && mod('shelf')) return K('drop', vDrop());
   if (expanded) return K('exp', vExpanded());
   const done = S.sessions.find(s => (s.status === 'done' || s.status === 'error') && S.now - s.done_at < 7 && !dismissedDone.has(s.sid + s.done_at));
@@ -321,6 +359,7 @@ async function tick(){
   try { st = await A().get_state(); } catch (e) { return; }
   S = st;
   I18N.setLang(S.lang);
+  if (!!S.onboarding !== onbActive){ onbActive = !!S.onboarding; onbStep = 0; expanded = false; }
   if (uiSeq === null) uiSeq = S.ui_seq;
   if (S.ui_seq !== uiSeq){ uiSeq = S.ui_seq; expanded = !expanded; }
   const m = S.media;
@@ -353,6 +392,12 @@ function act(name, arg, ev, el){
     case 'join': return api.join_meeting();
     case 'settings': return api.open_settings();
     case 'update': return api.install_update();
+    case 'onb-edge': return api.set_setting('edge', arg).then(tick);
+    case 'onb-mon': return api.set_setting('monitor', arg).then(tick);
+    case 'onb-connect': el.disabled = true; return (arg === 'codex' ? api.codex_connect(true) : api.claude_connect(true)).then(tick);
+    case 'onb-next': onbStep = Math.min(2, onbStep + 1); return render();
+    case 'onb-back': onbStep = Math.max(0, onbStep - 1); return render();
+    case 'onb-skip': case 'onb-done': return api.onboarding_finish().then(tick);
   }
 }
 function flash(el, text){ const old = el.textContent; el.textContent = text; setTimeout(() => el.textContent = old, 1200); }
@@ -362,7 +407,7 @@ document.addEventListener('click', e => {
   const tg = e.target.closest('[data-act]');
   if (tg){ e.stopPropagation(); act(tg.dataset.act, tg.dataset.arg, e, tg); return; }
   if (e.target.closest('input')) return;
-  if (S.pending.length) return;
+  if (S.pending.length || (view && view.kind === 'onb')) return;
   if (view && view.done){ dismissedDone.add(view.done); tick(); return; }
   expanded = !expanded; tick();
 });

@@ -61,6 +61,8 @@ your next Microsoft 365 meeting. Everything runs locally.
 
 **Using it**
 
+- **First launch**: the island walks you through three short steps (edge and screen, connect Claude Code
+  and Codex, the shortcut). You can skip it and show it again from *Settings → General*.
 - **Click** the pill to expand it; it collapses when the mouse leaves.
 - **Drag** it: it snaps to the nearest edge (top, bottom, left, right), on any monitor. On the side edges it becomes a vertical tab.
 - **Mouse wheel**: on music it changes the volume, on agents it cycles through sessions.

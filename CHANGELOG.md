@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Guided setup on first launch**: three short steps in the island (edge and screen, connect Claude Code and
+  Codex, shortcut tips). It can be skipped and shown again from *Settings → General*. Existing installs don't see it.
 - **No more "hook failed: ECONNREFUSED" in Claude Code when Skerry is not running.** Claude Code hooks are now
   `skerry-cli` command hooks that exit silently in that case (hooks v4, rewritten automatically). They run in the
   background, except the permission request, so they add no latency.

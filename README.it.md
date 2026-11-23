@@ -62,6 +62,8 @@ Microsoft 365. Tutto gira in locale.
 
 **Uso**
 
+- **Primo avvio**: l'isola ti guida in tre passi brevi (bordo e schermo, collegamento di Claude Code e Codex,
+  la scorciatoia). Puoi saltarli e riaprirli da *Impostazioni → Generale*.
 - **Clic** sulla pillola per espanderla; si richiude quando il mouse esce.
 - **Trascinala**: si aggancia al bordo più vicino (sopra, sotto, sinistra, destra), su qualsiasi monitor. Sui bordi laterali diventa una linguetta verticale.
 - **Rotellina**: sulla musica cambia il volume, sugli agenti scorre tra le sessioni.

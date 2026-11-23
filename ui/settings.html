@@ -110,6 +110,7 @@
   <h1 data-i18n="gen.title"></h1><div class="sub" data-i18n="gen.sub"></div>
   <div class="panel">
     <div class="row"><div class="ico">🌐</div><div class="l"><span data-i18n="gen.language"></span><div class="d" data-i18n="gen.languageDesc"></div></div><div class="seg" data-seg="language"><button data-v="auto" data-i18n="lang.auto"></button><button data-v="en" data-i18n="lang.en"></button><button data-v="it" data-i18n="lang.it"></button></div></div>
+    <div class="row"><div class="ico">🧭</div><div class="l"><span data-i18n="gen.onboarding"></span><div class="d" data-i18n="gen.onboardingDesc"></div></div><button class="btn" id="onb-btn" data-i18n="gen.onboardingBtn"></button></div>
     <div class="row"><div class="ico">🚀</div><div class="l"><span data-i18n="gen.autostart"></span><div class="d" data-i18n="gen.autostartDesc"></div></div><label class="sw"><input type="checkbox" data-k="autostart"><span></span></label></div>
     <div class="row"><div class="ico">⌨️</div><div class="l"><span data-i18n="gen.hotkey"></span><div class="d" data-i18n-html="gen.hotkeyDescHtml"></div></div><input type="text" data-k="hotkey" data-lazy></div>
   </div>
@@ -271,6 +272,7 @@ function bind(){
   $('cl-btn').onclick = () => connect('claude');
   $('cx-btn').onclick = () => connect('codex');
   $('logs').onclick = () => api().open_logs();
+  $('onb-btn').onclick = () => api().onboarding_restart();
   $('upd-btn').onclick = async () => { $('upd-btn').disabled = true; D.update = await api().check_updates(); renderUpdate(); load(); };
   $('upd-now').onclick = async () => { $('upd-now').disabled = true; await api().install_update(); setTimeout(load, 300); };
   $('upd-notes').onclick = () => api().open_release_notes();

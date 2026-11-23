@@ -23,8 +23,14 @@ def path(tmp_path):
 def test_new_file_gets_all_defaults(path):
     s = Settings(str(path))
     assert s.is_new
-    assert read(path) == DEFAULTS
-    assert s.all() == DEFAULTS
+    expected = {**DEFAULTS, "first_run_done": False}       # brand-new file: the guided setup is shown
+    assert read(path) == expected
+    assert s.all() == expected
+
+
+def test_existing_file_skips_the_guided_setup(path):
+    write(path, {"theme": "dark"})                          # settings from an older version: no guided setup
+    assert Settings(str(path)).get("first_run_done") is True
 
 
 def test_missing_values_are_added_and_user_values_kept(path):

@@ -2,6 +2,7 @@
 permission decisions never go through HTTP."""
 import logging
 import os
+import time
 
 from . import VERSION, autostart, i18n, integrations, paths, win32
 
@@ -9,7 +10,7 @@ log = logging.getLogger("skerry")
 
 SETTABLE = {
     "language", "theme", "accent", "hotkey", "autostart", "hide_fullscreen", "hide_from_capture", "permission_over_fullscreen",
-    "permission_wait", "focus_terminal_after_decision", "edge", "offset", "updates", "update_url",
+    "permission_wait", "focus_terminal_after_decision", "edge", "offset", "monitor", "updates", "update_url",
     "alerts.context", "alerts.limits", "alerts.battery_low", "alerts.bluetooth_low",
     "pomodoro.focus", "pomodoro.short_break", "pomodoro.long_break", "pomodoro.cycles",
     "connectors.m365.client_id", "connectors.m365.tenant", "connectors.m365.alert_minutes",
@@ -32,11 +33,38 @@ class Api:
         snap["timer"] = a.timer.state() if mods.get("timer", True) else None
         snap["meeting"] = a.connectors.meeting() if mods.get("calendar", True) else None
         snap["shelf"] = a.shelf.items() if mods.get("shelf", True) else []
-        snap["settings"] = {k: a.settings.get(k) for k in ("edge", "theme", "accent", "modules")}
+        snap["settings"] = {k: a.settings.get(k) for k in ("edge", "monitor", "theme", "accent", "modules")}
+        snap["onboarding"] = None if a.settings.get("first_run_done", True) else self._onboarding()
         snap["update"] = a.updater.visible_state()
         snap["version"] = VERSION
         snap["lang"] = i18n.current()
         return snap
+
+    # ---------- guided setup (first run) ----------
+    def _onboarding(self):
+        """What the guided setup needs. Agent status is read from disk, so it is cached for 2 seconds."""
+        cached = getattr(self, "_onb_cache", None)
+        if cached and time.time() - cached[0] < 2:
+            return cached[1]
+        s = self._app.settings
+        mons = win32.monitors()
+        data = {"hotkey": s.get("hotkey", ""),
+                "monitors": [{"value": "" if m["primary"] else m["device"], "index": i + 1, "primary": m["primary"],
+                              "width": m["monitor"][2] - m["monitor"][0], "height": m["monitor"][3] - m["monitor"][1]}
+                             for i, m in enumerate(mons)],
+                "claude": integrations.claude_status(), "codex": integrations.codex_status()}
+        self._onb_cache = (time.time(), data)
+        return data
+
+    def onboarding_finish(self):
+        self._app.settings.set("first_run_done", True)
+        log.info("Guided setup finished")
+        return True
+
+    def onboarding_restart(self):
+        self._onb_cache = None
+        self._app.settings.set("first_run_done", False)
+        return True
 
     def get_thumb(self):
         return self._app.media.thumb()
@@ -142,6 +170,7 @@ class Api:
     def claude_connect(self, on):
         try:
             (integrations.claude_install if on else integrations.claude_uninstall)(self._app.settings)
+            self._onb_cache = None
             return {"ok": True, **integrations.claude_status()}
         except Exception as e:
             log.exception("Connecting Claude Code")
@@ -150,6 +179,7 @@ class Api:
     def codex_connect(self, on):
         try:
             (integrations.codex_install if on else integrations.codex_uninstall)(self._app.settings)
+            self._onb_cache = None
             return {"ok": True, **integrations.codex_status()}
         except Exception as e:
             log.exception("Connecting Codex")
