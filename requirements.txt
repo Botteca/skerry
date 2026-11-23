@@ -1,4 +1,4 @@
-pywebview>=5.1
+pywebview>=6.2.1
 flask>=3.0
 pystray>=0.19
 pillow>=10.0
