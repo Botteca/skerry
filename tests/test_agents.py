@@ -190,3 +190,84 @@ def test_cli_never_blocks_when_skerry_is_off(tmp_path, args, stdin, stdout):
     r = subprocess.run([sys.executable, os.path.join(ROOT, "cli.py"), "hook", *args], input=json.dumps(stdin),
                        capture_output=True, text=True, env=env, timeout=60)
     assert (r.returncode, r.stdout, r.stderr) == (0, stdout, "")
+
+
+# ---------------------------------------------------------------- OpenCode (plugin)
+
+def post_new(env, agent, event, payload):
+    """Like post(), with a client of its own (for requests made from another thread)."""
+    return env["app"].test_client().post(f"/hook/{event}?agent={agent}", json=payload).get_json()
+
+def test_opencode_tools_and_permission_are_mapped():
+    ev, p = agents.normalize("opencode", "PreToolUse", {"session_id": "s1", "cwd": CWD, "tool_name": "edit",
+                                                       "tool_input": {"filePath": "C:/rep/ExampleApp/a.py"}})
+    assert (ev, p["tool_name"], p["tool_input"]["file_path"]) == ("PreToolUse", "Edit", "C:/rep/ExampleApp/a.py")
+    ev, p = agents.normalize("opencode", "PermissionRequest", {"session_id": "s1", "cwd": CWD, "tool_name": "bash",
+                                                              "tool_input": {"patterns": ["npm test"]}, "can_always": True})
+    assert (ev, p["tool_name"], p["tool_input"]["command"]) == ("PermissionRequest", "Bash", "npm test")
+    assert p["permission_suggestions"]
+    assert agents.normalize("opencode", "PermissionResolved", {"session_id": "s1"})[0] == "PostToolUse"
+
+
+def test_opencode_reply_format():
+    allow = {"hookSpecificOutput": {"hookEventName": "PermissionRequest", "decision": {"behavior": "allow"}}}
+    always = {"hookSpecificOutput": {"decision": {"behavior": "allow", "updatedPermissions": [{"type": "opencode"}]}}}
+    deny = {"hookSpecificOutput": {"decision": {"behavior": "deny", "message": "no"}}}
+    assert agents.reply("opencode", allow) == {"decision": "once"}
+    assert agents.reply("opencode", always) == {"decision": "always"}
+    assert agents.reply("opencode", deny) == {"decision": "reject"}
+    assert agents.reply("opencode", {}) == {}
+
+
+def test_opencode_permission_is_answered_from_the_island(env):
+    res = {}
+
+    def ask():
+        res["out"] = post_new(env, "opencode", "PermissionRequest",
+                          {"session_id": "s1", "cwd": CWD, "tool_name": "bash", "tool_input": {"patterns": ["npm test"]},
+                           "can_always": True})
+    th = threading.Thread(target=ask)
+    th.start()
+    for _ in range(100):
+        pend = env["store"].snapshot()["pending"]
+        if pend:
+            break
+        time.sleep(0.02)
+    assert pend[0]["agent"] == "opencode" and pend[0]["can_always"]
+    env["api"].decide(pend[0]["id"], "always")
+    th.join(5)
+    assert res["out"] == {"decision": "always"}
+
+
+def test_opencode_answer_in_the_terminal_withdraws_the_request(env):
+    res = {}
+    th = threading.Thread(target=lambda: res.update(out=post_new(env, "opencode", "PermissionRequest", {
+        "session_id": "s1", "cwd": CWD, "tool_name": "bash", "tool_input": {"patterns": ["ls"]}})))
+    th.start()
+    for _ in range(100):
+        if env["store"].snapshot()["pending"]:
+            break
+        time.sleep(0.02)
+    post(env, "opencode", "PermissionResolved", {"session_id": "s1", "cwd": CWD})
+    th.join(5)
+    assert res["out"] == {} and env["store"].snapshot()["pending"] == []
+
+
+def test_opencode_connect_writes_its_plugin(tmp_path, monkeypatch):
+    path = tmp_path / ".config" / "opencode" / "plugins" / "skerry.js"
+    monkeypatch.setattr(integrations, "OPENCODE_PLUGIN", str(path))
+    integrations.opencode_install(FakeSettings(permission_wait=300, port=47800))
+    src = path.read_text(encoding="utf-8")
+    assert src.startswith(integrations.OPENCODE_MARKER)
+    assert "http://127.0.0.1:47800/hook/" in src and "(300 + 20) * 1000" in src and "__" not in src.split("\n", 1)[1][:200]
+    assert integrations.opencode_status()["installed"]
+    integrations.opencode_uninstall(FakeSettings())
+    assert not path.exists()
+
+
+def test_opencode_disconnect_keeps_a_users_own_file(tmp_path, monkeypatch):
+    path = tmp_path / "skerry.js"
+    path.write_text("export const Mine = async () => ({})\n", encoding="utf-8")
+    monkeypatch.setattr(integrations, "OPENCODE_PLUGIN", str(path))
+    integrations.opencode_uninstall(FakeSettings())
+    assert path.exists()

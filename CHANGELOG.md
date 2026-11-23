@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.1
+
+- Claude Code plan approval (*ExitPlanMode*) and multiple-choice questions (*AskUserQuestion*) are no longer offered
+  as Allow/Deny in the island, where an answer did not close Claude Code's own dialog: the island shows that the
+  agent is waiting for you in the terminal.
+- **OpenCode** (experimental, opt-in in *Settings → Agents*): Skerry installs a small dependency-free plugin in
+  `~/.config/opencode/plugins/skerry.js` that shows OpenCode's activity and lets you answer its permission requests
+  from the island (replied through OpenCode's own local server).
+
 ## 1.0.0
 
 First public release.

@@ -68,7 +68,7 @@ def test_old_module_switches_become_hidden_sections(tmp_path):
     s = Settings(str(path))
     assert s.get("layout.hidden") == ["media", "meeting"]
     assert s.get("modules") == {"claude": False, "bluetooth": False, "codex": True, "gemini": True, "copilot": True,
-                                "privacy": True, "battery": True}          # agent/system switches stay
+                                "opencode": True, "privacy": True, "battery": True}          # agent/system switches stay
     s.set("theme", "light")                                              # saved once: migration does not repeat
     again = Settings(str(path))
     assert again.get("layout.hidden") == ["media", "meeting"]

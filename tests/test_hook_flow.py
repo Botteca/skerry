@@ -283,3 +283,14 @@ def test_only_offered_durations_are_accepted(env):
     assert env["api"].decide(p["id"], "grant:9999") is False
     env["api"].decide(p["id"], "deny")
     finish(t, result)
+
+
+@pytest.mark.parametrize("tool", ["ExitPlanMode", "AskUserQuestion"])
+def test_plan_approval_and_questions_go_to_the_terminal(env, tool):
+    """Claude Code's own dialog answers these: Skerry must not hold them, nor show Allow/Deny."""
+    t0 = time.time()
+    out = post(env, "PermissionRequest", {**BASH, "tool_name": tool, "tool_input": {"plan": "1. Do things"}})
+    assert out == {} and time.time() - t0 < 2
+    assert env["store"].snapshot()["pending"] == []
+    s = next(x for x in env["store"].snapshot()["sessions"] if x["sid"].endswith(SID))
+    assert s["status"] == "waiting"

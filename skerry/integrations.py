@@ -1,5 +1,6 @@
 """Connect/disconnect the agents: Claude Code (~/.claude/settings.json), Codex (~/.codex/hooks.json),
-Gemini CLI (~/.gemini/settings.json) and GitHub Copilot CLI (~/.copilot/hooks/skerry.json)."""
+Gemini CLI (~/.gemini/settings.json), GitHub Copilot CLI (~/.copilot/hooks/skerry.json) and OpenCode
+(~/.config/opencode/plugins/skerry.js)."""
 import json
 import logging
 import os
@@ -248,8 +249,115 @@ def copilot_uninstall(settings):
     log.info("GitHub Copilot CLI disconnected")
 
 
+# ---------------- OpenCode ----------------
+# OpenCode has no command hooks: it loads JavaScript plugins from ~/.config/opencode/plugins/. Skerry writes its own
+# dependency-free plugin there (disconnecting deletes the file). It forwards activity to Skerry's local server in the
+# background and, for a permission request, waits for the answer from the island and replies to OpenCode's own server
+# (current API /permission/{id}/reply, older /session/{id}/permissions/{id}). If Skerry is off or nobody answers in
+# time, nothing is replied and OpenCode keeps asking in the terminal as usual.
+OPENCODE_DIR = os.environ.get("OPENCODE_CONFIG_DIR") or os.path.join(HOME, ".config", "opencode")
+OPENCODE_PLUGIN = os.path.join(OPENCODE_DIR, "plugins", "skerry.js")
+OPENCODE_MARKER = "// Skerry plugin for OpenCode"
+OPENCODE_SOURCE = OPENCODE_MARKER + r""" (written by Skerry: disconnect it from Skerry's settings, do not edit).
+const HOOK = "http://127.0.0.1:__PORT__/hook/";
+const WAIT_MS = (__WAIT__ + 20) * 1000;
+
+async function send(event, body, ms) {
+  try {
+    const r = await fetch(HOOK + event + "?agent=opencode", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({hook_event_name: event, ...body}), signal: AbortSignal.timeout(ms)});
+    return await r.json();
+  } catch (e) {
+    return {};            // Skerry not running: never get in OpenCode's way
+  }
+}
+
+export const Skerry = async ({ directory, serverUrl }) => {
+  const cwd = directory;
+  const busy = {};          // last known state per session: only idle -> busy counts as a new prompt
+  const base = String(serverUrl || "").replace(/\/$/, "");
+  const post = (path, body) => fetch(base + path, {method: "POST", headers: {"Content-Type": "application/json"},
+                                                   body: JSON.stringify(body)}).catch(() => null);
+
+  async function permission(p, legacy) {
+    const out = await send("PermissionRequest", {
+      session_id: p.sessionID, cwd, permission_id: p.id,
+      tool_name: legacy ? p.type : p.permission,
+      tool_input: {patterns: p.patterns || p.pattern || [], title: p.title || "", ...(p.metadata || {})},
+      can_always: Boolean(legacy || (p.always && p.always.length)),
+    }, WAIT_MS);
+    const d = out && out.decision;
+    if (!d || !base) return;
+    if (legacy) await post(`/session/${p.sessionID}/permissions/${p.id}`, {response: d});
+    else await post(`/permission/${p.id}/reply`, {reply: d});
+  }
+
+  return {
+    event: async ({ event }) => {
+      const p = event.properties || {};
+      switch (event.type) {
+        case "session.created": send("SessionStart", {session_id: p.info && p.info.id, cwd}, 3000); break;
+        case "session.status": {
+          const now = Boolean(p.status && p.status.type === "busy");
+          if (now && !busy[p.sessionID]) send("UserPromptSubmit", {session_id: p.sessionID, cwd}, 3000);
+          busy[p.sessionID] = now;
+          break;
+        }
+        case "session.idle":
+          busy[p.sessionID] = false;
+          send("Stop", {session_id: p.sessionID, cwd}, 3000);
+          break;
+        case "session.error":
+          send("StopFailure", {session_id: p.sessionID, cwd, error: (p.error && (p.error.name || p.error.message)) || ""}, 3000);
+          break;
+        case "session.deleted": send("SessionEnd", {session_id: p.info && p.info.id, cwd}, 3000); break;
+        case "permission.asked": permission(p, false); break;          // not awaited: OpenCode keeps running
+        case "permission.updated": permission(p, true); break;         // OpenCode before the permission rewrite
+        case "permission.replied":
+          send("PermissionResolved", {session_id: p.sessionID, cwd}, 3000); break;
+      }
+    },
+    "tool.execute.before": async (input, output) => {
+      send("PreToolUse", {session_id: input.sessionID, cwd, tool_name: input.tool, tool_input: output.args}, 3000);
+    },
+    "tool.execute.after": async (input) => {
+      send("PostToolUse", {session_id: input.sessionID, cwd, tool_name: input.tool, tool_input: input.args}, 3000);
+    },
+  };
+};
+"""
+
+
+def opencode_status():
+    return {"installed": os.path.exists(OPENCODE_PLUGIN),
+            "available": bool(shutil.which("opencode")) or os.path.isdir(OPENCODE_DIR)}
+
+
+def opencode_install(settings):
+    src = (OPENCODE_SOURCE.replace("__PORT__", str(int(settings.get("port", 47800))))
+           .replace("__WAIT__", str(int(settings.get("permission_wait", 300)))))
+    os.makedirs(os.path.dirname(OPENCODE_PLUGIN), exist_ok=True)
+    tmp = OPENCODE_PLUGIN + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+        f.write(src)
+    os.replace(tmp, OPENCODE_PLUGIN)
+    log.info("OpenCode connected")
+
+
+def opencode_uninstall(settings):
+    try:
+        with open(OPENCODE_PLUGIN, encoding="utf-8") as f:
+            ours = f.read().startswith(OPENCODE_MARKER)
+    except OSError:
+        return
+    if ours:                                   # never delete a skerry.js the user wrote
+        os.remove(OPENCODE_PLUGIN)
+    log.info("OpenCode disconnected")
+
+
 # ---------------- all agents ----------------
-AGENTS = ("claude", "codex", "gemini", "copilot")
+AGENTS = ("claude", "codex", "gemini", "copilot", "opencode")
 
 
 def functions(agent):
@@ -264,7 +372,7 @@ def statuses():
 
 def refresh_connected(settings):
     """Rewrite the hooks of the opt-in agents that are already connected (after an update or a new wait time)."""
-    for agent in ("gemini", "copilot"):
+    for agent in ("gemini", "copilot", "opencode"):
         status, install, _ = functions(agent)
         if status().get("installed"):
             install(settings)

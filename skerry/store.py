@@ -14,6 +14,9 @@ from .i18n import Msg, render, t
 
 log = logging.getLogger("skerry")
 
+# tools whose request is a dialog only the agent can show (plan approval, multiple-choice questions)
+TERMINAL_ONLY = {"ExitPlanMode": ("📝", "action.plan_ready"), "AskUserQuestion": ("❓", "action.question")}
+
 TOOL_ICONS = {
     "Read": "👁", "Edit": "✏️", "MultiEdit": "✏️", "Write": "📝", "NotebookEdit": "📓",
     "Bash": "⌨️", "PowerShell": "⌨️", "shell": "⌨️", "local_shell": "⌨️", "exec_command": "⌨️",
@@ -25,7 +28,8 @@ TOOL_ICONS = {
     "view": "👁", "write_file": "📝", "create": "📝", "replace": "✏️", "edit": "✏️", "glob": "🔎",
     "search_file_content": "🔎", "grep": "🔎", "google_web_search": "🌐", "web_fetch": "🌐",
 }
-AGENTS = {"claude": "Claude Code", "codex": "Codex", "gemini": "Gemini CLI", "copilot": "Copilot CLI"}
+AGENTS = {"claude": "Claude Code", "codex": "Codex", "gemini": "Gemini CLI", "copilot": "Copilot CLI",
+          "opencode": "OpenCode"}
 FILE_TOOLS = {"Read": "action.read", "read_file": "action.read", "view": "action.read", "Write": "action.write",
               "write_file": "action.write", "create": "action.write", "Edit": "action.edit",
               "MultiEdit": "action.edit", "NotebookEdit": "action.edit", "replace": "action.edit", "edit": "action.edit"}
@@ -314,6 +318,15 @@ class Store:
     # ---------------- permissions ----------------
     def request_permission(self, payload, wait, agent="claude"):
         tool = payload.get("tool_name", "")
+        if tool in TERMINAL_ONLY:
+            # plan approval and questions are answered in the agent's own dialog (an "allow" from here would not
+            # close it): show that the agent is waiting and let the prompt appear at once
+            icon, key = TERMINAL_ONLY[tool]
+            with self._lock:
+                self._session(payload, agent).update(status="waiting", icon=icon, action=Msg(key))
+            self._on_event("permission")
+            log.info("Interactive tool (%s) %s: answered in the terminal", agent, tool)
+            return {}
         icon, text, detail = describe(tool, payload.get("tool_input"))
         pid = uuid.uuid4().hex[:12]
         suggestions = payload.get("permission_suggestions") or []

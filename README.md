@@ -57,6 +57,7 @@ your next Microsoft 365 meeting. Everything runs locally.
 |---|---|
 | **Claude Code** | Current action, permission requests (*Allow · Allow for 5/15/60 min · Always · Deny · Terminal*), task progress, completion, per-session context, 5-hour/weekly limits with threshold alerts |
 | **Codex** | Current action, permission requests, completion (through Codex hooks) |
+| **OpenCode** (experimental) | Current action, permission requests, completion, errors |
 | **GitHub Copilot CLI** | Current action, permission requests (*Allow · Allow for 5/15/60 min · Deny · Terminal*), completion, errors |
 | **Gemini CLI** | Activity only: current action, completion, and *asks for permission: answer in the terminal* (Gemini CLI hooks cannot answer permission prompts) |
 | **History** | Settings → History: agent sessions of the last 30 days by project, with duration, tokens (Claude Code) and the cost Claude Code reports; CSV export. Read from local files only |
@@ -186,11 +187,12 @@ Then:
   no errors in Claude Code. An existing status line is kept and chained; disconnecting restores it.
 - **Codex**: open Codex and approve the new hooks with `/hooks` (Codex only runs approved hooks).
 
-**GitHub Copilot CLI and Gemini CLI** are never connected automatically: use **Settings → Agents → Connect**.
+**GitHub Copilot CLI, Gemini CLI and OpenCode** are never connected automatically: use **Settings → Agents → Connect**.
 
 | | Where | Permissions |
 |---|---|---|
 | **Copilot CLI** | Skerry's own file `~/.copilot/hooks/skerry.json` (or `$COPILOT_HOME/hooks/`); disconnecting deletes it | Answered through the `permissionRequest` hook. If Skerry does not answer in time, Copilot asks in the terminal as usual |
+| **OpenCode** (experimental) | Skerry's own plugin `~/.config/opencode/plugins/skerry.js` (or `$OPENCODE_CONFIG_DIR/plugins/`); disconnecting deletes it | Answered from the island through OpenCode's own server. If Skerry does not answer in time, or you answer in OpenCode first, OpenCode keeps its usual prompt |
 | **Gemini CLI** | `skerry` entries in the `hooks` of `~/.gemini/settings.json` (backed up first; your other hooks stay) | **None.** Gemini CLI's permission notification is observability only, so Skerry shows that a prompt is waiting and you answer it in the terminal |
 
 Both use `skerry-cli`, which always exits 0 when Skerry is not running (Copilot CLI would deny the tool if a

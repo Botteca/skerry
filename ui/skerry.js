@@ -16,12 +16,12 @@ const mmss = s => { s = Math.max(0, Math.floor(s || 0)); const h = Math.floor(s/
 const pctColor = p => p >= 90 ? 'var(--red)' : p >= 70 ? 'var(--amber)' : 'var(--green)';
 const until = e => { const d = Math.max(0, e - S.now), h = Math.floor(d/3600), m = Math.floor(d%3600/60); return h ? `${h}h ${m}m` : `${m}m`; };
 const when = e => I18N.weekdayTime(e);
-const AGENT = {claude:'Claude Code', codex:'Codex', gemini:'Gemini CLI', copilot:'Copilot CLI'};
+const AGENT = {claude:'Claude Code', codex:'Codex', gemini:'Gemini CLI', copilot:'Copilot CLI', opencode:'OpenCode'};
 // Data Factory run status -> [dot class, translation key]
 const ADF_STATUS = {Succeeded: ['done', 'adf.succeeded'], Failed: ['error', 'adf.failed'], InProgress: ['working', 'adf.running'],
   Queued: ['working', 'adf.queued'], Cancelled: ['idle', 'adf.cancelled'], Canceling: ['idle', 'adf.cancelled'], none: ['idle', 'adf.none']};
 const SQL_DOT = {green: 'done', amber: 'waiting', red: 'error', error: 'error'};
-const GLYPH = {claude:'✦', codex:'◆', gemini:'✧', copilot:'⬢'};
+const GLYPH = {claude:'✦', codex:'◆', gemini:'✧', copilot:'⬢', opencode:'▣'};
 const GRANT_MINUTES = [5, 15, 60];   // same as skerry/store.py GRANT_MINUTES
 const glyph = (agent, spin) => `<span class="ag ${agent} ${spin ? 'spin' : ''}">${GLYPH[agent] || '✦'}</span>`;
 const mod = m => !S.settings.modules || S.settings.modules[m] !== false;
@@ -283,7 +283,7 @@ const SECTION = {
     return h + '</div>';
   },
   agents(){
-    if (!['claude', 'codex', 'gemini', 'copilot'].some(mod)) return '';
+    if (!['claude', 'codex', 'gemini', 'copilot', 'opencode'].some(mod)) return '';
     const sess = S.sessions.slice(0, 4);
     let h = `<div class="sec"><div class="sec-h"><i class="se">🤖</i><b>${tx('agents.title')}</b><span class="sp"></span>${sess.length ? '' : `<span>${tx('agents.none')}</span>`}</div>`;
     for (const s of sess){

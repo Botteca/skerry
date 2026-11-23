@@ -20,6 +20,8 @@ DEFAULT = "en"
 
 STRINGS = {
     "en": {
+        "action.plan_ready": "Plan ready: review it in the terminal",
+        "action.question": "Asks you a question in the terminal",
         "outlook.not_running": "Classic Outlook is not open: the meeting appears when you open it",
         "outlook.no_com": "Outlook cannot be read: the COM component is missing",
         "outlook.failed": "Could not read the Outlook calendar (see log)",
@@ -125,6 +127,8 @@ STRINGS = {
         "alert.sql_red": "{name}: {value}",
     },
     "it": {
+        "action.plan_ready": "Piano pronto: rivedilo nel terminale",
+        "action.question": "Ti fa una domanda nel terminale",
         "outlook.not_running": "Outlook classico non è aperto: la riunione compare quando lo apri",
         "outlook.no_com": "Impossibile leggere Outlook: manca il componente COM",
         "outlook.failed": "Impossibile leggere il calendario di Outlook (vedi log)",
@@ -225,6 +229,8 @@ STRINGS = {
         "alert.sql_red": "{name}: {value}",
     },
     "es": {
+        "action.plan_ready": "Plan listo: revísalo en el terminal",
+        "action.question": "Te hace una pregunta en el terminal",
         "outlook.not_running": "Outlook clásico no está abierto: la reunión aparece cuando lo abras",
         "outlook.no_com": "No se puede leer Outlook: falta el componente COM",
         "outlook.failed": "No se ha podido leer el calendario de Outlook (ver registro)",
@@ -325,6 +331,8 @@ STRINGS = {
         "alert.sql_red": "{name}: {value}",
     },
     "de": {
+        "action.plan_ready": "Plan fertig: prüfe ihn im Terminal",
+        "action.question": "Stellt dir eine Frage im Terminal",
         "outlook.not_running": "Das klassische Outlook ist nicht geöffnet: Die Besprechung erscheint, sobald du es öffnest",
         "outlook.no_com": "Outlook kann nicht gelesen werden: Die COM-Komponente fehlt",
         "outlook.failed": "Der Outlook-Kalender konnte nicht gelesen werden (siehe Protokoll)",
@@ -425,6 +433,8 @@ STRINGS = {
         "alert.sql_red": "{name}: {value}",
     },
     "fr": {
+        "action.plan_ready": "Plan prêt : relisez-le dans le terminal",
+        "action.question": "Vous pose une question dans le terminal",
         "outlook.not_running": "Outlook classique n'est pas ouvert : la réunion apparaît quand vous l'ouvrez",
         "outlook.no_com": "Impossible de lire Outlook : le composant COM est absent",
         "outlook.failed": "Impossible de lire le calendrier Outlook (voir le journal)",

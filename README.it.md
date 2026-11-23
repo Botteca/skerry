@@ -57,6 +57,7 @@ Microsoft 365. Tutto gira in locale.
 | Modulo | Cosa fa |
 |---|---|
 | **Claude Code** | Azione in corso, richieste di permesso (*Consenti · Consenti per 5/15/60 min · Sempre · Nega · Terminale*), avanzamento dei task, completamento, contesto per sessione, limiti 5 ore/settimanali con avvisi a soglia |
+| **OpenCode** (sperimentale) | Azione in corso, richieste di permesso, completamento, errori |
 | **GitHub Copilot CLI** | Azione in corso, richieste di permesso (*Consenti · Consenti per 5/15/60 min · Nega · Terminale*), completamento, errori |
 | **Gemini CLI** | Solo attività: azione in corso, completamento e *chiede un permesso: rispondi nel terminale* (gli hook di Gemini CLI non possono rispondere ai permessi) |
 | **Cronologia** | Impostazioni → Cronologia: sessioni degli agenti negli ultimi 30 giorni per progetto, con durata, token (Claude Code) e il costo riportato da Claude Code; export CSV. Solo file locali |
@@ -191,11 +192,12 @@ Poi:
   viene ripristinata.
 - **Codex**: apri Codex e approva i nuovi hook con `/hooks` (Codex esegue solo gli hook approvati).
 
-**GitHub Copilot CLI e Gemini CLI** non vengono mai collegati in automatico: usa **Impostazioni → Agenti → Collega**.
+**GitHub Copilot CLI, Gemini CLI e OpenCode** non vengono mai collegati in automatico: usa **Impostazioni → Agenti → Collega**.
 
 | | Dove | Permessi |
 |---|---|---|
 | **Copilot CLI** | File di Skerry `~/.copilot/hooks/skerry.json` (o `$COPILOT_HOME/hooks/`); scollegando viene cancellato | Risposti tramite l'hook `permissionRequest`. Se Skerry non risponde in tempo, Copilot chiede nel terminale come al solito |
+| **OpenCode** (sperimentale) | Plugin di Skerry `~/.config/opencode/plugins/skerry.js` (o `$OPENCODE_CONFIG_DIR/plugins/`); scollegando viene cancellato | Risposti dall'isola tramite il server di OpenCode. Se Skerry non risponde in tempo, o rispondi prima in OpenCode, resta la richiesta normale di OpenCode |
 | **Gemini CLI** | Voci `skerry` negli `hooks` di `~/.gemini/settings.json` (prima un backup; gli altri tuoi hook restano) | **Nessuno.** La notifica di permesso di Gemini CLI è solo osservabile: Skerry mostra che c'è una richiesta e tu rispondi nel terminale |
 
 Entrambi usano `skerry-cli`, che esce sempre con 0 se Skerry non è in esecuzione (Copilot CLI negherebbe lo strumento

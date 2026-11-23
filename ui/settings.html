@@ -341,12 +341,14 @@
 // [key, icon, name (literal for product names, or a translation key), description key]
 const MODULES = [
   ['claude', '✦', 'Claude Code'], ['codex', '◎', 'Codex'], ['gemini', '✧', 'Gemini CLI'], ['copilot', '⬢', 'Copilot CLI'],
+  ['opencode', '▣', 'OpenCode'],
   ['privacy', '🎙️'], ['battery', '🔋'], ['bluetooth', '🎧'],
 ];
 // [agent, icon, product name, description key]
 const AGENTS = [
   ['claude', '✦', 'Claude Code', 'agents.claudeDesc'], ['codex', '◎', 'Codex', 'agents.codexDesc'],
   ['gemini', '✧', 'Gemini CLI', 'agents.geminiDesc'], ['copilot', '⬢', 'GitHub Copilot CLI', 'agents.copilotDesc'],
+  ['opencode', '▣', 'OpenCode', 'agents.opencodeDesc'],
 ];
 const ICON = Object.fromEntries(AGENTS.map(([a, i]) => [a, i]));
 const ACCENTS = ['#d97757','#0a84ff','#30d158','#bf5af2','#ff9f0a','#ff375f','#64d2ff'];
@@ -391,7 +393,7 @@ function moduleRow(k){
 }
 function sectionOptions(id){
   const L = D.layout;
-  if (id === 'agents') return ['claude', 'codex', 'gemini', 'copilot'].map(moduleRow).join('');
+  if (id === 'agents') return ['claude', 'codex', 'gemini', 'copilot', 'opencode'].map(moduleRow).join('');
   if (id === 'usage') return `<div class="orow"><div class="l">${tx('lay.usageView')}</div><div class="seg" data-useg>${USAGE_VIEWS
     .map(([v, k]) => `<button data-v="${v}" class="${L.usage_view === v ? 'on' : ''}">${tx(k)}</button>`).join('')}</div></div>`;
   if (id === 'meeting') return `<div class="orow"><div class="l">${tx('lay.meetingAhead')}<div class="d">${tx('lay.meetingAheadDesc')}</div></div>

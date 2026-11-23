@@ -28,7 +28,7 @@ DEFAULTS = {
     "focus_terminal_after_decision": True,
     # agent integrations and system sources; the island sections are in "layout" (older modules.* are migrated)
     "modules": {
-        "claude": True, "codex": True, "gemini": True, "copilot": True, "privacy": True, "battery": True,
+        "claude": True, "codex": True, "gemini": True, "copilot": True, "opencode": True, "privacy": True, "battery": True,
         "bluetooth": True,
     },
     "layout": dict(layout.DEFAULT),

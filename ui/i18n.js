@@ -6,6 +6,8 @@
 
 const I18N_STRINGS = {
   en: {
+    "agents.opencodeDesc": "Actions, permissions and end of work, through a small plugin in ~/.config/opencode/plugins",
+    "mod.opencode.desc": "Activity, permissions and end of work",
     // ---------- pill: compact and cards ----------
     'privacy.mic': 'Microphone: {apps}',
     'privacy.cam': 'Camera: {apps}',
@@ -474,6 +476,8 @@ const I18N_STRINGS = {
   },
 
   it: {
+    "agents.opencodeDesc": "Azioni, permessi e fine lavoro, tramite un piccolo plugin in ~/.config/opencode/plugins",
+    "mod.opencode.desc": "Attività, permessi e fine lavoro",
     'privacy.mic': 'Microfono: {apps}',
     'privacy.cam': 'Fotocamera: {apps}',
     'timer.paused': 'in pausa',
@@ -929,6 +933,8 @@ const I18N_STRINGS = {
     'diag.failed': 'Copia non riuscita (vedi log)',
   },
   es: {
+    "agents.opencodeDesc": "Acciones, permisos y fin del trabajo, mediante un pequeño plugin en ~/.config/opencode/plugins",
+    "mod.opencode.desc": "Actividad, permisos y fin del trabajo",
     "privacy.mic": "Micrófono: {apps}",
     "privacy.cam": "Cámara: {apps}",
     "timer.paused": "en pausa",
@@ -1365,6 +1371,8 @@ const I18N_STRINGS = {
     "lang.fr": "Français",
   },
   de: {
+    "agents.opencodeDesc": "Aktionen, Berechtigungen und Arbeitsende, über ein kleines Plugin in ~/.config/opencode/plugins",
+    "mod.opencode.desc": "Aktivität, Berechtigungen und Arbeitsende",
     "privacy.mic": "Mikrofon: {apps}",
     "privacy.cam": "Kamera: {apps}",
     "timer.paused": "pausiert",
@@ -1801,6 +1809,8 @@ const I18N_STRINGS = {
     "lang.fr": "Français",
   },
   fr: {
+    "agents.opencodeDesc": "Actions, autorisations et fin du travail, grâce à un petit plugin dans ~/.config/opencode/plugins",
+    "mod.opencode.desc": "Activité, autorisations et fin du travail",
     "privacy.mic": "Micro : {apps}",
     "privacy.cam": "Caméra : {apps}",
     "timer.paused": "en pause",

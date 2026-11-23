@@ -22,7 +22,7 @@ KEY_LITERAL = re.compile(r"""['"]([a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9_]+)+)['"]""")
 
 # Product and brand names are the same in every language.
 BRANDS = {"Skerry", "Google Calendar", "Claude Code", "Codex", "Gemini CLI", "Copilot CLI", "GitHub Copilot CLI", "Microsoft 365", "Google Workspace", "SQL Server", "Azure SQL",
-          "Azure Data Factory", "Outlook"}
+          "Azure Data Factory", "Outlook", "OpenCode"}
 
 
 def read(*parts):
