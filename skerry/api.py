@@ -202,6 +202,16 @@ class Api:
         webbrowser.open(url)
         return True
 
+    def copy_diagnostics(self):
+        """Report for bug reports (personal data hidden) -> clipboard."""
+        from . import diagnostics
+        try:
+            ok, lines = diagnostics.copy_to_clipboard(self._app)
+            return {"ok": ok, "lines": lines}
+        except Exception:
+            log.exception("Diagnostics")
+            return {"ok": False, "lines": 0}
+
     def open_logs(self):
         os.startfile(paths.log_dir())
 

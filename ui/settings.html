@@ -219,6 +219,7 @@
   <div class="panel">
     <div class="about"><div class="logo"><i></i></div><div><b>Skerry</b><span id="ver3"></span></div></div>
     <div class="row"><div class="l"><span data-i18n="info.logs"></span><div class="d"><code id="logdir"></code></div></div><button class="btn" id="logs" data-i18n="info.openFolder"></button></div>
+    <div class="row"><div class="l"><span data-i18n="diag.title"></span><div class="d" data-i18n="diag.desc"></div><div class="d" id="diag-msg"></div></div><button class="btn" id="diag-btn" data-i18n="diag.copy"></button></div>
   </div>
 </section>
 </main>
@@ -273,6 +274,14 @@ function bind(){
   $('cx-btn').onclick = () => connect('codex');
   $('logs').onclick = () => api().open_logs();
   $('onb-btn').onclick = () => api().onboarding_restart();
+  $('diag-btn').onclick = async () => {
+    const b = $('diag-btn'), m = $('diag-msg');
+    b.disabled = true;
+    const r = await api().copy_diagnostics();
+    b.disabled = false;
+    m.textContent = r.ok ? t('diag.copied', {n: r.lines}) : t('diag.failed');
+    m.style.color = r.ok ? 'var(--green)' : 'var(--red)';
+  };
   $('upd-btn').onclick = async () => { $('upd-btn').disabled = true; D.update = await api().check_updates(); renderUpdate(); load(); };
   $('upd-now').onclick = async () => { $('upd-now').disabled = true; await api().install_update(); setTimeout(load, 300); };
   $('upd-notes').onclick = () => api().open_release_notes();

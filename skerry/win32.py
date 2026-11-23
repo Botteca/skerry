@@ -82,13 +82,26 @@ SW_HIDE, SW_SHOWNOACTIVATE, SW_RESTORE = 0, 4, 9
 
 
 # ---------------- monitor ----------------
+def monitor_dpi(hmon):
+    """Effective DPI of a monitor (GetDpiForMonitor, Windows 8.1+); 96 if unknown."""
+    try:
+        x, y = wintypes.UINT(), wintypes.UINT()
+        if ctypes.windll.shcore.GetDpiForMonitor(hmon, 0, ctypes.byref(x), ctypes.byref(y)) == 0 and x.value:
+            return int(x.value)
+    except Exception:
+        pass
+    return 96
+
+
 def _monitor_info(hmon):
     mi = MONITORINFOEXW()
     mi.cbSize = ctypes.sizeof(MONITORINFOEXW)
     user32.GetMonitorInfoW(hmon, ctypes.byref(mi))
     r, w = mi.rcMonitor, mi.rcWork
+    dpi = monitor_dpi(hmon)
     return {"device": mi.szDevice, "primary": bool(mi.dwFlags & 1),
-            "monitor": (r.left, r.top, r.right, r.bottom), "work": (w.left, w.top, w.right, w.bottom)}
+            "monitor": (r.left, r.top, r.right, r.bottom), "work": (w.left, w.top, w.right, w.bottom),
+            "dpi": dpi, "scale": round(dpi / 96, 2)}
 
 
 def monitors():
@@ -383,6 +396,50 @@ def focus_window(hwnd):
         if attached:
             user32.AttachThreadInput(me, other, False)
     return bool(ok)
+
+
+def dpi_info(hwnd=None):
+    """Process DPI awareness, system DPI and the DPI of a window (diagnostics)."""
+    if not IS_WIN:
+        return {}
+    out = {}
+    try:
+        ctx = user32.GetThreadDpiAwarenessContext()
+        out["awareness"] = {0: "unaware", 1: "system", 2: "per-monitor"}.get(
+            user32.GetAwarenessFromDpiAwarenessContext(ctx), "?")
+    except Exception:
+        out["awareness"] = "?"
+    try:
+        out["system_dpi"] = user32.GetDpiForSystem()
+    except Exception:
+        pass
+    if hwnd:
+        out["window_dpi"] = user32.GetDpiForWindow(hwnd)
+    return out
+
+
+def copy_text_to_clipboard(text):
+    """Put Unicode text on the clipboard (CF_UNICODETEXT)."""
+    if not IS_WIN:
+        return False
+    data = (str(text) + "\0").encode("utf-16-le")
+    h = kernel32.GlobalAlloc(0x42, len(data))          # GMEM_MOVEABLE | GMEM_ZEROINIT
+    if not h:
+        return False
+    p = kernel32.GlobalLock(h)
+    ctypes.memmove(p, data, len(data))
+    kernel32.GlobalUnlock(h)
+    for _ in range(10):
+        if user32.OpenClipboard(None):
+            break
+        time.sleep(0.05)
+    else:
+        return False
+    try:
+        user32.EmptyClipboard()
+        return bool(user32.SetClipboardData(13, h))
+    finally:
+        user32.CloseClipboard()
 
 
 def copy_files_to_clipboard(file_paths):

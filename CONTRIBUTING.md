@@ -4,7 +4,8 @@ Thanks for your interest! Bug reports, ideas and pull requests are all welcome.
 By taking part you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 - **Bugs and ideas**: open an [issue](https://github.com/fabrisimo/skerry/issues/new/choose) using the templates.
-  For bugs, attach the relevant lines of the log (Tray → Logs) after removing anything private.
+  For bugs, paste *Settings → About and logs → Copy diagnostics* (personal data is already hidden) or the relevant
+  log lines (Tray → Logs) after removing anything private.
 - **Security vulnerabilities**: never in a public issue. See [SECURITY.md](SECURITY.md).
 - **Bigger changes** (new modules, new connectors, new dependencies): open an issue first so we can agree on the design.
 

@@ -256,6 +256,11 @@ const I18N_STRINGS = {
     'info.version': 'Version {version}',
     'info.logs': 'Log files',
     'info.openFolder': 'Open folder',
+    'diag.title': 'Diagnostics',
+    'diag.desc': 'Version, Windows, screens, modules, connections and the last 80 log lines, without personal data (user paths, Bluetooth device names and email addresses are hidden). Paste it into a bug report.',
+    'diag.copy': 'Copy diagnostics',
+    'diag.copied': {one: 'Copied to the clipboard ({n} line)', other: 'Copied to the clipboard ({n} lines)'},
+    'diag.failed': 'Could not copy (see log)',
   },
 
   it: {
@@ -497,6 +502,11 @@ const I18N_STRINGS = {
     'info.version': 'Versione {version}',
     'info.logs': 'File di log',
     'info.openFolder': 'Apri cartella',
+    'diag.title': 'Diagnostica',
+    'diag.desc': 'Versione, Windows, schermi, moduli, connessioni e ultime 80 righe di log, senza dati personali (percorsi utente, nomi dei dispositivi Bluetooth e indirizzi email sono oscurati). Incollala in una segnalazione.',
+    'diag.copy': 'Copia diagnostica',
+    'diag.copied': {one: 'Copiata negli appunti ({n} riga)', other: 'Copiata negli appunti ({n} righe)'},
+    'diag.failed': 'Copia non riuscita (vedi log)',
   },
 };
 

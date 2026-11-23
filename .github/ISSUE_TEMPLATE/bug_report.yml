@@ -71,9 +71,10 @@ body:
   - type: textarea
     id: log
     attributes:
-      label: Log
+      label: Diagnostics or log
       description: |
-        Tray icon → Logs, or `%LOCALAPPDATA%\Skerry\logs\skerry.log` (in development `.\logs\skerry.log`).
+        Best: *Settings → About and logs → Copy diagnostics* and paste here (user paths, Bluetooth device names and
+        email addresses are already hidden). Otherwise: Tray icon → Logs, or `%LOCALAPPDATA%\Skerry\logs\skerry.log`.
         Paste the lines around the problem. **Check them first** and remove anything private
         (project names, file paths, user names, meeting titles).
       render: text

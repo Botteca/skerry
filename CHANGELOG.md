@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Copy diagnostics** (Settings → About and logs): version, Windows, DPI, screens, enabled modules, connector
+  and agent status and the last 80 log lines go to the clipboard, with user paths, Bluetooth device names and
+  email addresses hidden.
 - **Guided setup on first launch**: three short steps in the island (edge and screen, connect Claude Code and
   Codex, shortcut tips). It can be skipped and shown again from *Settings → General*. Existing installs don't see it.
 - **No more "hook failed: ECONNREFUSED" in Claude Code when Skerry is not running.** Claude Code hooks are now
