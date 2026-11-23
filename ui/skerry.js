@@ -137,7 +137,7 @@ function vCompact(){
     return {...base, key:`b${bt.percent}${badgeKey()}`, html:`<div class="bar"><span>🪫</span>
       <span class="sm" style="color:var(--red)">${bt.percent}%</span><span class="muted sm">${tx('pill.battery')}</span>${b}</div>`};
   }
-  const lim = f && mod('claude') ? `${ring(f.used_percentage)}<span class="sm">${Math.round(f.used_percentage)}%</span><span class="muted xs">${tx('usage.fiveHourShort')}</span>` : '';
+  const lim = f && mod('claude') ? `${ring(f.used_percentage)}<span class="sm">${pct(f.used_percentage)}%</span><span class="muted xs">${tx('usage.fiveHourShort')}</span>` : '';
   if (vert) return {...base, key:`vi${f&&Math.round(f.used_percentage)}${badgeKey()}`, html:`<div class="tab">${lead(glyph('claude'), true)}${f ? ring(f.used_percentage) : ''}${b}</div>`};
   // resting label (Settings > Appearance): Claude usage (falls back to the name), the name, a clock or nothing
   const il = S.settings.idle_label || 'usage', name = '<span class="muted sm">Skerry</span>';
@@ -180,41 +180,49 @@ const vDrop = () => ({w:340, r:28, key:'drop', html:`<div class="drop"><b>${tx('
 
 const BT_ICON = {mouse:'🖱️', keyboard:'⌨️', headset:'🎧', speaker:'🔊', pen:'✒️', gamepad:'🎮', phone:'📱', device:'🔹'};
 const fmtTok = n => n >= 1e6 ? I18N.number(n/1e6, n >= 1e7 ? 0 : 1) + 'M' : n >= 1e3 ? Math.round(n/1e3) + 'k' : String(n);
-function claudeBlock(){
+// Claude Code limits (5-hour session, week, spending), from the status line. Rounded like the official app.
+const pct = v => Math.round(v);
+function limitsBlock(){
   if (!mod('claude')) return '';
-  const L = S.limits, sl = S.statusline || {}, u = S.usage, view = S.layout.usage_view;
-  const showPct = view === 'all' || view === 'percent', showTok = view !== 'percent';
+  const L = S.limits, sl = S.statusline || {};
   const g = (label, w, sub) => `<div class="gauge">${ring(w.used_percentage, 46, undefined, 4.5)}
-    <div class="gv"><b>${Math.floor(w.used_percentage)}%</b><span>${label}</span><span class="muted">${sub}</span></div></div>`;
+    <div class="gv"><b>${pct(w.used_percentage)}%</b><span>${label}</span><span class="muted">${sub}</span></div></div>`;
   const age = L && L.received_at ? Math.max(0, S.now - L.received_at) : 0;
   const ago = age > 120 ? ' · ' + t('usage.dataAge', {age: age >= 3600 ? Math.floor(age/3600) + 'h' : Math.floor(age/60) + 'm'}) : '';
   const hasPct = !!(L && (L.five_hour || L.seven_day || L.spend_limit));
   let body = '';
-  if (hasPct && showPct){
+  if (hasPct){
     if (L.five_hour) body += g(tx('usage.session5h'), L.five_hour, esc(t('usage.resetsIn', {time: until(L.five_hour.resets_at)}) + ago));
     if (L.seven_day) body += g(tx('usage.week'), L.seven_day, tx('usage.resetsAt', {when: when(L.seven_day.resets_at)}));
     const sp = L.spend_limit;
     if (sp) body += g(tx('usage.spend') + (sp.period ? ' · ' + esc(sp.period) : ''), sp,
       sp.used_usd != null && sp.limit_usd != null ? `$${(+sp.used_usd).toFixed(0)} / $${(+sp.limit_usd).toFixed(0)}` : (sp.resets_at ? tx('usage.resetsIn', {time: until(sp.resets_at)}) : ''));
     body = `<div class="gauges">${body}</div>`;
+  } else {
+    body = `<div class="fn-note">${!sl.seen ? tx('usage.noData')
+      : tx('usage.noPlan', {cmd: I18N.html('<span class="mono">/usage</span>')})}</div>`;
   }
-  if (u && view === 'today'){
-    body += `<div class="usage"><div class="ucard"><span class="muted">${tx('usage.today')}</span>
+  return `<div class="sec"><div class="sec-h"><i class="se">⏱️</i><b>${tx('limits.title')}</b></div>${body}</div>`;
+}
+
+// Tokens used on this PC (local Claude Code session files): last 5 hours / 7 days and the 7-day chart, or today.
+function usageBlock(){
+  if (!mod('claude')) return '';
+  const u = S.usage, view = S.layout.usage_view;
+  if (!u) return '';
+  let body = '';
+  if (view === 'today'){
+    body = `<div class="usage"><div class="ucard"><span class="muted">${tx('usage.today')}</span>
       <div class="n"><b>${fmtTok(u.days[6])}</b><em>${tx('usage.tokens')}</em></div></div></div>`;
-  } else if (u && showTok){
+  } else {
     const card = (label, w) => `<div class="ucard" title="${tx('usage.breakdown', {input: fmtTok(w.input), output: fmtTok(w.output), cacheWrite: fmtTok(w.cache_write), cacheRead: fmtTok(w.cache_read)})}">
       <span class="muted">${label}</span><div class="n"><b>${fmtTok(w.tokens)}</b><em>${tx('usage.tokens')}</em></div><span class="muted">${tx('usage.responses', {n: w.requests})}</span></div>`;
     const max = Math.max(1, ...u.days);
     const bars = u.days.map((v, i) => `<div class="bc" title="${tx('usage.tokensTip', {tokens: fmtTok(v)})}"><i class="${i === 6 ? 'now' : ''}" style="height:${Math.max(4, Math.round(86 * v / max))}%"></i>
       <span>${esc(I18N.weekdayNarrow(S.now - (6 - i) * 86400))}</span></div>`).join('');
-    body += `<div class="usage">${card(tx('usage.last5h'), u.h5)}${card(tx('usage.last7d'), u.d7)}<div class="bars">${bars}</div></div>`;
+    body = `<div class="usage">${card(tx('usage.last5h'), u.h5)}${card(tx('usage.last7d'), u.d7)}<div class="bars">${bars}</div></div>`;
   }
-  if (!body && !showPct) return '';
-  if (!hasPct && showPct){
-    body += `<div class="fn-note">${!sl.seen ? tx('usage.noData')
-      : tx('usage.noPlan', {cmd: I18N.html('<span class="mono">/usage</span>')})}</div>`;
-  }
-  return `<div class="sec"><div class="sec-h"><i class="se">📊</i><b>${tx('usage.title')}</b><span class="sp"></span>${u ? `<span class="xs">${tx('usage.local')}</span>` : ''}</div>${body}</div>`;
+  return `<div class="sec"><div class="sec-h"><i class="se">📊</i><b>${tx('usage.title')}</b><span class="sp"></span><span class="xs">${tx('usage.local')}</span></div>${body}</div>`;
 }
 
 // Update offer above the footer: "Update to vX ready" + "Update now" (auto) or "vX available" + "Update" (notify).
@@ -296,7 +304,8 @@ const SECTION = {
     }
     return h + '</div>';
   },
-  usage(){ return claudeBlock(); },
+  limits(){ return limitsBlock(); },
+  usage(){ return usageBlock(); },
   system(){
     const sy = S.system || {}, chips = [], devs = [];
     (sy.mic || []).forEach(a => chips.push(`<span class="chip on"><span class="pd mic"></span> 🎙 ${esc(a)}</span>`));

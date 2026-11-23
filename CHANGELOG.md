@@ -2,6 +2,9 @@
 
 ## 1.0.1
 
+- **Claude Code limits** (5-hour session and week) now have their own section, separate from *Claude usage*
+  (tokens and chart): each can be moved or hidden in *Settings → Layout*. Percentages are rounded like the official
+  app (they were truncated, so they often showed 1% less).
 - Claude Code plan approval (*ExitPlanMode*) and multiple-choice questions (*AskUserQuestion*) are no longer offered
   as Allow/Deny in the island, where an answer did not close Claude Code's own dialog: the island shows that the
   agent is waiting for you in the terminal.

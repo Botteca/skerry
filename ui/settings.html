@@ -372,7 +372,8 @@ function show(p){
 const SECTIONS = [
   ['media', '🎵', 'mod.media', 'mod.media.desc'], ['meeting', '📅', 'mod.calendar', 'mod.calendar.desc'],
   ['adf', '🏭', 'mod.adf', 'mod.adf.desc'], ['sql', '🗄️', 'mod.sql', 'mod.sql.desc'],
-  ['agents', '✦', 'sec.agents', 'sec.agents.desc'], ['usage', '📊', 'mod.usage', 'mod.usage.desc'],
+  ['agents', '✦', 'sec.agents', 'sec.agents.desc'], ['limits', '⏱️', 'mod.limits', 'mod.limits.desc'],
+  ['usage', '📊', 'mod.usage', 'mod.usage.desc'],
   ['system', '🔋', 'sec.system', 'sec.system.desc'], ['timer', '⏱️', 'mod.timer', 'mod.timer.desc'],
   ['shelf', '📎', 'mod.shelf', 'mod.shelf.desc'],
 ];
@@ -383,7 +384,7 @@ const PILL_EVENTS = [
   ['timer', '⏱️', 'pill.timer', 'pill.timer.desc'], ['battery', '🪫', 'pill.battery', 'pill.battery.desc'],
 ];
 const PROFILE_NAMES = {work: 'profile.work', present: 'profile.present', focus: 'profile.focus'};
-const USAGE_VIEWS = [['all', 'lay.usageAll'], ['tokens', 'lay.usageTokens'], ['percent', 'lay.usagePercent'], ['today', 'lay.usageToday']];
+const USAGE_VIEWS = [['all', 'lay.usageAll'], ['today', 'lay.usageToday']];
 let layoutKey = null, openOpts = new Set();
 
 function moduleRow(k){

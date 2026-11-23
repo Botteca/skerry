@@ -6,14 +6,15 @@ appended at the end in their default position, so a saved order never breaks.
 """
 
 # Expanded island, default order (the order of versions before the Layout page).
-SECTIONS = ("media", "meeting", "adf", "sql", "agents", "usage", "system", "timer", "shelf")
+# The tuple order is the default order of the expanded island; ids never change (saved orders and profiles use them).
+SECTIONS = ("media", "meeting", "adf", "sql", "agents", "limits", "usage", "system", "timer", "shelf")
 # Closed pill: what may occupy it when several things happen. "permission" is always first and cannot be hidden.
 PILL = ("permission", "agent", "meeting", "media", "timer", "battery")
 FIXED_PILL = "permission"
 # Minimal mode: only agents (plus permissions and important alerts, which never depend on the layout).
 MINIMAL_SECTIONS = ("agents",)
 MINIMAL_PILL = ("permission", "agent")
-USAGE_VIEWS = ("all", "tokens", "percent", "today")
+USAGE_VIEWS = ("all", "today")
 # modules.<key> of versions before the Layout page -> section id (agents and system keep their own sub-switches)
 LEGACY_MODULES = {"media": "media", "calendar": "meeting", "adf": "adf", "sql": "sql", "usage": "usage",
                   "timer": "timer", "shelf": "shelf"}
@@ -45,7 +46,8 @@ def resolve(layout):
     minimal = bool(lay.get("minimal"))
     sections = [s for s in order if s not in hidden and (not minimal or s in MINIMAL_SECTIONS)]
     active_pill = [p for p in pill if p not in pill_hidden and (not minimal or p in MINIMAL_PILL)]
-    view = lay.get("usage_view") if lay.get("usage_view") in USAGE_VIEWS else "all"
+    # "tokens" and "percent" date from when limits and tokens shared a section: both now mean "all"
+    view = "today" if lay.get("usage_view") == "today" else "all"
     try:
         ahead = max(0, min(1440, int(lay.get("meeting_ahead", DEFAULT["meeting_ahead"]))))
     except (TypeError, ValueError):

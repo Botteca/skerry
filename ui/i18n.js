@@ -6,6 +6,9 @@
 
 const I18N_STRINGS = {
   en: {
+    "limits.title": "Claude Code limits",
+    "mod.limits": "Claude Code limits",
+    "mod.limits.desc": "5-hour session and weekly limit, as reported by Claude Code",
     "agents.opencodeDesc": "Actions, permissions and end of work, through a small plugin in ~/.config/opencode/plugins",
     "mod.opencode.desc": "Activity, permissions and end of work",
     // ---------- pill: compact and cards ----------
@@ -137,8 +140,6 @@ const I18N_STRINGS = {
     'lay.alwaysOn': 'Always shown',
     'lay.usageView': 'Show',
     'lay.usageAll': 'Everything',
-    'lay.usageTokens': 'Tokens',
-    'lay.usagePercent': 'Percentages',
     'lay.usageToday': 'Today only',
     'lay.meetingAhead': 'Show the meeting from (minutes before)',
     'lay.meetingAheadDesc': 'Up to 1440 (24 hours); a meeting in progress is always shown',
@@ -476,6 +477,9 @@ const I18N_STRINGS = {
   },
 
   it: {
+    "limits.title": "Limiti di Claude Code",
+    "mod.limits": "Limiti di Claude Code",
+    "mod.limits.desc": "Sessione di 5 ore e limite settimanale, come li comunica Claude Code",
     "agents.opencodeDesc": "Azioni, permessi e fine lavoro, tramite un piccolo plugin in ~/.config/opencode/plugins",
     "mod.opencode.desc": "Attività, permessi e fine lavoro",
     'privacy.mic': 'Microfono: {apps}',
@@ -604,8 +608,6 @@ const I18N_STRINGS = {
     'lay.alwaysOn': 'Sempre visibile',
     'lay.usageView': 'Mostra',
     'lay.usageAll': 'Tutto',
-    'lay.usageTokens': 'Token',
-    'lay.usagePercent': 'Percentuali',
     'lay.usageToday': 'Solo oggi',
     'lay.meetingAhead': 'Mostra la riunione da (minuti prima)',
     'lay.meetingAheadDesc': 'Fino a 1440 (24 ore); una riunione in corso si vede sempre',
@@ -933,6 +935,9 @@ const I18N_STRINGS = {
     'diag.failed': 'Copia non riuscita (vedi log)',
   },
   es: {
+    "limits.title": "Límites de Claude Code",
+    "mod.limits": "Límites de Claude Code",
+    "mod.limits.desc": "Sesión de 5 horas y límite semanal, según Claude Code",
     "agents.opencodeDesc": "Acciones, permisos y fin del trabajo, mediante un pequeño plugin en ~/.config/opencode/plugins",
     "mod.opencode.desc": "Actividad, permisos y fin del trabajo",
     "privacy.mic": "Micrófono: {apps}",
@@ -1060,8 +1065,6 @@ const I18N_STRINGS = {
     "lay.alwaysOn": "Siempre visible",
     "lay.usageView": "Mostrar",
     "lay.usageAll": "Todo",
-    "lay.usageTokens": "Tokens",
-    "lay.usagePercent": "Porcentajes",
     "lay.usageToday": "Solo hoy",
     "lay.meetingAhead": "Mostrar la reunión desde (minutos antes)",
     "lay.meetingAheadDesc": "Hasta 1440 (24 horas); una reunión en curso siempre se muestra",
@@ -1371,6 +1374,9 @@ const I18N_STRINGS = {
     "lang.fr": "Français",
   },
   de: {
+    "limits.title": "Claude-Code-Limits",
+    "mod.limits": "Claude-Code-Limits",
+    "mod.limits.desc": "5-Stunden-Sitzung und Wochenlimit, wie Claude Code sie meldet",
     "agents.opencodeDesc": "Aktionen, Berechtigungen und Arbeitsende, über ein kleines Plugin in ~/.config/opencode/plugins",
     "mod.opencode.desc": "Aktivität, Berechtigungen und Arbeitsende",
     "privacy.mic": "Mikrofon: {apps}",
@@ -1498,8 +1504,6 @@ const I18N_STRINGS = {
     "lay.alwaysOn": "Immer sichtbar",
     "lay.usageView": "Anzeigen",
     "lay.usageAll": "Alles",
-    "lay.usageTokens": "Tokens",
-    "lay.usagePercent": "Prozent",
     "lay.usageToday": "Nur heute",
     "lay.meetingAhead": "Besprechung anzeigen ab (Minuten vorher)",
     "lay.meetingAheadDesc": "Bis 1440 (24 Stunden); eine laufende Besprechung wird immer angezeigt",
@@ -1809,6 +1813,9 @@ const I18N_STRINGS = {
     "lang.fr": "Français",
   },
   fr: {
+    "limits.title": "Limites de Claude Code",
+    "mod.limits": "Limites de Claude Code",
+    "mod.limits.desc": "Session de 5 heures et limite hebdomadaire, telles que les indique Claude Code",
     "agents.opencodeDesc": "Actions, autorisations et fin du travail, grâce à un petit plugin dans ~/.config/opencode/plugins",
     "mod.opencode.desc": "Activité, autorisations et fin du travail",
     "privacy.mic": "Micro : {apps}",
@@ -1936,8 +1943,6 @@ const I18N_STRINGS = {
     "lay.alwaysOn": "Toujours affiché",
     "lay.usageView": "Afficher",
     "lay.usageAll": "Tout",
-    "lay.usageTokens": "Tokens",
-    "lay.usagePercent": "Pourcentages",
     "lay.usageToday": "Aujourd'hui seulement",
     "lay.meetingAhead": "Afficher la réunion à partir de (minutes avant)",
     "lay.meetingAheadDesc": "Jusqu'à 1440 (24 heures) ; une réunion en cours est toujours affichée",
