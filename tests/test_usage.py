@@ -40,7 +40,7 @@ def test_windows_and_totals(root):
     write(os.path.join(root, "C--rep-ExampleApp", "s1.jsonl"), [
         {"type": "user", "timestamp": iso(now - 60), "message": {"role": "user", "content": "hi"}},
         record(now - 1 * HOUR, "m1", inp=100, out=50, cw=10, cr=1000),
-        record(now - 3 * DAY, "m2", inp=200, out=20),
+        record(now - 3 * DAY - 6 * HOUR, "m2", inp=200, out=20),  # mid-bucket, away from day boundaries
         record(now - 8 * DAY, "m3", inp=9999),          # older than 7 days: ignored
         record(now + 2 * HOUR, "m4", inp=9999),          # in the future: ignored
     ])
