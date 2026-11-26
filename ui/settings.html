@@ -121,6 +121,7 @@
   .opts{padding:2px 16px 12px 62px;display:flex;flex-direction:column;gap:6px}
   .opts .orow{display:flex;align-items:center;gap:10px;font-size:12.5px}
   .opts .orow .l{flex:1} .opts .orow input[type=text]{width:200px}
+  .lrow input[data-lk=name]{width:150px} .lrow input.wide{flex:1;width:auto;min-width:0}
   .more{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:12px}
   .hproj{cursor:pointer} .hsess .row{gap:12px;padding:7px 16px 7px 58px;min-height:0;font-size:12px;color:var(--muted)}
   .hsess .row b{color:var(--fg);font-weight:500}
@@ -375,7 +376,8 @@ const SECTIONS = [
   ['agents', '✦', 'sec.agents', 'sec.agents.desc'], ['limits', '⏱️', 'mod.limits', 'mod.limits.desc'],
   ['usage', '📊', 'mod.usage', 'mod.usage.desc'],
   ['system', '🔋', 'sec.system', 'sec.system.desc'], ['timer', '⏱️', 'mod.timer', 'mod.timer.desc'],
-  ['shelf', '📎', 'mod.shelf', 'mod.shelf.desc'],
+  ['shelf', '📎', 'mod.shelf', 'mod.shelf.desc'], ['links', '🔗', 'mod.links', 'mod.links.desc'],
+  ['case', 'Aa', 'mod.case', 'mod.case.desc'],
 ];
 // closed pill events, same ids as layout.PILL
 const PILL_EVENTS = [
@@ -399,6 +401,7 @@ function sectionOptions(id){
     .map(([v, k]) => `<button data-v="${v}" class="${L.usage_view === v ? 'on' : ''}">${tx(k)}</button>`).join('')}</div></div>`;
   if (id === 'meeting') return `<div class="orow"><div class="l">${tx('lay.meetingAhead')}<div class="d">${tx('lay.meetingAheadDesc')}</div></div>
     <input type="number" min="0" max="1440" data-ahead value="${L.meeting_ahead}"></div>`;
+  if (id === 'links') return linksEditor();
   if (id === 'system'){
     const bt = D.bluetooth || [];
     return ['privacy', 'battery', 'bluetooth'].map(moduleRow).join('')
@@ -408,6 +411,22 @@ function sectionOptions(id){
           <label class="sw"><input type="checkbox" data-btshow="${esc(d.name)}" ${d.shown ? 'checked' : ''} aria-label="${tx('lay.btShow', {name: d.name})}"><span></span></label></div>`).join('');
   }
   return '';
+}
+// Useful links: edited locally, saved through api.links_save, which keeps only http(s) links (max 20).
+let linkList = null;
+function linksEditor(){
+  if (!linkList) linkList = (get(D.settings, 'links') || []).map(l => ({name: l.name, url: l.url}));
+  return linkList.map((l, i) => `<div class="orow lrow">
+      <input type="text" data-lk="name" data-i="${i}" value="${esc(l.name)}" placeholder="${tx('lay.linkName')}" aria-label="${tx('lay.linkName')}">
+      <input type="text" class="wide" data-lk="url" data-i="${i}" value="${esc(l.url)}" placeholder="${tx('lay.linkUrlPh')}" aria-label="${tx('lay.linkUrl')}">
+      <button class="mv" data-lkdel="${i}" aria-label="${tx('lay.linkRemove', {name: l.name || l.url})}">✕</button></div>`).join('')
+    + `<div class="orow"><div class="l d" id="lk-msg">${tx('lay.linksHint')}</div><button class="btn" data-lkadd ${linkList.length >= 20 ? 'disabled' : ''}>${tx('lay.linkAdd')}</button></div>`;
+}
+async function linksSave(){
+  const wanted = linkList.filter(l => l.url.trim());
+  const saved = await api().links_save(wanted);
+  const msg = $('lk-msg');
+  if (msg) msg.textContent = t(saved.length < wanted.length ? 'lay.linkInvalid' : 'lay.linksHint');
 }
 function itemHtml(kind, id, icon, nameKey, descKey, i, n, on, fixed){
   const name = t(nameKey), opts = kind === 'sec' ? sectionOptions(id) : '';
@@ -499,6 +518,7 @@ function sortable(list){
       el.checked ? cur.delete(item.dataset.id) : cur.add(item.dataset.id);
       save('layout.' + key, [...cur]);
     } else if (el.matches('[data-mod]')) save('modules.' + el.dataset.mod, el.checked);
+    else if (el.matches('[data-lk]')){ linkList[+el.dataset.i][el.dataset.lk] = el.value; linksSave(); }
     else if (el.matches('[data-ahead]')) save('layout.meeting_ahead', Math.max(0, Math.min(1440, +el.value || 0)));
     else if (el.matches('[data-bt]') || el.matches('[data-btshow]')){
       const name = el.dataset.bt || el.dataset.btshow, row = el.closest('.orow');
@@ -508,6 +528,12 @@ function sortable(list){
   list.addEventListener('click', e => {
     const b = e.target.closest('[data-useg] button');
     if (b) save('layout.usage_view', b.dataset.v);
+    if (e.target.closest('[data-lkadd]')){
+      linkList.push({name: '', url: ''}); renderLayout(true);
+      const names = list.querySelectorAll('[data-lk="name"]'); if (names.length) names[names.length - 1].focus();
+    }
+    const del = e.target.closest('[data-lkdel]');
+    if (del){ linkList.splice(+del.dataset.lkdel, 1); linksSave(); renderLayout(true); }
   });
 }
 // after a keyboard move the list is rebuilt: put the focus back on the same control of the same row

@@ -29,6 +29,36 @@ const vertical = () => ['left','right'].includes(S.settings.edge);
 // Status indicator: the companion slot (ui/companion.js), the classic glyph/dot, or nothing in the closed pill when "off".
 const cstyle = () => (S.settings.companion || {}).style || 'dot';
 const lead = (classic, pill) => Companion.style(S) ? '<span class="cslot"></span>' : pill && cstyle() === 'off' ? '' : classic;
+// Line icons (24x24, stroke = currentColor) for section headers and controls: crisper and calmer than emoji.
+const ICON = {
+  media: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  meeting: '<rect x="3" y="4.5" width="18" height="17" rx="3"/><path d="M16 2.5v4M8 2.5v4M3 10h18"/>',
+  adf: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><path d="M6.5 10v4a3 3 0 0 0 3 3H14"/>',
+  sql: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+  agents: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17v4M17 19h4"/>',
+  limits: '<path d="M12 14l4-4"/><path d="M3.3 19a10 10 0 1 1 17.4 0"/>',
+  usage: '<path d="M3 20h18M6 16v-5M11 16V6M16 16v-8"/>',
+  system: '<rect x="4" y="4" width="16" height="11" rx="2"/><path d="M2 20h20"/>',
+  timer: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M10 2h4"/>',
+  shelf: '<path d="M21 11l-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7"/>',
+  links: '<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3.2-3.2a4.5 4.5 0 0 0-6.4-6.4L12 5.6"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3.2 3.2a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/>',
+  case: '<path d="M2.5 18l5-12 5 12M4.5 14h6"/><circle cx="17.5" cy="15" r="3"/><path d="M20.5 12v6"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
+  prev: '<path d="M18 19L9 12l9-7z" class="f"/><path d="M6 5v14"/>',
+  next: '<path d="M6 5l9 7-9 7z" class="f"/><path d="M18 5v14"/>',
+  play: '<path d="M7 4.5l12 7.5-12 7.5z" class="f"/>',
+  pause: '<rect x="6" y="4.5" width="4" height="15" rx="1" class="f"/><rect x="14" y="4.5" width="4" height="15" rx="1" class="f"/>',
+  vol: '<path d="M11 5L6 9H3v6h3l5 4z" class="f"/><path d="M15.5 9a4 4 0 0 1 0 6M18.5 6a8.5 8.5 0 0 1 0 12"/>',
+  mute: '<path d="M11 5L6 9H3v6h3l5 4z" class="f"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>',
+  copy: '<rect x="8" y="8" width="13" height="13" rx="2.5"/><path d="M16 8V5.5A2.5 2.5 0 0 0 13.5 3h-8A2.5 2.5 0 0 0 3 5.5v8A2.5 2.5 0 0 0 5.5 16H8"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  out: '<path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>',
+};
+const ico = (name, cls = 'se') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICON[name] || ''}</svg>`;
+const BRAND = '<img class="blogo" src="botteca.svg" alt="Botteca" title="Botteca">';
+// The text of the "case" section lives in one textarea that survives re-renders (moved into each new .caseslot).
+let caseBox = null;
+const CASE_KEY = {upper: 'case.upper', lower: 'case.lower', sentence: 'case.sentence', capital: 'case.capital', alternate: 'case.alternate', inverse: 'case.inverse'};
 const MOOD_KEY = {rest: 'cmp.rest', work: 'cmp.work', perm: 'cmp.perm', happy: 'cmp.happy', worry: 'cmp.worry', meet: 'cmp.meet', sleep: 'cmp.sleep'};
 
 function ring(p, size = 16, color, sw = 2.5){
@@ -202,7 +232,7 @@ function limitsBlock(){
     body = `<div class="fn-note">${!sl.seen ? tx('usage.noData')
       : tx('usage.noPlan', {cmd: I18N.html('<span class="mono">/usage</span>')})}</div>`;
   }
-  return `<div class="sec"><div class="sec-h"><i class="se">⏱️</i><b>${tx('limits.title')}</b></div>${body}</div>`;
+  return `<div class="sec"><div class="sec-h">${ico('limits')}<b>${tx('limits.title')}</b></div>${body}</div>`;
 }
 
 // Tokens used on this PC (local Claude Code session files): last 5 hours / 7 days and the 7-day chart, or today.
@@ -222,7 +252,7 @@ function usageBlock(){
       <span>${esc(I18N.weekdayNarrow(S.now - (6 - i) * 86400))}</span></div>`).join('');
     body = `<div class="usage">${card(tx('usage.last5h'), u.h5)}${card(tx('usage.last7d'), u.d7)}<div class="bars">${bars}</div></div>`;
   }
-  return `<div class="sec"><div class="sec-h"><i class="se">📊</i><b>${tx('usage.title')}</b><span class="sp"></span><span class="xs">${tx('usage.local')}</span></div>${body}</div>`;
+  return `<div class="sec"><div class="sec-h">${ico('usage')}<b>${tx('usage.title')}</b><span class="sp"></span><span class="xs">${tx('usage.local')}</span></div>${body}</div>`;
 }
 
 // Update offer above the footer: "Update to vX ready" + "Update now" (auto) or "vX available" + "Update" (notify).
@@ -247,10 +277,10 @@ const SECTION = {
       ${md.duration ? `<div class="prog" data-act="seek"><i data-live="pg"></i></div>
         <div class="times"><span data-live="pt"></span><span>${mmss(md.duration)}</span></div>` : ''}
       </div></div>
-      <div class="ctl"><span class="k" data-act="media" data-arg="prev">⏮</span>
-        <span class="k" data-act="media" data-arg="toggle">${md.playing ? '⏸' : '▶'}</span>
-        <span class="k" data-act="media" data-arg="next">⏭</span><span class="sp"></span>
-        ${au ? `<div class="vol"><span class="k" data-act="mute" style="font-size:14px">${au.muted ? '🔇' : '🔊'}</span>
+      <div class="ctl"><span class="k" data-act="media" data-arg="prev">${ico('prev', 'ki')}</span>
+        <span class="k play" data-act="media" data-arg="toggle">${ico(md.playing ? 'pause' : 'play', 'ki')}</span>
+        <span class="k" data-act="media" data-arg="next">${ico('next', 'ki')}</span><span class="sp"></span>
+        ${au ? `<div class="vol"><span class="k" data-act="mute">${ico(au.muted ? 'mute' : 'vol', 'ki')}</span>
           <input type="range" min="0" max="100" data-live="vol" value="${Math.round((au.volume||0)*100)}"></div>` : ''}
       </div></div>`;
   },
@@ -262,7 +292,7 @@ const SECTION = {
     const whenTxt = m.in_progress ? t('meeting.inProgress', {time: hm(m.end)})
       : left < 3600 ? t('meeting.inMinutes', {n: Math.max(1, Math.round(left / 60))}) : t('meeting.at', {time: hm(m.start)});
     const sub = [whenTxt, m.provider, m.location].filter(Boolean).map(esc).join(' · ');
-    return `<div class="sec"><div class="sec-h"><i class="se">📅</i><b>${tx('meeting.title')}</b></div><div class="meet ${m.in_progress ? 'live' : (left < 300 ? 'soon' : '')}">
+    return `<div class="sec"><div class="sec-h">${ico('meeting')}<b>${tx('meeting.title')}</b></div><div class="meet ${m.in_progress ? 'live' : (left < 300 ? 'soon' : '')}">
       <div class="mt"><b>${hm(m.start)}</b><span>${hm(m.end)}</span></div>
       <div class="mi2"><div class="mn">${m.title ? esc(m.title) : tx('meeting.untitled')}</div><div class="muted sm">${sub}</div></div>
       ${m.join_url ? `<button class="b-join" data-act="join">${tx('meeting.join')}</button>` : ''}</div></div>`;
@@ -270,7 +300,7 @@ const SECTION = {
   // Azure Data Factory: latest run of the chosen pipelines
   adf(){
     if (!S.adf) return '';
-    let h = `<div class="sec"><div class="sec-h"><i class="se">🏭</i><b>${tx('adf.title')}</b></div>`;
+    let h = `<div class="sec"><div class="sec-h">${ico('adf')}<b>${tx('adf.title')}</b></div>`;
     for (const r of S.adf){
       const [dot, label] = ADF_STATUS[r.status] || ['idle', 'adf.none'];
       const at = r.end || r.start;
@@ -282,7 +312,7 @@ const SECTION = {
   // SQL Server / Azure SQL widgets: first value of a read-only query, green/amber/red
   sql(){
     if (!S.sql) return '';
-    let h = `<div class="sec"><div class="sec-h"><i class="se">🗄️</i><b>${tx('sql.title')}</b></div>`;
+    let h = `<div class="sec"><div class="sec-h">${ico('sql')}<b>${tx('sql.title')}</b></div>`;
     for (const w of S.sql){
       const v = w.value === null ? '—' : typeof w.value === 'number' ? I18N.number(w.value, 2) : String(w.value);
       h += `<div class="sess" title="${esc(w.error)}"><span class="dot ${SQL_DOT[w.level] || 'idle'}"></span><span class="p">${esc(w.name)}</span>
@@ -293,7 +323,7 @@ const SECTION = {
   agents(){
     if (!['claude', 'codex', 'gemini', 'copilot', 'opencode'].some(mod)) return '';
     const sess = S.sessions.slice(0, 4);
-    let h = `<div class="sec"><div class="sec-h"><i class="se">🤖</i><b>${tx('agents.title')}</b><span class="sp"></span>${sess.length ? '' : `<span>${tx('agents.none')}</span>`}</div>`;
+    let h = `<div class="sec"><div class="sec-h">${ico('agents')}<b>${tx('agents.title')}</b><span class="sp"></span>${sess.length ? '' : `<span>${tx('agents.none')}</span>`}</div>`;
     for (const s of sess){
       const tk = s.tasks;
       h += `<div class="sess ${s.has_window ? 'click' : ''}" ${s.has_window ? `data-act="focus" data-arg="${esc(s.sid)}" title="${tx('agents.focusTip')}"` : ''}>
@@ -314,11 +344,11 @@ const SECTION = {
     (sy.bluetooth || []).forEach(d => devs.push(`<span title="${esc(d.name)}" class="chip on dev ${d.battery <= 15 ? 'low' : ''}"><span class="di">${BT_ICON[d.kind] || '🔹'}</span><span class="dn">${esc(d.name.replace(/\s*Bluetooth\s*/i,' ').trim())}</span>
       <span class="bt"><i style="width:${d.battery}%;background:${d.battery <= 15 ? 'var(--red)' : d.battery <= 30 ? 'var(--amber)' : 'var(--green)'}"></i></span><b>${d.battery}%</b></span>`));
     if (!chips.length && !devs.length) return '';
-    return `<div class="sec"><div class="sec-h"><i class="se">💻</i><b>${tx('system.title')}</b></div>${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}${devs.length ? `<div class="devs">${devs.join('')}</div>` : ''}</div>`;
+    return `<div class="sec"><div class="sec-h">${ico('system')}<b>${tx('system.title')}</b></div>${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}${devs.length ? `<div class="devs">${devs.join('')}</div>` : ''}</div>`;
   },
   timer(){
     const tm = S.timer;
-    let h = `<div class="sec"><div class="sec-h"><i class="se">⏱️</i><b>${tx('timer.title')}</b>${tm ? `<span class="muted">· ${esc(tm.label)}${tm.mode === 'pomodoro' ? ' #' + tm.cycle : ''}</span>` : ''}</div>`;
+    let h = `<div class="sec"><div class="sec-h">${ico('timer')}<b>${tx('timer.title')}</b>${tm ? `<span class="muted">· ${esc(tm.label)}${tm.mode === 'pomodoro' ? ' #' + tm.cycle : ''}</span>` : ''}</div>`;
     h += tm ? `<div class="timer">${ring(100*(1 - tm.left/tm.duration), 26, tm.phase === 'focus' || tm.mode === 'timer' ? 'var(--accent)' : 'var(--green)')}
           <span class="big" data-live="tm">${mmss(tm.left)}</span><span class="sp"></span>
           <span class="chip act" data-act="tpause">${tm.paused ? '▶ ' + tx('timer.resume') : '⏸ ' + tx('timer.pause')}</span><span class="chip act" data-act="tstop">✕ ${tx('timer.stop')}</span></div>`
@@ -328,7 +358,7 @@ const SECTION = {
   },
   shelf(){
     const it = S.shelf || [];
-    let h = `<div class="sec"><div class="sec-h"><i class="se">🗂️</i><b>${tx('shelf.title')}</b><span class="sp"></span>
+    let h = `<div class="sec"><div class="sec-h">${ico('shelf')}<b>${tx('shelf.title')}</b><span class="sp"></span>
       ${it.length ? `<span class="link" data-act="shelf-copyall">${tx('shelf.copyAll')}</span><span class="link" data-act="shelf-clear">${tx('shelf.clear')}</span>` : ''}</div>`;
     if (!it.length) h += `<div class="muted xs">${tx('shelf.empty')}</div>`;
     it.forEach((f, i) => {
@@ -339,6 +369,22 @@ const SECTION = {
     });
     return h + '</div>';
   },
+  // Useful links (Settings > Layout): a tile per link, opened in the default browser by Api.open_link
+  links(){
+    const L = S.links || [];
+    const h = `<div class="sec"><div class="sec-h">${ico('links')}<b>${tx('links.title')}</b><span class="sp"></span>
+      <span class="link" data-act="settings">${tx(L.length ? 'links.edit' : 'links.add')}</span></div>`;
+    if (!L.length) return h + `<div class="muted xs">${tx('links.empty')}</div></div>`;
+    return h + `<div class="lnks">${L.map((l, i) => `<div class="lnk" data-act="open-link" data-arg="${i}" title="${esc(l.host)}">
+      <span class="lt">${esc([...l.name][0] || '·')}</span><span class="ln">${esc(l.name)}</span>${ico('out', 'lo')}</div>`).join('')}</div></div>`;
+  },
+  // Upper / lower case and friends (ui/textcase.js), on the text typed or pasted in the box
+  case(){
+    return `<div class="sec"><div class="sec-h">${ico('case')}<b>${tx('case.title')}</b><span class="sp"></span><span class="xs" data-live="cc"></span>
+      <span class="cb icon" data-act="case-clear" title="${tx('case.clear')}">${ico('x', 'ki')}</span>
+      <span class="cb icon" data-act="case-copy" title="${tx('case.copy')}">${ico('copy', 'ki')}</span></div>
+      <div class="caseslot"></div><div class="cbtns">${TextCase.MODES.map(m => `<span class="cb" data-act="case" data-arg="${m}">${tx(CASE_KEY[m])}</span>`).join('')}</div></div>`;
+  },
 };
 
 function vExpanded(){
@@ -347,12 +393,12 @@ function vExpanded(){
   let h = '<div class="card">' + (cm ? `<div class="hd chd"><span class="cslot"></span><span class="muted sm">${tx(MOOD_KEY[cm])}</span></div>` : '');
   for (const id of S.layout.sections) if (SECTION[id]) h += SECTION[id]();
   h += updateBar();
-  h += `<div class="foot"><span>Skerry ${esc(S.version)}</span>
-    <span class="sp"></span><span class="link" data-act="settings">⚙ ${tx('foot.settings')}</span></div></div>`;
+  h += `<div class="foot">${BRAND}<span>Skerry ${esc(S.version)}</span>
+    <span class="sp"></span><span class="link gear" data-act="settings">${ico('gear', 'ki')}${tx('foot.settings')}</span></div></div>`;
   const u = S.update;
   const key = 'x' + JSON.stringify([cm, S.layout, md && [md.title, md.artist, md.playing, md.duration, thumbId, !!au, au && au.muted],
     sess.map(s => [s.sid, s.status, s.action, s.tasks, s.context_pct, s.has_window]), L, S.statusline && S.statusline.seen, S.usage && [S.usage.h5, S.usage.d7, S.usage.days],
-    Math.floor(S.now/30), sy, S.adf, S.sql, S.timer && [S.timer.label, S.timer.paused, S.timer.cycle], S.shelf, u && [u.status, u.version]]);
+    Math.floor(S.now/30), sy, S.adf, S.sql, S.links, S.timer && [S.timer.label, S.timer.paused, S.timer.cycle], S.shelf, u && [u.status, u.version]]);
   return {w:480, r:28, key, html:h};
 }
 
@@ -386,7 +432,7 @@ function vOnboarding(){
         opt(cstyle() === 'dot', 'onb-cmp', 'dot', tx('look.cmpDot'))}${opt(cstyle() === 'eyes', 'onb-cmp', 'eyes', tx('look.cmpEyes'))}</div>`;
   }
   const dots = [0, 1, 2].map(i => `<i class="${i === step ? 'on' : ''}"></i>`).join('');
-  const left = step < 2 ? `<span class="link" data-act="onb-skip">${tx('onb.skip')}</span>` : '';
+  const left = BRAND + (step < 2 ? `<span class="link" data-act="onb-skip">${tx('onb.skip')}</span>` : '');
   const back = step > 0 ? `<button class="b-ghost" data-act="onb-back">${tx('onb.back')}</button>` : '';
   const next = step < 2 ? `<button class="b-join" data-act="onb-next">${tx('onb.next')}</button>`
                         : `<button class="b-join" data-act="onb-done">${tx('onb.start')}</button>`;
@@ -418,6 +464,7 @@ function live(){
     set('pt', el => el.textContent = mmss(p));
   }
   set('gr', el => el.textContent = mmss(+el.dataset.until - S.now));
+  if (caseBox) set('cc', el => el.textContent = caseBox.value ? t('case.count', TextCase.counts(caseBox.value)) : '');
   if (S.timer){ ['tm','tmb','tmc'].forEach(k => set(k, el => el.textContent = mmss(S.timer.left))); }
   if (S.audio){
     set('vol', el => { if (document.activeElement !== el) el.value = Math.round((S.audio.volume || 0)*100); });
@@ -439,7 +486,15 @@ function render(){
     lastKey = key; lastKind = view.kind;
     $c.className = (view.auto ? 'auto ' : '') + (fresh ? 'fresh' : '');
     $c.style.width = view.auto ? '' : view.w + 'px';
+    const typing = caseBox && document.activeElement === caseBox, sel = caseBox && [caseBox.selectionStart, caseBox.selectionEnd];
     $c.innerHTML = `<div class="${fresh ? 'enter' : ''}">${view.html}</div>`;
+    const slot = $c.querySelector('.caseslot');
+    if (slot){
+      if (!caseBox){ caseBox = document.createElement('textarea'); caseBox.className = 'casebox'; caseBox.rows = 2; caseBox.spellcheck = false; }
+      caseBox.placeholder = t('case.placeholder');
+      slot.appendChild(caseBox);
+      if (typing){ caseBox.focus(); caseBox.setSelectionRange(...sel); }
+    }
   }
   live();
   const cm = Companion.style(S) && Companion.moodNow(S);
@@ -489,6 +544,10 @@ function act(name, arg, ev, el){
     case 'shelf-remove': return api.shelf_remove(+arg);
     case 'shelf-clear': return api.shelf_clear();
     case 'join': return api.join_meeting();
+    case 'open-link': return api.open_link(+arg);
+    case 'case': if (caseBox){ caseBox.value = TextCase.convert(arg, caseBox.value); live(); } return;
+    case 'case-clear': if (caseBox){ caseBox.value = ''; caseBox.focus(); live(); } return;
+    case 'case-copy': return caseBox && caseBox.value && api.copy_text(caseBox.value).then(ok => ok && flash(el.closest('.sec').querySelector('[data-live="cc"]'), t('case.copied')));
     case 'settings': return api.open_settings();
     case 'update': return api.install_update();
     case 'onb-edge': return api.set_setting('edge', arg).then(tick);
@@ -506,14 +565,15 @@ document.addEventListener('click', e => {
   if (suppressClick || !S) return;
   const tg = e.target.closest('[data-act]');
   if (tg){ e.stopPropagation(); act(tg.dataset.act, tg.dataset.arg, e, tg); return; }
-  if (e.target.closest('input')) return;
+  if (e.target.closest('input,textarea')) return;
   if (S.pending.length || (view && view.kind === 'onb')) return;
   if (view && view.done){ dismissedDone.add(view.done); tick(); return; }
   expanded = !expanded; tick();
 });
-document.addEventListener('input', e => { if (e.target.dataset.live === 'vol') A().set_volume(e.target.value/100); });
+document.addEventListener('input', e => { if (e.target.dataset.live === 'vol') A().set_volume(e.target.value/100); else if (e.target === caseBox) live(); });
 
 document.addEventListener('wheel', e => {
+  if (e.target === caseBox) return;          // the text box scrolls its own text
   e.preventDefault();
   if (!S) return;
   const d = e.deltaY < 0 ? 1 : -1;
@@ -524,7 +584,7 @@ document.addEventListener('wheel', e => {
 
 // drag to move the pill to another edge
 document.addEventListener('mousedown', e => {
-  if (e.button !== 0 || e.target.closest('button,input,[data-act]')) return;
+  if (e.button !== 0 || e.target.closest('button,input,textarea,[data-act]')) return;
   drag = {x: e.screenX, y: e.screenY, started: false};
 });
 document.addEventListener('mousemove', e => {

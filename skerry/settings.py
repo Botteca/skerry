@@ -48,6 +48,7 @@ DEFAULTS = {
     "chained_statusline": None,
     "auto_connect_done": False,
     "first_run_done": True,   # False only for a brand-new settings file: the island shows the guided setup
+    "links": [],              # useful links [{name, url}], written only through Api.links_save (http/https only)
     "bluetooth_names": {},   # e.g. {"BLE ·9418": "Mouse", "BLE ·a5f0": ""}  ("" = hide)
     "hooks_version": 0,
     "connectors": {

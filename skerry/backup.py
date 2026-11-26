@@ -54,5 +54,8 @@ def import_data(settings, payload):
         from .connectors.sql import sanitize
         clean, errors = sanitize(sql.get("widgets"))
         sql["widgets"] = [w for w in clean if w["id"] not in errors]   # queries that are not read-only are dropped
+    if "links" in values:
+        from .links import sanitize as clean_links
+        values["links"] = clean_links(values["links"])
     settings.update(values)
     return len(values)
