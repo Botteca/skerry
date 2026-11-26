@@ -165,7 +165,9 @@ def scenes(settings):
     perm["sessions"] = []
     expanded = pill_state(settings, agents, media=MEDIA, meeting=meeting(time.time()), usage=USAGE,
                           system={"mic": [], "cam": [], "battery": {"percent": 74, "plugged": False},
-                                  "bluetooth": BLUETOOTH})
+                                  "bluetooth": BLUETOOTH},
+                          links=[{"name": "Contoso Wiki", "host": "wiki.example.invalid"},
+                                 {"name": "Status page", "host": "status.example.invalid"}])
     expanded["_expand"] = True
     settings_data = {"settings": dict(settings), "version": VERSION, "autostart": True,
                      "claude": {"installed": True, "available": True},
@@ -189,7 +191,7 @@ def scenes(settings):
         "03-timer": {"bg": "a", "size": (600, 160), "pills": [pomo]},
         "04-permission": {"bg": "a", "size": (640, 300), "pills": [perm]},
         "05-done": {"bg": "a", "size": (640, 220), "pills": [done]},
-        "06-expanded": {"bg": "b", "size": (1080, 1000), "pills": [expanded]},
+        "06-expanded": {"bg": "b", "size": (1080, 1280), "pills": [expanded]},
         "07-settings-appearance": {"bg": "b", "size": (950, 740), "settings": (settings_data, "look")},
         "07-settings-layout": {"bg": "b", "size": (950, 740), "settings": (settings_data, "layout")},
         "07-settings-connections": {"bg": "b", "size": (950, 740), "settings": (settings_data, "conn")},
@@ -248,7 +250,7 @@ addEventListener('message', e => {
 
 def build(tmp, scene, name):
     ui = os.path.join(ROOT, "ui")
-    for f in ("skerry.css", "i18n.js", "companion.js", "skerry.js"):
+    for f in ("skerry.css", "i18n.js", "companion.js", "textcase.js", "skerry.js", "botteca.svg"):
         shutil.copy(os.path.join(ui, f), tmp)
     if "settings" in scene:
         data, page = scene["settings"]

@@ -7,7 +7,7 @@ appended at the end in their default position, so a saved order never breaks.
 
 # Expanded island, default order (the order of versions before the Layout page).
 # The tuple order is the default order of the expanded island; ids never change (saved orders and profiles use them).
-SECTIONS = ("media", "meeting", "adf", "sql", "agents", "limits", "usage", "system", "timer", "shelf")
+SECTIONS = ("media", "meeting", "adf", "sql", "agents", "limits", "usage", "system", "timer", "shelf", "links", "case")
 # Closed pill: what may occupy it when several things happen. "permission" is always first and cannot be hidden.
 PILL = ("permission", "agent", "meeting", "media", "timer", "battery")
 FIXED_PILL = "permission"

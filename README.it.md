@@ -68,6 +68,8 @@ Microsoft 365. Tutto gira in locale.
 | **Dispositivi Bluetooth** | Livello della batteria dei dispositivi che lo comunicano, con avviso di batteria scarica |
 | **Timer e Pomodoro** | Conto alla rovescia nella pillola, cicli Pomodoro configurabili |
 | **Mensola** | Trascina dei file sulla pillola, poi *Copia* e Ctrl+V dove vuoi |
+| **Link utili** | I tuoi siti preferiti come riquadri, un clic per aprirli nel browser |
+| **Maiuscolo / minuscolo** | Converti il testo in MAIUSCOLO, minuscolo, Frase, Ogni Parola, aLtErNaTo o iNVERSO |
 | **Utilizzo di Claude** | Token usati nelle ultime 5 ore / 7 giorni, letti dai file di sessione locali di Claude Code |
 | **Riunioni** | Prossima riunione di Microsoft 365 (Outlook/Teams) o Google Calendar (Meet) con il pulsante *Entra* e un avviso prima dell'inizio (facoltativo) |
 | **SQL Server · Azure SQL** | Widget con una query in sola lettura: il primo valore, verde/ambra/rosso secondo le tue soglie, e un avviso quando uno diventa rosso (facoltativo) |

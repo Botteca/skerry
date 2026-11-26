@@ -67,6 +67,8 @@ your next Microsoft 365 meeting. Everything runs locally.
 | **Bluetooth devices** | Battery level of devices that report it, with a low-battery alert |
 | **Timer and Pomodoro** | Countdown in the pill, configurable Pomodoro cycles |
 | **File shelf** | Drop files on the pill, then *Copy* and Ctrl+V anywhere |
+| **Useful links** | Your favourite sites as tiles, one click to open them in the browser |
+| **Upper / lower case** | Convert text to UPPER, lower, Sentence, Each Word, aLtErNaTe or iNVERSE case |
 | **Claude usage** | Tokens used in the last 5 hours / 7 days, read from local Claude Code session files |
 | **Meetings** | Next Microsoft 365 (Outlook/Teams) or Google Calendar (Meet) meeting with a *Join* button and an alert before it starts (optional) |
 | **SQL Server · Azure SQL** | Widgets with a read-only query: the first value, green/amber/red by your thresholds, and an alert when one turns red (optional) |

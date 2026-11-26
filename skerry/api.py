@@ -3,8 +3,9 @@ permission decisions never go through HTTP."""
 import logging
 import os
 import time
+from urllib.parse import urlparse
 
-from . import VERSION, autostart, displays, i18n, integrations, layout, paths, profiles, win32
+from . import VERSION, autostart, displays, i18n, integrations, layout, links, paths, profiles, win32
 from .store import GRANT_MINUTES
 
 log = logging.getLogger("skerry")
@@ -50,6 +51,7 @@ class Api:
         snap["adf"] = a.connectors.adf.runs() if "adf" in shown else None
         snap["sql"] = a.connectors.sql.widgets() if "sql" in shown else None
         snap["shelf"] = a.shelf.items() if "shelf" in shown else []
+        snap["links"] = [{"name": x["name"], "host": urlparse(x["url"]).hostname} for x in links.sanitize(a.settings.get("links"))]             if "links" in shown else []
         snap["settings"] = {k: a.settings.get(k) for k in ("edge", "monitor", "theme", "idle_label", "accent", "modules", "alerts", "companion")}
         snap["visible"] = bool(getattr(a.win, "visible", True))   # the companion stops its animations when hidden
         snap["onboarding"] = None if a.settings.get("first_run_done", True) else self._onboarding()
@@ -374,6 +376,27 @@ class Api:
         if c:
             c.refresh()
         return bool(c)
+
+    # ---------- useful links, text case ----------
+    def links_save(self, items):
+        """Save the useful links (invalid or non-http(s) entries are dropped). Returns what was saved."""
+        clean = links.sanitize(items)
+        self._app.settings.set("links", clean)
+        return clean
+
+    def open_link(self, index):
+        """Open a saved link in the default browser. http(s) only, checked again here."""
+        import webbrowser
+        items = links.sanitize(self._app.settings.get("links"))
+        try:
+            url = items[int(index)]["url"]
+        except (IndexError, TypeError, ValueError):
+            return False
+        webbrowser.open(url)
+        return True
+
+    def copy_text(self, text):
+        return win32.copy_text_to_clipboard(str(text)[:200_000])
 
     def join_meeting(self):
         """Open the current meeting link. https only, never other schemes."""

@@ -22,7 +22,7 @@ KEY_LITERAL = re.compile(r"""['"]([a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9_]+)+)['"]""")
 
 # Product and brand names are the same in every language.
 BRANDS = {"Skerry", "Google Calendar", "Claude Code", "Codex", "Gemini CLI", "Copilot CLI", "GitHub Copilot CLI", "Microsoft 365", "Google Workspace", "SQL Server", "Azure SQL",
-          "Azure Data Factory", "Outlook", "OpenCode"}
+          "Azure Data Factory", "Outlook", "OpenCode", "Botteca"}
 
 
 def read(*parts):
@@ -268,7 +268,7 @@ JS_ALLOWED = BRANDS | {"Files", "use strict", "ArrowUp", "ArrowDown"}   # DataTr
 def visible_js_text(kind, text):
     """Words a literal would show to the user, or [] if it looks like code."""
     found = [m for m in re.findall(r'(?:title|placeholder|alt|aria-label)="([^"]*)"', text)
-             if re.search(WORD, m.replace("\x00", " "))]
+             if re.search(WORD, m.replace("\x00", " ")) and m not in BRANDS]
     if "<" in text:
         stripped = re.sub(r"&\w+;", " ", re.sub(r"<[^>]*>", " ", text)).replace("\x00", " ")
         stripped = re.sub(r"(?<!\w)/\w+", " ", stripped)          # slash commands such as /usage

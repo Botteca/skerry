@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+## 1.0.2 — 2026-11-26
+
+- **Useful links**: a new island section with your favourite sites as tiles, opened in the default browser with one
+  click. Edit them in *Settings → Layout → Useful links → Options* (web addresses only, up to 20).
+- **Upper / lower case**: a new island section to convert text to UPPER, lower, Sentence, Each Word, aLtErNaTe and
+  iNVERSE case, with a character/word count and a copy button.
+- Cleaner look: line icons instead of emoji in section headers, rounder media controls, link tiles, and the Botteca
+  logo next to the version in the island footer and in the guided setup.
+
 ## 1.0.1
 
 - **Claude Code limits** (5-hour session and week) now have their own section, separate from *Claude usage*
